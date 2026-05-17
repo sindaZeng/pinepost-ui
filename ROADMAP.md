@@ -4,8 +4,8 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 
 ## Near Term
 
-- Harden current v0.12 recipes with more disabled, loading, and failure states.
-- Expand browser smoke coverage into screenshot comparison for the docs catalog.
+- Harden current v0.13 theme editing flow with more token validation and reset states.
+- Expand visual smoke coverage with stored baseline review for the docs catalog.
 - Add more copyable recipes for dashboard, commerce, and learning-app flows.
 
 ## Mid Term
@@ -13,7 +13,7 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 - Add saved Table recipe presets that combine filters, settings, and density.
 - Add richer formatting presets for date and time panels.
 - Add Cascader multi-select exploration and more screen reader affordances.
-- Add more theme token customization examples.
+- Add import and export helpers for sharing theme token sets between projects.
 - Add package release notes automation for npm publishing.
 
 ## Release Policy

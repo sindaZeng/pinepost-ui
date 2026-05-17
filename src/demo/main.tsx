@@ -79,6 +79,9 @@ import {
   Pagination,
   PageHeader,
   PinepostProvider,
+  createPinepostThemeCss,
+  mergePinepostThemeTokens,
+  pinepostThemePresets,
   Popconfirm,
   PopconfirmAction,
   PopconfirmCancel,
@@ -140,6 +143,8 @@ import {
   Watermark,
   type PinepostLocale,
   type PinepostTheme,
+  type PinepostThemeTokenName,
+  type PinepostThemeTokens,
   type TableColumnSettingsValue
 } from "../index";
 import "../styles.css";
@@ -181,10 +186,34 @@ type NavGroup = {
   title: string;
 };
 
-type GuidePanelId = "install" | "theme";
+type GuidePanelId = "install" | "theme" | "theme-studio";
 
 const themeOrder: PinepostTheme[] = ["calm", "play", "shop"];
 const localeOrder: PinepostLocale[] = ["zh-CN", "en"];
+const editableThemeTokens: Array<{
+  helper: { en: string; zh: string };
+  label: { en: string; zh: string };
+  name: PinepostThemeTokenName;
+  type: "color" | "radius";
+}> = [
+  { name: "--pinepost-paper", type: "color", label: { zh: "纸张底色", en: "Paper" }, helper: { zh: "页面背景与大面积纸张。", en: "Page backgrounds and paper surfaces." } },
+  { name: "--pinepost-paper-raised", type: "color", label: { zh: "浮起纸面", en: "Raised paper" }, helper: { zh: "卡片、面板和预览层。", en: "Cards, panels, and raised previews." } },
+  { name: "--pinepost-ink", type: "color", label: { zh: "墨色", en: "Ink" }, helper: { zh: "标题与正文主色。", en: "Main text and headings." } },
+  { name: "--pinepost-leaf", type: "color", label: { zh: "叶色", en: "Leaf" }, helper: { zh: "主按钮与确认动作。", en: "Primary actions and confirmations." } },
+  { name: "--pinepost-stamp", type: "color", label: { zh: "邮戳", en: "Stamp" }, helper: { zh: "强调、危险和重点标记。", en: "Emphasis, danger, and marked states." } },
+  { name: "--pinepost-parcel", type: "color", label: { zh: "包裹", en: "Parcel" }, helper: { zh: "促销、包装和暖色操作。", en: "Warm actions, packing, and commerce states." } },
+  { name: "--pinepost-sky", type: "color", label: { zh: "天空", en: "Sky" }, helper: { zh: "信息提示与轻量标签。", en: "Info accents and lightweight tags." } },
+  { name: "--pinepost-radius-md", type: "radius", label: { zh: "圆角", en: "Radius" }, helper: { zh: "按钮、卡片和浮层的基础圆角。", en: "Base radius for buttons, cards, and overlays." } }
+];
+
+const themePreviewRows = [
+  { route: "North gate", count: 12, status: "Ready" },
+  { route: "Cedar desk", count: 7, status: "Review" }
+];
+
+function themeTokensToStyle(tokens: PinepostThemeTokens) {
+  return tokens as React.CSSProperties;
+}
 
 const copy = {
   "zh-CN": {
@@ -438,6 +467,174 @@ function ThemePanel({ labels, locale, theme, zh }: { labels: (typeof copy)["zh-C
             </code>
           </pre>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function colorInputValue(value: string) {
+  return /^#[0-9a-f]{6}$/i.test(value) ? value : "#000000";
+}
+
+function radiusInputValue(value: string) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : 8;
+}
+
+function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"]; theme: PinepostTheme; zh: boolean }) {
+  const [preset, setPreset] = React.useState<PinepostTheme>(theme);
+  const [overrides, setOverrides] = React.useState<Partial<PinepostThemeTokens>>({});
+  const tokens = React.useMemo(() => mergePinepostThemeTokens(preset, overrides), [overrides, preset]);
+  const cssText = React.useMemo(() => createPinepostThemeCss({ selector: ".pinepost-workspace", tokens }), [tokens]);
+
+  React.useEffect(() => {
+    setPreset(theme);
+    setOverrides({});
+  }, [theme]);
+
+  function setToken(name: PinepostThemeTokenName, value: string) {
+    setOverrides((current) => ({ ...current, [name]: value }));
+  }
+
+  function selectPreset(value: string) {
+    setPreset(value as PinepostTheme);
+    setOverrides({});
+  }
+
+  return (
+    <section className="docs-section docs-section--guide docs-theme-studio">
+      <div className="docs-section__head">
+        <span>{labels.groups.guide}</span>
+        <h2>{zh ? "Theme Studio 主题工作台" : "Theme Studio"}</h2>
+        <p>
+          {zh
+            ? "从预设出发微调核心 token，实时查看组件效果，并复制可直接放进项目的 CSS 变量。"
+            : "Start from a preset, tune the core tokens, preview real components, and copy the CSS variables into your product."}
+        </p>
+      </div>
+
+      <div className="docs-theme-studio__layout">
+        <div className="docs-theme-studio__controls">
+          <div className="docs-theme-studio__preset">
+            <span>{zh ? "起始预设" : "Preset"}</span>
+            <Segmented
+              value={preset}
+              onValueChange={selectPreset}
+              options={themeOrder.map((item) => ({ value: item, label: labels.themes[item] }))}
+            />
+            <Button size="sm" variant="soft" onClick={() => setOverrides({})}>
+              {zh ? "还原预设" : "Reset preset"}
+            </Button>
+          </div>
+
+          <div className="docs-theme-studio__tokens" aria-label={zh ? "主题 token 编辑" : "Theme token editor"}>
+            {editableThemeTokens.map((token) => (
+              <label className="docs-theme-studio__token" key={token.name}>
+                <span>
+                  <strong>{zh ? token.label.zh : token.label.en}</strong>
+                  <small>{zh ? token.helper.zh : token.helper.en}</small>
+                </span>
+                {token.type === "color" ? (
+                  <span className="docs-theme-studio__color">
+                    <input
+                      aria-label={token.name}
+                      type="color"
+                      value={colorInputValue(tokens[token.name])}
+                      onChange={(event) => setToken(token.name, event.target.value)}
+                    />
+                    <Input value={tokens[token.name]} onChange={(event) => setToken(token.name, event.target.value)} />
+                  </span>
+                ) : (
+                  <span className="docs-theme-studio__radius">
+                    <input
+                      aria-label={token.name}
+                      max={18}
+                      min={4}
+                      type="range"
+                      value={radiusInputValue(tokens[token.name])}
+                      onChange={(event) => setToken(token.name, `${event.target.value}px`)}
+                    />
+                    <Input value={tokens[token.name]} onChange={(event) => setToken(token.name, event.target.value)} />
+                  </span>
+                )}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="docs-theme-studio__preview" style={themeTokensToStyle(tokens)}>
+          <div className="docs-theme-studio__hero">
+            <Tag>{labels.themes[preset]}</Tag>
+            <h3>{zh ? "松木柜台" : "Pine counter"}</h3>
+            <p>{zh ? "按钮、表单、表格和上传在同一组 token 下保持一致。" : "Buttons, forms, tables, and upload states share one token set."}</p>
+            <Space>
+              <Button>{zh ? "发送清单" : "Send list"}</Button>
+              <Button variant="parcel">{zh ? "打包" : "Pack"}</Button>
+              <Button variant="stamp">{zh ? "盖章" : "Stamp"}</Button>
+            </Space>
+          </div>
+
+          <div className="docs-theme-studio__cards">
+            <Card>
+              <CardHeader>
+                <CardTitle>{zh ? "收件便签" : "Delivery note"}</CardTitle>
+                <CardDescription>{zh ? "真实控件预览当前主题。" : "Real controls preview the current theme."}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="docs-field-grid">
+                  <label>
+                    {zh ? "收件处" : "Desk"}
+                    <Input placeholder={zh ? "苔藓桌" : "Moss desk"} />
+                  </label>
+                  <Switch label={zh ? "静默配送" : "Quiet delivery"} defaultChecked />
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="docs-theme-studio__table">
+              <Table
+                columns={[
+                  { key: "route", title: zh ? "路线" : "Route" },
+                  { key: "count", title: zh ? "数量" : "Count" },
+                  { key: "status", title: zh ? "状态" : "Status" }
+                ]}
+                data={themePreviewRows}
+                density="compact"
+                rowKey="route"
+              />
+            </div>
+
+            <Upload label={zh ? "上传包裹图" : "Upload parcel image"} showFileList={false} />
+          </div>
+        </div>
+      </div>
+
+      <CodeBlock codeText={cssText} label={zh ? "CSS 变量" : "CSS variables"} labels={labels} />
+
+      <div className="docs-api-wrap" aria-label={zh ? "Theme Studio token 表" : "Theme Studio token table"}>
+        <strong className="docs-api-title">{zh ? "可编辑 token" : "Editable tokens"}</strong>
+        <table className="docs-api">
+          <thead>
+            <tr>
+              <th>{labels.prop}</th>
+              <th>{labels.type}</th>
+              <th>{labels.defaultValue}</th>
+              <th>{labels.description}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {editableThemeTokens.map((token) => (
+              <tr key={token.name}>
+                <td>
+                  <code>{token.name}</code>
+                </td>
+                <td>{token.type === "color" ? "color" : "CSS length"}</td>
+                <td>{pinepostThemePresets[preset][token.name]}</td>
+                <td>{zh ? token.helper.zh : token.helper.en}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   );
@@ -2966,8 +3163,8 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Upload recipes</span><Tag variant="parcel">Beta</Tag><span>Table, TableColumnSettings, Form, Cascader, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "截图回归、更多行业配方、主题工作台" : "Screenshot checks, more product recipes, theme studio"}</span></div>,
-      code: code(["Stable: production-ready basics and recipes", "Beta: deep interaction surfaces", "Planned: future refinements"]),
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme Studio, Upload recipes</span><Tag variant="parcel">Beta</Tag><span>Table, TableColumnSettings, Form, Cascader, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "主题导入导出、更多行业配方、视觉基线审阅" : "Theme import/export, more product recipes, visual baseline review"}</span></div>,
+      code: code(["Stable: production-ready basics, theme editing, and recipes", "Beta: deep interaction surfaces", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },
         { prop: "Beta", type: "status", defaultValue: "-", description: zh ? "API 已可用，继续打磨边界。" : "Usable API with active refinement." },
@@ -2993,22 +3190,36 @@ function App() {
       items: [
         { id: "install", label: zh ? "安装使用" : "Install" },
         { id: "theme", label: zh ? "主题语言" : "Theme and locale" },
+        { id: "theme-studio", label: zh ? "主题工作台" : "Theme Studio" },
         ...visibleDocs(labels.groups.guide)
       ]
     }
   ];
   const selectedDoc = docs.find((item) => item.id === selectedId);
-  const selectedPanelTitle =
-    selectedDoc?.title ?? (selectedId === "install" ? labels.install : zh ? "Theme 与 Locale" : "Theme and Locale");
-  const selectedPanelDescription =
-    selectedDoc?.description ??
-    (selectedId === "install"
-      ? zh
+  const guidePanels: Record<GuidePanelId, { description: string; title: string }> = {
+    install: {
+      title: labels.install,
+      description: zh
         ? "安装包、引入样式，然后用 PinepostProvider 包住应用。"
         : "Install the package, import styles, and wrap your app with PinepostProvider."
-      : zh
+    },
+    theme: {
+      title: zh ? "Theme 与 Locale" : "Theme and Locale",
+      description: zh
         ? "Provider 同时管理主题、语言和根节点 token，适合文档站与业务应用共用。"
-        : "The provider controls theme, locale, and root tokens for docs and product apps.");
+        : "The provider controls theme, locale, and root tokens for docs and product apps."
+    },
+    "theme-studio": {
+      title: zh ? "Theme Studio 主题工作台" : "Theme Studio",
+      description: zh
+        ? "微调 Pinepost 主题 token，实时预览组件，并复制可落地的 CSS 变量。"
+        : "Tune Pinepost theme tokens, preview real components, and copy production-ready CSS variables."
+    }
+  };
+  const selectedGuidePanel = selectedId in guidePanels ? guidePanels[selectedId as GuidePanelId] : guidePanels.theme;
+  const selectedPanelTitle =
+    selectedDoc?.title ?? selectedGuidePanel.title;
+  const selectedPanelDescription = selectedDoc?.description ?? selectedGuidePanel.description;
 
   function renderSelectedPanel() {
     if (selectedDoc) {
@@ -3017,6 +3228,10 @@ function App() {
 
     if ((selectedId as GuidePanelId) === "install") {
       return <InstallPanel labels={labels} zh={zh} />;
+    }
+
+    if ((selectedId as GuidePanelId) === "theme-studio") {
+      return <ThemeStudioPanel labels={labels} theme={theme} zh={zh} />;
     }
 
     return <ThemePanel labels={labels} locale={locale} theme={theme} zh={zh} />;

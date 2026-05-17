@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.0
+
+- Added editable Pinepost theme token presets, merge helpers, and CSS variable generation.
+- Added a Theme Studio guide page with live component previews and copyable CSS output.
+- Added Playwright smoke coverage for the theme editing and visual capture workflow.
+- Updated docs, roadmap, and package metadata for the v0.13 quality pass.
+
 ## 0.12.0
 
 - Added Table column ordering, column order ref methods, and the TableColumnSettings panel.

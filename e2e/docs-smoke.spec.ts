@@ -13,7 +13,7 @@ async function expectNoPageOverflow(page: import("@playwright/test").Page) {
 }
 
 test.describe("Pinepost docs smoke", () => {
-  test("renders one selected component page with v0.12 recipes and copy controls", async ({ page }) => {
+  test("renders one selected component page with recipes and copy controls", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Table 表格" }).click();
 
@@ -48,5 +48,31 @@ test.describe("Pinepost docs smoke", () => {
       await expect(page.getByText("业务配方")).toBeVisible();
       await expectNoPageOverflow(page);
     }
+  });
+
+  test("keeps Theme Studio editable, copyable, and visually capturable", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /主题工作台|Theme Studio/ }).click();
+
+    await expect(page.locator("h1")).toHaveText(/Theme Studio/);
+    await expect(page.locator("h1")).toHaveCount(1);
+    await page.getByLabel("--pinepost-leaf").fill("#267755");
+    await expect(page.locator(".docs-code code")).toContainText("--pinepost-leaf: #267755;");
+
+    const copyButton = page.getByRole("button", { name: "复制" }).first();
+    await copyButton.click();
+    await expect(copyButton).toHaveText("已复制");
+
+    const preview = page.locator(".docs-theme-studio__preview");
+    await expect(preview).toBeVisible();
+    const box = await preview.boundingBox();
+    expect(box?.width ?? 0).toBeGreaterThan(280);
+    expect(box?.height ?? 0).toBeGreaterThan(320);
+
+    const screenshot = await preview.screenshot({ animations: "disabled" });
+    expect(screenshot.byteLength).toBeGreaterThan(8000);
+    await testInfo.attach("theme-studio-preview", { body: screenshot, contentType: "image/png" });
+
+    await expectNoPageOverflow(page);
   });
 });

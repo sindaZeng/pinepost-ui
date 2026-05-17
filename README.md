@@ -95,6 +95,10 @@ The v0.12 expansion adds TableColumnSettings, Table column ordering, richer
 Upload file actions, copyable product recipes, and browser smoke checks for the
 documentation catalog.
 
+The v0.13 expansion adds editable theme token utilities, a Theme Studio guide
+for previewing and copying CSS variables, and stronger docs smoke coverage for
+the theme editing workflow.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, copyable recipes, and API table.
 
