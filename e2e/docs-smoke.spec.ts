@@ -89,11 +89,34 @@ test.describe("Pinepost docs smoke", () => {
     await expect(page.locator("h1")).toHaveText(/业务模板|Recipe Gallery/);
     await expect(page.getByRole("heading", { name: "后台表格台" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "素材上传墙" })).toBeVisible();
-    await expect(page.locator(".docs-recipe-card__components strong", { hasText: "组件清单" })).toHaveCount(5);
+    await expect(page.locator(".docs-recipe-card__components strong", { hasText: "组件清单" })).toHaveCount(8);
+
+    await page.getByRole("button", { name: "上传", exact: true }).click();
+    await expect(page.locator(".docs-recipe-card")).toHaveCount(1);
+    await expect(page.getByRole("heading", { name: "素材上传墙" })).toBeVisible();
+
+    await page.getByRole("button", { name: "全部" }).click();
+    const tableRecipe = page.locator(".docs-recipe-card").filter({ hasText: "后台表格台" });
+    await tableRecipe.getByRole("button", { name: "加载中" }).click();
+    await expect(tableRecipe.locator(".docs-preview-surface").getByText("正在刷新路线数据")).toBeVisible();
+    await page.locator(".docs-recipe-card").filter({ hasText: "审批表单页" }).getByRole("button", { name: "禁用" }).click();
+    await expect(page.getByRole("button", { name: "暂不可提交" })).toBeDisabled();
+    const campaignRecipe = page.locator(".docs-recipe-card").filter({ hasText: "活动商品卡" });
+    await campaignRecipe.getByRole("button", { name: "售罄" }).click();
+    await expect(campaignRecipe.locator(".docs-preview-surface").getByText("本轮已经售罄")).toBeVisible();
 
     const copyButton = page.getByRole("button", { name: "复制" }).first();
     await copyButton.click();
     await expect(copyButton).toHaveText("已复制");
     await expectNoPageOverflow(page);
+  });
+
+  test("finds Recipe Gallery through product workflow keywords", async ({ page }) => {
+    await page.goto("/");
+
+    for (const term of ["loading", "上传", "dashboard", "commerce"]) {
+      await page.getByLabel("搜索组件").fill(term);
+      await expect(page.getByRole("button", { name: /业务模板|Recipe Gallery/ })).toBeVisible();
+    }
   });
 });

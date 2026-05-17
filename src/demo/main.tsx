@@ -188,7 +188,7 @@ type DocItem = {
 };
 
 type NavGroup = {
-  items: Array<{ id: string; label: string }>;
+  items: Array<{ id: string; label: string; searchText?: string }>;
   title: string;
 };
 
@@ -737,155 +737,275 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
   );
 }
 
+type RecipeCategory = "all" | "commerce" | "data" | "form" | "learning" | "upload";
+
+type RecipeState = {
+  code: string;
+  label: string;
+  preview: React.ReactNode;
+  value: string;
+};
+
+type RecipeDefinition = {
+  category: Exclude<RecipeCategory, "all">;
+  components: string[];
+  description: string;
+  states: RecipeState[];
+  title: string;
+};
+
+function RecipeCard({
+  labels,
+  recipe,
+  zh
+}: {
+  labels: (typeof copy)["zh-CN"];
+  recipe: RecipeDefinition;
+  zh: boolean;
+}) {
+  const [stateValue, setStateValue] = React.useState(recipe.states[0]?.value ?? "");
+  const activeState = recipe.states.find((state) => state.value === stateValue) ?? recipe.states[0];
+
+  React.useEffect(() => {
+    setStateValue(recipe.states[0]?.value ?? "");
+  }, [recipe.title, recipe.states]);
+
+  return (
+    <article className="docs-recipe-card" data-recipe-category={recipe.category}>
+      <div className="docs-recipe-card__head">
+        <div>
+          <h3>{recipe.title}</h3>
+          <p>{recipe.description}</p>
+        </div>
+        <div className="docs-recipe-card__components" aria-label={zh ? "组件清单" : "Component list"}>
+          <strong>{zh ? "组件清单" : "Component list"}</strong>
+          <span>{recipe.components.join(" / ")}</span>
+        </div>
+      </div>
+      <div className="docs-recipe-card__states">
+        <span>{zh ? "状态" : "State"}</span>
+        <Segmented
+          value={activeState.value}
+          onValueChange={setStateValue}
+          options={recipe.states.map((state) => ({ value: state.value, label: state.label }))}
+        />
+      </div>
+      <div className="docs-preview-surface">{activeState.preview}</div>
+      <CodeBlock codeText={activeState.code} label={`${recipe.title} - ${activeState.label}`} labels={labels} />
+    </article>
+  );
+}
+
 function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh: boolean }) {
-  const recipes = [
+  const [category, setCategory] = React.useState<RecipeCategory>("all");
+  const categoryOptions: Array<{ label: string; value: RecipeCategory }> = [
+    { value: "all", label: zh ? "全部" : "All" },
+    { value: "data", label: zh ? "数据" : "Data" },
+    { value: "form", label: zh ? "表单" : "Form" },
+    { value: "upload", label: zh ? "上传" : "Upload" },
+    { value: "commerce", label: zh ? "商业" : "Commerce" },
+    { value: "learning", label: zh ? "学习" : "Learning" }
+  ];
+  const recipes: RecipeDefinition[] = [
     {
+      category: "data",
       title: zh ? "后台表格台" : "Operations table",
       description: zh ? "带密度、列设置和状态标签的日常运营表格。" : "A daily operations table with density, column settings, and status tags.",
       components: ["Table", "TableColumnSettings", "Tag", "Button"],
-      preview: (
-        <div className="docs-recipe-preview">
-          <TableColumnSettings
-            columns={[
-              { key: "route", title: zh ? "路线" : "Route" },
-              { key: "count", title: zh ? "数量" : "Count" },
-              { key: "status", title: zh ? "状态" : "Status" }
-            ]}
-            defaultValue={{ columnOrder: ["route", "count", "status"], density: "compact", hiddenColumns: [] }}
-          />
-          <Table
-            columns={[
-              { key: "route", title: zh ? "路线" : "Route" },
-              { key: "count", title: zh ? "数量" : "Count" },
-              { key: "status", title: zh ? "状态" : "Status", render: (row) => <Tag>{String(row.status)}</Tag> }
-            ]}
-            data={[
-              { route: zh ? "北门" : "North gate", count: 12, status: zh ? "待发" : "Ready" },
-              { route: zh ? "松木桌" : "Pine desk", count: 6, status: zh ? "复核" : "Review" }
-            ]}
-            density="compact"
-            rowKey="route"
-          />
-        </div>
-      ),
-      code: code([
-        'import { Table, TableColumnSettings, Tag } from "pinepost-ui";',
-        "",
-        "<TableColumnSettings columns={columns} defaultValue={settings} />",
-        "<Table columns={columns} data={rows} density=\"compact\" rowKey=\"route\" />"
-      ])
+      states: [
+        {
+          value: "ready",
+          label: zh ? "正常" : "Ready",
+          preview: (
+            <div className="docs-recipe-preview">
+              <TableColumnSettings
+                columns={[
+                  { key: "route", title: zh ? "路线" : "Route" },
+                  { key: "count", title: zh ? "数量" : "Count" },
+                  { key: "status", title: zh ? "状态" : "Status" }
+                ]}
+                defaultValue={{ columnOrder: ["route", "count", "status"], density: "compact", hiddenColumns: [] }}
+              />
+              <Table
+                columns={[
+                  { key: "route", title: zh ? "路线" : "Route" },
+                  { key: "count", title: zh ? "数量" : "Count" },
+                  { key: "status", title: zh ? "状态" : "Status", render: (row) => <Tag>{String(row.status)}</Tag> }
+                ]}
+                data={[
+                  { route: zh ? "北门" : "North gate", count: 12, status: zh ? "待发" : "Ready" },
+                  { route: zh ? "松木桌" : "Pine desk", count: 6, status: zh ? "复核" : "Review" }
+                ]}
+                density="compact"
+                rowKey="route"
+              />
+            </div>
+          ),
+          code: code(['<TableColumnSettings columns={columns} defaultValue={settings} />', '<Table columns={columns} data={rows} density="compact" rowKey="route" />'])
+        },
+        {
+          value: "loading",
+          label: zh ? "加载中" : "Loading",
+          preview: (
+            <Loading label={zh ? "正在刷新路线数据" : "Refreshing route data"}>
+              <Skeleton count={3} />
+            </Loading>
+          ),
+          code: code(['<Loading label="正在刷新路线数据">', "  <Skeleton count={3} />", "</Loading>"])
+        },
+        {
+          value: "empty",
+          label: zh ? "空态" : "Empty",
+          preview: <Empty title={zh ? "没有待处理路线" : "No routes waiting"} description={zh ? "筛选条件下暂无任务。" : "No tasks match the current filters."} action={<Button size="sm">{zh ? "清除筛选" : "Clear filters"}</Button>} />,
+          code: code(['<Empty title="没有待处理路线" action={<Button>清除筛选</Button>} />'])
+        }
+      ]
     },
     {
+      category: "form",
       title: zh ? "审批表单页" : "Approval form",
       description: zh ? "适合工单、申请和配置保存的紧凑表单。" : "A compact form for tickets, requests, and configuration saves.",
       components: ["Form", "FormField", "Input", "Select", "Button"],
-      preview: (
-        <Form className="docs-recipe-form">
-          <FormField label={zh ? "收件处" : "Desk"}>
-            <Input placeholder={zh ? "苔藓桌" : "Moss desk"} />
-          </FormField>
-          <FormField label={zh ? "优先级" : "Priority"}>
-            <Select
-              defaultValue="normal"
-              options={[
-                { value: "normal", label: zh ? "普通" : "Normal" },
-                { value: "high", label: zh ? "加急" : "High" }
-              ]}
-            />
-          </FormField>
-          <Button>{zh ? "提交审批" : "Submit"}</Button>
-        </Form>
-      ),
-      code: code([
-        'import { Button, Form, FormField, Input, Select } from "pinepost-ui";',
-        "",
-        "<Form>",
-        "  <FormField label=\"收件处\"><Input /></FormField>",
-        "  <FormField label=\"优先级\"><Select options={options} /></FormField>",
-        "  <Button>提交审批</Button>",
-        "</Form>"
-      ])
+      states: [
+        {
+          value: "ready",
+          label: zh ? "正常" : "Ready",
+          preview: (
+            <Form className="docs-recipe-form">
+              <FormField label={zh ? "收件处" : "Desk"}><Input placeholder={zh ? "苔藓桌" : "Moss desk"} /></FormField>
+              <FormField label={zh ? "优先级" : "Priority"}><Select defaultValue="normal" options={[{ value: "normal", label: zh ? "普通" : "Normal" }, { value: "high", label: zh ? "加急" : "High" }]} /></FormField>
+              <Button>{zh ? "提交审批" : "Submit"}</Button>
+            </Form>
+          ),
+          code: code(["<Form>", "  <FormField label=\"收件处\"><Input /></FormField>", "  <Button>提交审批</Button>", "</Form>"])
+        },
+        {
+          value: "loading",
+          label: zh ? "处理中" : "Saving",
+          preview: <Loading label={zh ? "正在保存审批单" : "Saving request"}><Form className="docs-recipe-form"><FormField label={zh ? "收件处" : "Desk"}><Input disabled value={zh ? "苔藓桌" : "Moss desk"} /></FormField><Button disabled>{zh ? "保存中" : "Saving"}</Button></Form></Loading>,
+          code: code(['<Loading label="正在保存审批单">', "  <Form>...</Form>", "</Loading>"])
+        },
+        {
+          value: "disabled",
+          label: zh ? "禁用" : "Disabled",
+          preview: <Form className="docs-recipe-form"><Alert title={zh ? "审批窗口已关闭" : "Approval closed"} description={zh ? "当前批次暂不可提交。" : "This batch cannot be submitted right now."} variant="warning" /><FormField label={zh ? "收件处" : "Desk"}><Input disabled value={zh ? "苔藓桌" : "Moss desk"} /></FormField><Button disabled>{zh ? "暂不可提交" : "Temporarily unavailable"}</Button></Form>,
+          code: code(['<Alert variant="warning" title="审批窗口已关闭" />', "<Button disabled>暂不可提交</Button>"])
+        }
+      ]
     },
     {
+      category: "upload",
       title: zh ? "素材上传墙" : "Asset upload wall",
       description: zh ? "展示自定义文件项、失败状态和手动重试入口。" : "Shows custom file items, failure states, and retry entry points.",
       components: ["Upload", "Progress", "Button", "Badge"],
-      preview: (
-        <Upload
-          label={zh ? "上传素材" : "Upload assets"}
-          defaultFileList={[
-            { name: "parcel-cover.png", percent: 68, status: "uploading", uid: "asset-1" },
-            { error: new Error("Upload failed"), name: "stamp-set.zip", percent: 30, status: "error", uid: "asset-2" }
-          ]}
-          renderFile={(file, actions) => (
-            <div className="docs-upload-card">
-              <span>{file.name}</span>
-              <Badge variant={file.status === "error" ? "stamp" : "sky"}>{file.status}</Badge>
-              <Button size="sm" variant="soft" onClick={file.status === "error" ? actions.retry : actions.remove}>
-                {file.status === "error" ? (zh ? "重试" : "Retry") : (zh ? "移除" : "Remove")}
-              </Button>
-            </div>
-          )}
-        />
-      ),
-      code: code([
-        'import { Badge, Button, Upload } from "pinepost-ui";',
-        "",
-        "<Upload",
-        "  defaultFileList={files}",
-        "  renderFile={(file, actions) => <CustomFile file={file} actions={actions} />}",
-        "/>"
-      ])
+      states: [
+        {
+          value: "ready",
+          label: zh ? "队列" : "Queue",
+          preview: <Upload label={zh ? "上传素材" : "Upload assets"} defaultFileList={[{ name: "parcel-cover.png", percent: 68, status: "uploading", uid: "asset-1" }, { error: new Error("Upload failed"), name: "stamp-set.zip", percent: 30, status: "error", uid: "asset-2" }]} renderFile={(file, actions) => <div className="docs-upload-card"><span>{file.name}</span><Badge variant={file.status === "error" ? "stamp" : "sky"}>{file.status}</Badge><Button size="sm" variant="soft" onClick={file.status === "error" ? actions.retry : actions.remove}>{file.status === "error" ? (zh ? "重试" : "Retry") : (zh ? "移除" : "Remove")}</Button></div>} />,
+          code: code(["<Upload", "  defaultFileList={files}", "  renderFile={(file, actions) => <CustomFile file={file} actions={actions} />}", "/>"])
+        },
+        {
+          value: "loading",
+          label: zh ? "上传中" : "Uploading",
+          preview: <div className="docs-recipe-preview"><Progress value={68} label={zh ? "parcel-cover.png 上传中" : "parcel-cover.png uploading"} /><Progress value={34} label={zh ? "stamp-set.zip 上传中" : "stamp-set.zip uploading"} /></div>,
+          code: code(['<Progress value={68} label="parcel-cover.png 上传中" />'])
+        },
+        {
+          value: "error",
+          label: zh ? "失败" : "Error",
+          preview: <Alert title={zh ? "stamp-set.zip 上传失败" : "stamp-set.zip failed"} description={zh ? "检查网络后可从文件项重试。" : "Check the network and retry from the file item."} variant="danger" />,
+          code: code(['<Alert variant="danger" title="stamp-set.zip 上传失败" />'])
+        }
+      ]
     },
     {
+      category: "commerce",
       title: zh ? "活动商品卡" : "Campaign card",
       description: zh ? "适合活动页、套餐卡和小型电商模块。" : "A card pattern for campaigns, bundles, and small commerce modules.",
       components: ["Card", "Badge", "Statistic", "Button"],
-      preview: (
-        <Card className="docs-campaign-card">
-          <CardHeader>
-            <Badge variant="parcel">{zh ? "今日特选" : "Today"}</Badge>
-            <CardTitle>{zh ? "松果礼盒" : "Pinecone bundle"}</CardTitle>
-            <CardDescription>{zh ? "含三张便签与一枚邮戳。" : "Three notes and one stamp."}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Statistic label={zh ? "库存" : "Stock"} value={18} suffix={zh ? "份" : " packs"} />
-          </CardContent>
-          <CardFooter>
-            <Button variant="parcel">{zh ? "加入清单" : "Add to list"}</Button>
-          </CardFooter>
-        </Card>
-      ),
-      code: code([
-        'import { Badge, Button, Card, Statistic } from "pinepost-ui";',
-        "",
-        "<Card>",
-        "  <Badge variant=\"parcel\">今日特选</Badge>",
-        "  <Statistic label=\"库存\" value={18} />",
-        "  <Button variant=\"parcel\">加入清单</Button>",
-        "</Card>"
-      ])
+      states: [
+        {
+          value: "ready",
+          label: zh ? "在售" : "Live",
+          preview: <Card className="docs-campaign-card"><CardHeader><Badge variant="parcel">{zh ? "今日特选" : "Today"}</Badge><CardTitle>{zh ? "松果礼盒" : "Pinecone bundle"}</CardTitle><CardDescription>{zh ? "含三张便签与一枚邮戳。" : "Three notes and one stamp."}</CardDescription></CardHeader><CardContent><Statistic label={zh ? "库存" : "Stock"} value={18} suffix={zh ? "份" : " packs"} /></CardContent><CardFooter><Button variant="parcel">{zh ? "加入清单" : "Add to list"}</Button></CardFooter></Card>,
+          code: code(['<Card><Badge variant="parcel">今日特选</Badge><Statistic label="库存" value={18} /></Card>'])
+        },
+        {
+          value: "loading",
+          label: zh ? "加载中" : "Loading",
+          preview: <Card className="docs-campaign-card"><CardContent><Skeleton count={4} /></CardContent><CardFooter><Button disabled>{zh ? "读取库存" : "Checking stock"}</Button></CardFooter></Card>,
+          code: code(["<Card><Skeleton count={4} /></Card>"])
+        },
+        {
+          value: "soldout",
+          label: zh ? "售罄" : "Sold out",
+          preview: <Result status="warning" title={zh ? "本轮已经售罄" : "Sold out for this round"} description={zh ? "可以展示候补登记或下一轮提醒。" : "Offer a waitlist or next-round reminder."} />,
+          code: code(['<Result status="warning" title="本轮已经售罄" />'])
+        }
+      ]
     },
     {
+      category: "learning",
       title: zh ? "学习任务页" : "Learning task",
       description: zh ? "把步骤、进度和反馈组合成轻学习流程。" : "Combines steps, progress, and feedback for learning flows.",
       components: ["Steps", "Progress", "Rate", "Result"],
-      preview: (
-        <div className="docs-recipe-preview">
-          <Steps active={2} items={[{ title: zh ? "阅读" : "Read" }, { title: zh ? "练习" : "Practice" }, { title: zh ? "提交" : "Submit" }]} />
-          <Progress value={72} />
-          <Rate value={4} disabled />
-        </div>
-      ),
-      code: code([
-        'import { Progress, Rate, Steps } from "pinepost-ui";',
-        "",
-        "<Steps active={2} items={items} />",
-        "<Progress value={72} />",
-        "<Rate value={4} disabled />"
-      ])
+      states: [
+        {
+          value: "ready",
+          label: zh ? "进行中" : "Active",
+          preview: <div className="docs-recipe-preview"><Steps active={2} items={[{ title: zh ? "阅读" : "Read" }, { title: zh ? "练习" : "Practice" }, { title: zh ? "提交" : "Submit" }]} /><Progress value={72} /><Rate value={4} disabled /></div>,
+          code: code(["<Steps active={2} items={items} />", "<Progress value={72} />", "<Rate value={4} disabled />"])
+        },
+        {
+          value: "loading",
+          label: zh ? "加载中" : "Loading",
+          preview: <Loading label={zh ? "正在生成练习" : "Generating practice"}><Skeleton count={3} /></Loading>,
+          code: code(['<Loading label="正在生成练习"><Skeleton count={3} /></Loading>'])
+        },
+        {
+          value: "success",
+          label: zh ? "完成" : "Success",
+          preview: <Result status="success" title={zh ? "任务完成" : "Task complete"} description={zh ? "学习记录已经保存。" : "Learning record saved."} />,
+          code: code(['<Result status="success" title="任务完成" />'])
+        }
+      ]
+    },
+    {
+      category: "data",
+      title: zh ? "运营仪表盘" : "Operations dashboard",
+      description: zh ? "把关键指标、进度和提示压进一个可扫视面板。" : "A scannable dashboard for metrics, progress, and notes.",
+      components: ["Statistic", "Progress", "Alert", "Skeleton"],
+      states: [
+        { value: "ready", label: zh ? "正常" : "Ready", preview: <div className="docs-dashboard-grid"><Statistic label={zh ? "今日单量" : "Orders"} value={128} /><Statistic label={zh ? "准时率" : "On time"} value="96%" /><Progress value={84} label={zh ? "路线完成率" : "Route completion"} /><Alert title={zh ? "午后高峰" : "Afternoon peak"} description={zh ? "建议保留两名复核人员。" : "Keep two reviewers available."} /></div>, code: code(["<Statistic label=\"今日单量\" value={128} />", "<Progress value={84} label=\"路线完成率\" />"]) },
+        { value: "loading", label: zh ? "加载中" : "Loading", preview: <Skeleton count={5} />, code: code(["<Skeleton count={5} />"]) },
+        { value: "empty", label: zh ? "空态" : "Empty", preview: <Empty title={zh ? "暂无运营数据" : "No operations data"} description={zh ? "选择日期后会显示指标。" : "Pick a date to see metrics."} />, code: code(['<Empty title="暂无运营数据" />']) }
+      ]
+    },
+    {
+      category: "commerce",
+      title: zh ? "活动发布页" : "Campaign launch",
+      description: zh ? "发布前校验、倒计时和成功反馈放在同一流程里。" : "Pre-launch checks, timing, and success feedback in one flow.",
+      components: ["Card", "Switch", "Timeline", "Message"],
+      states: [
+        { value: "ready", label: zh ? "待发布" : "Ready", preview: <Card><CardHeader><CardTitle>{zh ? "春日活动" : "Spring campaign"}</CardTitle><CardDescription>{zh ? "确认库存、封面和投放时间。" : "Confirm stock, artwork, and launch time."}</CardDescription></CardHeader><CardContent><Switch label={zh ? "开启提醒" : "Enable reminder"} defaultChecked /><Timeline items={[{ title: zh ? "素材确认" : "Artwork checked" }, { title: zh ? "库存锁定" : "Stock locked" }]} /></CardContent></Card>, code: code(["<Card><Switch label=\"开启提醒\" /><Timeline items={items} /></Card>"]) },
+        { value: "disabled", label: zh ? "缺配置" : "Blocked", preview: <Message title={zh ? "缺少封面图" : "Cover image missing"} description={zh ? "补齐素材后才能发布。" : "Add artwork before launch."} variant="warning" />, code: code(['<Message variant="warning" title="缺少封面图" />']) },
+        { value: "success", label: zh ? "已发布" : "Live", preview: <Result status="success" title={zh ? "活动已发布" : "Campaign is live"} description={zh ? "入口已经同步到集市页。" : "Entry is now visible on the shop page."} />, code: code(['<Result status="success" title="活动已发布" />']) }
+      ]
+    },
+    {
+      category: "data",
+      title: zh ? "客服队列页" : "Support queue",
+      description: zh ? "把待处理、超时和处理完成的对话集中展示。" : "A queue for waiting, overdue, and resolved support conversations.",
+      components: ["Badge", "Table", "Alert", "Button"],
+      states: [
+        { value: "ready", label: zh ? "正常" : "Ready", preview: <Table columns={[{ key: "name", title: zh ? "访客" : "Visitor" }, { key: "status", title: zh ? "状态" : "Status", render: (row) => <Badge variant={String(row.status).includes("超时") ? "stamp" : "sky"}>{String(row.status)}</Badge> }]} data={[{ name: zh ? "松木店" : "Pine shop", status: zh ? "等待中" : "Waiting" }, { name: zh ? "苔藓课" : "Moss class", status: zh ? "超时" : "Overdue" }]} rowKey="name" />, code: code(['<Table columns={queueColumns} data={queueRows} rowKey="name" />']) },
+        { value: "loading", label: zh ? "加载中" : "Loading", preview: <Loading label={zh ? "正在拉取会话" : "Loading conversations"}><Skeleton count={4} /></Loading>, code: code(['<Loading label="正在拉取会话"><Skeleton count={4} /></Loading>']) },
+        { value: "error", label: zh ? "异常" : "Error", preview: <Alert title={zh ? "队列同步失败" : "Queue sync failed"} description={zh ? "保留本地缓存，并提示重新同步。" : "Keep local cache and offer a sync retry."} variant="danger" />, code: code(['<Alert variant="danger" title="队列同步失败" />']) }
+      ]
     }
   ];
+  const filteredRecipes = category === "all" ? recipes : recipes.filter((recipe) => recipe.category === category);
 
   return (
     <section className="docs-section docs-section--guide docs-recipe-gallery">
@@ -895,22 +1015,14 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
         <p>{zh ? "把常见业务界面拆成可复制的 Pinepost 组合，方便直接拿去改。" : "Copyable Pinepost compositions for common product screens."}</p>
       </div>
 
+      <div className="docs-recipe-gallery__filters">
+        <span>{zh ? "分类" : "Category"}</span>
+        <Segmented value={category} onValueChange={(value) => setCategory(value as RecipeCategory)} options={categoryOptions} />
+      </div>
+
       <div className="docs-recipe-gallery__grid">
-        {recipes.map((recipe) => (
-          <article className="docs-recipe-card" key={recipe.title}>
-            <div className="docs-recipe-card__head">
-              <div>
-                <h3>{recipe.title}</h3>
-                <p>{recipe.description}</p>
-              </div>
-              <div className="docs-recipe-card__components" aria-label={zh ? "组件清单" : "Component list"}>
-                <strong>{zh ? "组件清单" : "Component list"}</strong>
-                <span>{recipe.components.join(" / ")}</span>
-              </div>
-            </div>
-            <div className="docs-preview-surface">{recipe.preview}</div>
-            <CodeBlock codeText={recipe.code} label={recipe.title} labels={labels} />
-          </article>
+        {filteredRecipes.map((recipe) => (
+          <RecipeCard key={recipe.title} recipe={recipe} labels={labels} zh={zh} />
         ))}
       </div>
     </section>
@@ -3441,8 +3553,8 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme Studio import/export, Recipe Gallery</span><Tag variant="parcel">Beta</Tag><span>Table, TableColumnSettings, Form, Cascader, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "更多业务模板、视觉基线审阅、多主题集合" : "More product recipes, visual baseline review, theme collections"}</span></div>,
-      code: code(["Stable: production-ready basics, theme editing, and recipes", "Beta: deep interaction surfaces", "Planned: future refinements"]),
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme Studio import/export, Recipe Gallery state recipes</span><Tag variant="parcel">Beta</Tag><span>Table, TableColumnSettings, Form, Cascader, TreeSelect, DateRangePickerPanel, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "多主题集合、表格配方预设、发布说明自动化" : "Theme collections, table recipe presets, release notes automation"}</span></div>,
+      code: code(["Stable: production-ready basics, theme editing, and stateful recipes", "Beta: deep interaction surfaces and visual checks", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },
         { prop: "Beta", type: "status", defaultValue: "-", description: zh ? "API 已可用，继续打磨边界。" : "Usable API with active refinement." },
@@ -3469,7 +3581,11 @@ function App() {
         { id: "install", label: zh ? "安装使用" : "Install" },
         { id: "theme", label: zh ? "主题语言" : "Theme and locale" },
         { id: "theme-studio", label: zh ? "主题工作台" : "Theme Studio" },
-        { id: "recipes", label: zh ? "业务模板" : "Recipe Gallery" },
+        {
+          id: "recipes",
+          label: zh ? "业务模板" : "Recipe Gallery",
+          searchText: "业务模板 Recipe Gallery loading 上传 dashboard commerce upload form data learning 商业 学习"
+        },
         ...visibleDocs(labels.groups.guide)
       ]
     }
@@ -3479,7 +3595,7 @@ function App() {
     .map((group) => ({
       ...group,
       items: normalizedNavFilter
-        ? group.items.filter((item) => `${group.title} ${item.label}`.toLowerCase().includes(normalizedNavFilter))
+        ? group.items.filter((item) => `${group.title} ${item.label} ${item.searchText ?? ""}`.toLowerCase().includes(normalizedNavFilter))
         : group.items
     }))
     .filter((group) => group.items.length > 0);

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.0
+
+- Expanded Recipe Gallery to eight product templates with category filters.
+- Added state switching for recipe previews across ready, loading, empty, error, disabled, sold-out, and success states.
+- Added visual baseline Playwright coverage for Theme Studio, Recipe Gallery, Table, and Upload pages.
+- Updated docs search, coverage status, and release metadata for the hardened recipe workflow.
+
 ## 0.14.0
 
 - Added theme JSON import/export helpers, token validation, and stable theme class name generation.
