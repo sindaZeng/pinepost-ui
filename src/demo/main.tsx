@@ -60,6 +60,7 @@ import {
   FormField,
   createPinepostDatePresets,
   createPinepostDateRangePresets,
+  createPinepostRecipeBundle,
   createPinepostTimeRangePresets,
   formatPinepostDateRange,
   formatPinepostTimeRange,
@@ -90,7 +91,9 @@ import {
   mergePinepostThemeTokens,
   parsePinepostThemeCollectionExport,
   parsePinepostThemeExport,
+  parsePinepostRecipeBundle,
   pinepostThemePresets,
+  stringifyPinepostRecipeBundle,
   stringifyPinepostThemeCollectionExport,
   stringifyPinepostThemeExport,
   stringifyTableViewPresetExport,
@@ -160,6 +163,7 @@ import {
   type PinepostThemeTokenName,
   type PinepostThemeTokens,
   type PinepostThemeValidationIssue,
+  type PinepostRecipeBundleValidationIssue,
   type CascaderMultipleValue,
   type TableColumnSettingsValue
 } from "../index";
@@ -243,6 +247,19 @@ function describeThemeIssue(issue: PinepostThemeValidationIssue, zh: boolean) {
   };
 
   return `${tokenPrefix}${zh ? messages[issue.code].zh : messages[issue.code].en}`;
+}
+
+function describeBundleIssue(issue: PinepostRecipeBundleValidationIssue, zh: boolean) {
+  const messages: Record<PinepostRecipeBundleValidationIssue["code"], { en: string; zh: string }> = {
+    "invalid-bundle": { zh: "配方包需要有效名称、ID 和模板引用。", en: "Bundle needs a valid name, id, and recipe references." },
+    "invalid-color": { zh: "主题颜色配置有无效值。", en: "Theme color configuration has an invalid value." },
+    "invalid-json": { zh: "需要有效的 JSON。", en: "Expected valid JSON." },
+    "invalid-schedule": { zh: "排期配置包含无法识别的预设。", en: "Schedule config contains an unknown preset." },
+    "invalid-table-preset": { zh: "表格视图预设配置无法导入。", en: "Table view preset config could not be imported." },
+    "invalid-theme": { zh: "主题集合配置无法导入。", en: "Theme collection config could not be imported." }
+  };
+
+  return zh ? messages[issue.code].zh : messages[issue.code].en;
 }
 
 function downloadTextFile(filename: string, text: string) {
@@ -842,6 +859,14 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
       <CodeBlock codeText={cssText} label={zh ? "CSS 变量" : "CSS variables"} labels={labels} />
       <CodeBlock codeText={jsonText} label={zh ? "主题 JSON" : "Theme JSON"} labels={labels} />
       <CodeBlock codeText={collectionJsonText} label={zh ? "主题集合 JSON" : "Theme collection JSON"} labels={labels} />
+      <div className="docs-note">
+        <strong>{zh ? "Recipe Bundle 入口" : "Recipe Bundle entry"}</strong>
+        <p>
+          {zh
+            ? "主题集合 JSON 可以放进 Recipe Bundle，和表格视图、排期预设一起迁移。"
+            : "Theme collection JSON can be included in a Recipe Bundle alongside table views and scheduling presets."}
+        </p>
+      </div>
 
       <div className="docs-theme-studio__import">
         <div>
@@ -919,6 +944,7 @@ type RecipeDefinition = {
   category: Exclude<RecipeCategory, "all">;
   components: string[];
   description: string;
+  id: string;
   states: RecipeState[];
   title: string;
 };
@@ -967,6 +993,8 @@ function RecipeCard({
 
 function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh: boolean }) {
   const [category, setCategory] = React.useState<RecipeCategory>("all");
+  const [bundleRecipeIds, setBundleRecipeIds] = React.useState(["operations-table", "campaign-launch"]);
+  const [bundleImportText, setBundleImportText] = React.useState("");
   const recipeLocale = zh ? "zh-CN" : "en";
   const launchDateRangePresets = React.useMemo(() => createPinepostDateRangePresets({ locale: recipeLocale, referenceDate: new Date(2026, 4, 18) }), [recipeLocale]);
   const launchTimeRangePresets = React.useMemo(() => createPinepostTimeRangePresets({ locale: recipeLocale }), [recipeLocale]);
@@ -981,6 +1009,7 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
   const recipes: RecipeDefinition[] = [
     {
       category: "data",
+      id: "operations-table",
       title: zh ? "后台表格台" : "Operations table",
       description: zh ? "带密度、列设置和状态标签的日常运营表格。" : "A daily operations table with density, column settings, and status tags.",
       components: ["Table", "TableColumnSettings", "Tag", "Button"],
@@ -1035,6 +1064,7 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
     },
     {
       category: "form",
+      id: "approval-form",
       title: zh ? "审批表单页" : "Approval form",
       description: zh ? "适合工单、申请和配置保存的紧凑表单。" : "A compact form for tickets, requests, and configuration saves.",
       components: ["Form", "FormField", "Input", "Select", "Button"],
@@ -1067,6 +1097,7 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
     },
     {
       category: "upload",
+      id: "asset-upload-wall",
       title: zh ? "素材上传墙" : "Asset upload wall",
       description: zh ? "展示自定义文件项、失败状态和手动重试入口。" : "Shows custom file items, failure states, and retry entry points.",
       components: ["Upload", "Progress", "Button", "Badge"],
@@ -1093,6 +1124,7 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
     },
     {
       category: "commerce",
+      id: "campaign-card",
       title: zh ? "活动商品卡" : "Campaign card",
       description: zh ? "适合活动页、套餐卡和小型电商模块。" : "A card pattern for campaigns, bundles, and small commerce modules.",
       components: ["Card", "Badge", "Statistic", "Button"],
@@ -1119,6 +1151,7 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
     },
     {
       category: "learning",
+      id: "learning-task",
       title: zh ? "学习任务页" : "Learning task",
       description: zh ? "把步骤、进度和反馈组合成轻学习流程。" : "Combines steps, progress, and feedback for learning flows.",
       components: ["Steps", "Progress", "Rate", "Result"],
@@ -1145,6 +1178,7 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
     },
     {
       category: "data",
+      id: "operations-dashboard",
       title: zh ? "运营仪表盘" : "Operations dashboard",
       description: zh ? "把关键指标、进度和提示压进一个可扫视面板。" : "A scannable dashboard for metrics, progress, and notes.",
       components: ["Statistic", "Progress", "Alert", "Skeleton"],
@@ -1156,6 +1190,7 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
     },
     {
       category: "commerce",
+      id: "campaign-launch",
       title: zh ? "活动发布页" : "Campaign launch",
       description: zh ? "发布前校验、倒计时和成功反馈放在同一流程里。" : "Pre-launch checks, timing, and success feedback in one flow.",
       components: ["Card", "Switch", "Timeline", "DateRangePickerPanel", "TimeRangePickerPanel"],
@@ -1167,6 +1202,7 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
     },
     {
       category: "data",
+      id: "support-queue",
       title: zh ? "客服队列页" : "Support queue",
       description: zh ? "把待处理、超时和处理完成的对话集中展示。" : "A queue for waiting, overdue, and resolved support conversations.",
       components: ["Badge", "Table", "Alert", "Button"],
@@ -1178,6 +1214,62 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
     }
   ];
   const filteredRecipes = category === "all" ? recipes : recipes.filter((recipe) => recipe.category === category);
+  const selectedBundleRecipes = recipes.filter((recipe) => bundleRecipeIds.includes(recipe.id));
+  const bundleExport = React.useMemo(
+    () =>
+      createPinepostRecipeBundle({
+        id: "spring-ops-kit",
+        name: zh ? "春日运营配方包" : "Spring operations bundle",
+        description: zh ? "主题、表格视图、排期快捷项和业务模板引用。" : "Theme, table views, scheduling shortcuts, and recipe references.",
+        recipeIds: bundleRecipeIds,
+        schedule: {
+          dateKeys: ["today"],
+          dateRangeKeys: ["last-7-days", "this-week"],
+          locale: recipeLocale,
+          referenceDate: "2026-05-18",
+          timeRangeKeys: ["morning", "full-day"]
+        },
+        tableViewPresets: createTableViewPresetExport({
+          activeKey: "ops",
+          presets: [
+            {
+              key: "ops",
+              label: zh ? "运营视图" : "Operations",
+              columnOrder: ["route", "status", "count"],
+              hiddenColumns: [],
+              sortState: { key: "route", order: "asc" }
+            },
+            {
+              key: "review",
+              label: zh ? "复核视图" : "Review",
+              columnOrder: ["status", "route", "count"],
+              hiddenColumns: ["count"],
+              sortState: { key: "count", order: "desc" }
+            }
+          ]
+        }),
+        themeCollection: createPinepostThemeCollectionExport({
+          activeId: "campaign",
+          name: zh ? "春日主题集合" : "Spring theme collection",
+          themes: [
+            { baseTheme: "calm", id: "workspace", name: zh ? "工作台" : "Workspace", tokens: {} },
+            { baseTheme: "shop", id: "campaign", name: zh ? "活动页" : "Campaign", tokens: { "--pinepost-paper": "#fff4df", "--pinepost-stamp": "#c95745" } }
+          ]
+        })
+      }),
+    [bundleRecipeIds, recipeLocale, zh]
+  );
+  const bundleJsonText = React.useMemo(() => stringifyPinepostRecipeBundle(bundleExport), [bundleExport]);
+  const bundleImportResult = React.useMemo(
+    () => bundleImportText.trim() ? parsePinepostRecipeBundle(bundleImportText) : undefined,
+    [bundleImportText]
+  );
+
+  function toggleBundleRecipe(id: string) {
+    setBundleRecipeIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+    );
+  }
 
   return (
     <section className="docs-section docs-section--guide docs-recipe-gallery">
@@ -1190,6 +1282,88 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
       <div className="docs-recipe-gallery__filters">
         <span>{zh ? "分类" : "Category"}</span>
         <Segmented value={category} onValueChange={(value) => setCategory(value as RecipeCategory)} options={categoryOptions} />
+      </div>
+
+      <div className="docs-bundle-builder" aria-label={zh ? "配方包构建器" : "Recipe Bundle Builder"}>
+        <div className="docs-bundle-builder__head">
+          <div>
+            <strong>{zh ? "Bundle Builder 配方包构建器" : "Bundle Builder"}</strong>
+            <p>{zh ? "选择业务模板后，生成可导入导出的 Recipe Bundle JSON。" : "Select product recipes and generate portable Recipe Bundle JSON."}</p>
+            <p><code>createPinepostRecipeBundle</code> / <code>parsePinepostRecipeBundle</code></p>
+          </div>
+          <Tag variant="parcel">{zh ? "配置配方" : "Config recipe"}</Tag>
+        </div>
+        <div className="docs-bundle-builder__recipes" aria-label={zh ? "选择模板" : "Select recipes"}>
+          {recipes.map((recipe) => (
+            <button
+              key={recipe.id}
+              aria-pressed={bundleRecipeIds.includes(recipe.id)}
+              onClick={() => toggleBundleRecipe(recipe.id)}
+              type="button"
+            >
+              {recipe.title}
+            </button>
+          ))}
+        </div>
+        <div className="docs-bundle-builder__summary">
+          <div>
+            <span>{zh ? "模板" : "Recipes"}</span>
+            <strong>{selectedBundleRecipes.length}</strong>
+          </div>
+          <div>
+            <span>{zh ? "主题" : "Themes"}</span>
+            <strong>{bundleExport.themeCollection?.themes.length ?? 0}</strong>
+          </div>
+          <div>
+            <span>{zh ? "表格预设" : "Table presets"}</span>
+            <strong>{bundleExport.tableViewPresets?.presets.length ?? 0}</strong>
+          </div>
+          <div>
+            <span>{zh ? "排期" : "Schedule"}</span>
+            <strong>{bundleExport.schedule?.dateRangeKeys?.length ?? 0}/{bundleExport.schedule?.timeRangeKeys?.length ?? 0}</strong>
+          </div>
+        </div>
+        <CodeBlock codeText={bundleJsonText} label={zh ? "Recipe Bundle JSON" : "Recipe Bundle JSON"} labels={labels} />
+        <div className="docs-bundle-builder__import">
+          <div>
+            <strong>{zh ? "Bundle import 预览" : "Bundle import preview"}</strong>
+            <p>{zh ? "粘贴配方包 JSON 后，预览模板、主题、表格视图和排期配置。" : "Paste bundle JSON to preview recipes, themes, table views, and schedule config."}</p>
+          </div>
+          <Textarea
+            aria-label={zh ? "Recipe Bundle JSON 输入" : "Recipe Bundle JSON input"}
+            placeholder={zh ? "粘贴 Recipe Bundle JSON" : "Paste Recipe Bundle JSON"}
+            value={bundleImportText}
+            onChange={(event) => setBundleImportText(event.target.value)}
+          />
+          <div className="docs-theme-studio__actions">
+            <Button size="sm" onClick={() => setBundleImportText(bundleJsonText)}>
+              {zh ? "填入配方包" : "Use bundle JSON"}
+            </Button>
+          </div>
+          {bundleImportResult && (
+            <div className="docs-bundle-builder__preview" role="status">
+              {bundleImportResult.issues.length > 0 ? (
+                <Alert
+                  variant="warning"
+                  title={zh ? "导入时已修正配置" : "Import adjusted"}
+                  description={bundleImportResult.issues.map((issue) => describeBundleIssue(issue, zh)).join(" ")}
+                />
+              ) : (
+                <Alert
+                  variant="success"
+                  title={zh ? "配方包可用" : "Bundle ready"}
+                  description={zh ? "JSON 可以恢复模板、主题集合、表格视图和排期配置。" : "JSON restores recipes, theme collection, table views, and schedule config."}
+                />
+              )}
+              <div className="docs-bundle-builder__summary">
+                <div><span>{zh ? "模板" : "Recipes"}</span><strong>{bundleImportResult.value?.recipeIds.length ?? 0}</strong></div>
+                <div><span>{zh ? "主题" : "Themes"}</span><strong>{bundleImportResult.themeCollection?.value?.themes.length ?? 0}</strong></div>
+                <div><span>{zh ? "表格预设" : "Table presets"}</span><strong>{bundleImportResult.tableViewPresets?.value?.presets.length ?? 0}</strong></div>
+                <div><span>{zh ? "排期 locale" : "Schedule locale"}</span><strong>{bundleImportResult.value?.schedule?.locale ?? "-"}</strong></div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="docs-recipe-gallery__grid">
@@ -2380,6 +2554,35 @@ function App() {
             ");",
             "",
             "<Table viewPresets={viewPresets} defaultViewPreset=\"ops\" />"
+          ])
+        },
+        {
+          title: zh ? "进入 Recipe Bundle" : "Add to Recipe Bundle",
+          description: zh ? "表格视图预设可以和主题集合、排期快捷项组合成一份配方包。" : "Table view presets can join theme collections and scheduling shortcuts in one bundle.",
+          preview: (
+            <div className="docs-field-grid">
+              <Alert
+                title={zh ? "表格视图已加入配方包" : "Table view added to bundle"}
+                description={zh ? "导出的 TableViewPresetExport 会作为 tableViewPresets 字段保存。" : "The exported TableViewPresetExport is saved as tableViewPresets."}
+                variant="success"
+              />
+              <Textarea readOnly aria-label={zh ? "表格配方包字段" : "Table bundle field"} value={'"tableViewPresets": { "version": 1, "activeKey": "ops", "presets": [...] }'} />
+            </div>
+          ),
+          code: code([
+            'import { createPinepostRecipeBundle, createTableViewPresetExport } from "pinepost-ui";',
+            "",
+            "const tableViewPresets = createTableViewPresetExport({",
+            '  activeKey: "ops",',
+            "  presets: viewPresets",
+            "});",
+            "",
+            "const bundle = createPinepostRecipeBundle({",
+            '  id: "ops-kit",',
+            '  name: "Ops kit",',
+            '  recipeIds: ["operations-table"],',
+            "  tableViewPresets",
+            "});"
           ])
         }
       ],
@@ -3869,8 +4072,8 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme collections, Recipe Gallery state recipes</span><Tag variant="parcel">Beta</Tag><span>Table presets, Cascader multi-select, Date/time presets, Form, TreeSelect, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "组合配方包、深层选择无障碍、发布检查自动化" : "Recipe bundles, deep selection accessibility, release checklist automation"}</span></div>,
-      code: code(["Stable: production-ready basics, theme collections, and stateful recipes", "Beta: table presets, multi-route selection, scheduling presets, and visual checks", "Planned: future refinements"]),
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme collections, Recipe Gallery state recipes</span><Tag variant="parcel">Beta</Tag><span>Recipe Bundles, Table presets, Cascader multi-select, Date/time presets, Form, TreeSelect, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "深层选择无障碍、发布检查自动化" : "Deep selection accessibility, release checklist automation"}</span></div>,
+      code: code(["Stable: production-ready basics, theme collections, and stateful recipes", "Beta: recipe bundles, table presets, multi-route selection, scheduling presets, and visual checks", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },
         { prop: "Beta", type: "status", defaultValue: "-", description: zh ? "API 已可用，继续打磨边界。" : "Usable API with active refinement." },
@@ -3906,7 +4109,7 @@ function App() {
         {
           id: "recipes",
           label: zh ? "业务模板" : "Recipe Gallery",
-          searchText: "业务模板 Recipe Gallery loading 上传 dashboard commerce upload form data learning preset 排期 scheduling 商业 学习"
+          searchText: "业务模板 Recipe Gallery recipe bundle Bundle Builder 配方包 loading 上传 dashboard commerce upload form data learning preset 排期 scheduling 商业 学习"
         },
         ...visibleDocs(labels.groups.guide)
       ]
@@ -3944,8 +4147,8 @@ function App() {
     recipes: {
       title: zh ? "Recipe Gallery 业务模板" : "Recipe Gallery",
       description: zh
-        ? "面向真实页面的组合模板，带预览、组件清单和可复制代码。"
-        : "Product-ready compositions with previews, component lists, and copyable code."
+        ? "面向真实页面的组合模板，带预览、组件清单、配方包和可复制代码。"
+        : "Product-ready compositions with previews, component lists, recipe bundles, and copyable code."
     }
   };
   const selectedGuidePanel = selectedId in guidePanels ? guidePanels[selectedId as GuidePanelId] : guidePanels.theme;

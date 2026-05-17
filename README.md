@@ -114,6 +114,9 @@ automation.
 The v0.17 expansion adds Cascader multiple path selection and scheduling preset
 helpers for date, date range, and time range workflows.
 
+The v0.18 expansion adds portable Recipe Bundle helpers that combine theme
+collections, table view presets, scheduling keys, and recipe references.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, copyable recipes, and API table.
 

@@ -31,5 +31,17 @@ export type {
   PinepostThemeValidationCode,
   PinepostThemeValidationIssue
 } from "./theme";
+export {
+  createPinepostRecipeBundle,
+  parsePinepostRecipeBundle,
+  stringifyPinepostRecipeBundle
+} from "./recipe-bundle";
+export type {
+  PinepostRecipeBundleExport,
+  PinepostRecipeBundleParseResult,
+  PinepostRecipeBundleScheduleConfig,
+  PinepostRecipeBundleValidationCode,
+  PinepostRecipeBundleValidationIssue
+} from "./recipe-bundle";
 
 export * from "./components";

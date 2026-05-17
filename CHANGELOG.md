@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.0
+
+- Added portable Recipe Bundle helpers for saving theme collections, table view presets, schedule config, and recipe references.
+- Added stable shortcut keys to Pinepost date, date range, and time range preset helpers.
+- Expanded Recipe Gallery with Bundle Builder, import preview, and searchable recipe bundle documentation.
+- Updated Theme Studio, Table, Coverage, and docs smoke coverage for bundle workflows.
+
 ## 0.17.0
 
 - Added multiple path selection for Cascader while preserving the existing single path workflow.

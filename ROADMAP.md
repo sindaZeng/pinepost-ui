@@ -5,8 +5,8 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 ## Near Term
 
 - Expand visual baseline review with more component detail pages.
-- Add saved recipe bundles that combine Theme Studio collections, Table presets, and scheduling presets.
 - Add more screen reader affordances for deep selection workflows.
+- Add saved bundle handoff examples for commerce launches and learning flows.
 
 ## Mid Term
 

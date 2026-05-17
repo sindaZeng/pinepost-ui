@@ -6,6 +6,6 @@
     "declarationMap": true,
     "emitDeclarationOnly": false
   },
-  "include": ["src/index.ts", "src/components", "src/pinepost-provider.tsx", "src/locale.ts", "src/theme.ts", "src/lib"],
+  "include": ["src/index.ts", "src/components", "src/pinepost-provider.tsx", "src/locale.ts", "src/recipe-bundle.ts", "src/theme.ts", "src/lib"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/demo", "src/test"]
 }

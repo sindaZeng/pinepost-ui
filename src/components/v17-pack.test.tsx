@@ -103,16 +103,18 @@ describe("Pinepost UI v0.17 pack", () => {
     const timeRangePresets = createPinepostTimeRangePresets({ locale: "zh-CN" });
 
     expect(datePresets.map((item) => item.label)).toEqual(["今天", "明天"]);
+    expect(datePresets.map((item) => item.key)).toEqual(["today", "tomorrow"]);
     expect(typeof datePresets[0].value === "function" ? datePresets[0].value() : datePresets[0].value).toEqual(new Date(2026, 4, 18));
     expect(dateRangePresets.map((item) => item.label)).toEqual(["Last 7 days", "This week"]);
+    expect(dateRangePresets.map((item) => item.key)).toEqual(["last-7-days", "this-week"]);
     expect(typeof dateRangePresets[0].value === "function" ? dateRangePresets[0].value() : dateRangePresets[0].value).toEqual([
       new Date(2026, 4, 12),
       new Date(2026, 4, 18)
     ]);
     expect(timeRangePresets).toEqual([
-      { label: "上午", value: ["09:00", "12:00"] },
-      { label: "下午", value: ["13:00", "18:00"] },
-      { label: "全天", value: ["09:00", "18:00"] }
+      { key: "morning", label: "上午", value: ["09:00", "12:00"] },
+      { key: "afternoon", label: "下午", value: ["13:00", "18:00"] },
+      { key: "full-day", label: "全天", value: ["09:00", "18:00"] }
     ]);
   });
 });

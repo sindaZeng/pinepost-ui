@@ -89,6 +89,7 @@ export const ColorPickerPanel = React.forwardRef<HTMLDivElement, ColorPickerPane
 ColorPickerPanel.displayName = "ColorPickerPanel";
 
 export interface DatePickerShortcut {
+  key?: string;
   label: React.ReactNode;
   value: Date | (() => Date);
 }
@@ -205,6 +206,7 @@ DatePickerPanel.displayName = "DatePickerPanel";
 export type DateRangeValue = [Date | undefined, Date | undefined];
 
 export interface DateRangeShortcut {
+  key?: string;
   label: React.ReactNode;
   value: DateRangeValue | (() => DateRangeValue);
 }
@@ -391,6 +393,7 @@ TimePickerPanel.displayName = "TimePickerPanel";
 export type TimeRangeValue = [string | undefined, string | undefined];
 
 export interface TimeRangeShortcut {
+  key?: string;
   label: React.ReactNode;
   value: TimeRangeValue | (() => TimeRangeValue);
 }
@@ -502,8 +505,8 @@ export function createPinepostDatePresets(options: PinepostDatePresetOptions = {
   const { locale = "en", referenceDate = new Date() } = options;
   const today = startOfDay(referenceDate);
   return [
-    { label: locale === "zh-CN" ? "今天" : "Today", value: today },
-    { label: locale === "zh-CN" ? "明天" : "Tomorrow", value: addDays(today, 1) }
+    { key: "today", label: locale === "zh-CN" ? "今天" : "Today", value: today },
+    { key: "tomorrow", label: locale === "zh-CN" ? "明天" : "Tomorrow", value: addDays(today, 1) }
   ];
 }
 
@@ -512,17 +515,17 @@ export function createPinepostDateRangePresets(options: PinepostDatePresetOption
   const today = startOfDay(referenceDate);
   const weekStart = startOfWeek(today);
   return [
-    { label: locale === "zh-CN" ? "最近 7 天" : "Last 7 days", value: [addDays(today, -6), today] },
-    { label: locale === "zh-CN" ? "本周" : "This week", value: [weekStart, addDays(weekStart, 6)] }
+    { key: "last-7-days", label: locale === "zh-CN" ? "最近 7 天" : "Last 7 days", value: [addDays(today, -6), today] },
+    { key: "this-week", label: locale === "zh-CN" ? "本周" : "This week", value: [weekStart, addDays(weekStart, 6)] }
   ];
 }
 
 export function createPinepostTimeRangePresets(options: Pick<PinepostDatePresetOptions, "locale"> = {}): TimeRangeShortcut[] {
   const { locale = "en" } = options;
   return [
-    { label: locale === "zh-CN" ? "上午" : "Morning", value: ["09:00", "12:00"] },
-    { label: locale === "zh-CN" ? "下午" : "Afternoon", value: ["13:00", "18:00"] },
-    { label: locale === "zh-CN" ? "全天" : "Full day", value: ["09:00", "18:00"] }
+    { key: "morning", label: locale === "zh-CN" ? "上午" : "Morning", value: ["09:00", "12:00"] },
+    { key: "afternoon", label: locale === "zh-CN" ? "下午" : "Afternoon", value: ["13:00", "18:00"] },
+    { key: "full-day", label: locale === "zh-CN" ? "全天" : "Full day", value: ["09:00", "18:00"] }
   ];
 }
 

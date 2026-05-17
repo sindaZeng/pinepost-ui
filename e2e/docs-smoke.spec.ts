@@ -21,6 +21,7 @@ test.describe("Pinepost docs smoke", () => {
     await expect(page.locator("h1")).toHaveCount(1);
     await expect(page.getByText("业务表格配置台").first()).toBeVisible();
     await expect(page.getByText("视图预设导出").first()).toBeVisible();
+    await expect(page.getByText("进入 Recipe Bundle").first()).toBeVisible();
     await expect(page.getByText("TableColumnSettings", { exact: true })).toBeVisible();
     await expect(page.getByText("columnOrder / defaultColumnOrder")).toBeVisible();
 
@@ -95,6 +96,7 @@ test.describe("Pinepost docs smoke", () => {
     await page.getByRole("button", { name: "填入主题集合" }).click();
     await page.getByRole("button", { name: "导入集合" }).click();
     await expect(page.getByText("主题集合已导入。")).toBeVisible();
+    await expect(page.getByText("Recipe Bundle 入口")).toBeVisible();
 
     const preview = page.locator(".docs-theme-studio__preview");
     await expect(preview).toBeVisible();
@@ -116,6 +118,14 @@ test.describe("Pinepost docs smoke", () => {
     await page.getByRole("button", { name: /业务模板|Recipe Gallery/ }).click();
 
     await expect(page.locator("h1")).toHaveText(/业务模板|Recipe Gallery/);
+    await expect(page.getByText("Bundle Builder 配方包构建器")).toBeVisible();
+    await expect(page.getByText("createPinepostRecipeBundle")).toBeVisible();
+    const bundleBuilder = page.locator(".docs-bundle-builder");
+    const bundleCopyButton = bundleBuilder.getByRole("button", { name: "复制" }).first();
+    await bundleCopyButton.click();
+    await expect(bundleCopyButton).toHaveText("已复制");
+    await bundleBuilder.getByRole("button", { name: "填入配方包" }).click();
+    await expect(bundleBuilder.getByText("配方包可用")).toBeVisible();
     await expect(page.getByRole("heading", { name: "后台表格台" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "素材上传墙" })).toBeVisible();
     await expect(page.locator(".docs-recipe-card__components strong", { hasText: "组件清单" })).toHaveCount(8);
@@ -147,7 +157,7 @@ test.describe("Pinepost docs smoke", () => {
   test("finds Recipe Gallery through product workflow keywords", async ({ page }) => {
     await page.goto("/");
 
-    for (const term of ["loading", "上传", "dashboard", "commerce"]) {
+    for (const term of ["loading", "上传", "dashboard", "commerce", "bundle", "配方包", "recipe bundle"]) {
       await page.getByLabel("搜索组件").fill(term);
       await expect(page.getByRole("button", { name: /业务模板|Recipe Gallery/ })).toBeVisible();
     }
