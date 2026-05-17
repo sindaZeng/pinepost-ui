@@ -11,6 +11,7 @@ export type FormRule = {
 export interface FormRef {
   clearValidate: (names?: string | string[]) => void;
   getFieldError: (name: string) => React.ReactNode | undefined;
+  isFieldValidating: (name: string) => boolean;
   resetFields: (names?: string | string[]) => void;
   scrollToField: (name: string) => void;
   validate: () => Promise<boolean>;
@@ -27,6 +28,7 @@ type FormContextValue = {
   clearValidate: (names?: string | string[]) => void;
   errors: Record<string, React.ReactNode>;
   registerField: (name: string, element: HTMLElement | null) => () => void;
+  validating: Record<string, boolean>;
 };
 
 const FormContext = React.createContext<FormContextValue | null>(null);
@@ -45,7 +47,17 @@ export const Form = React.forwardRef<FormRef, FormProps>(
     const nativeRef = React.useRef<HTMLFormElement>(null);
     const fieldsRef = React.useRef(new Map<string, HTMLElement>());
     const [errors, setErrors] = React.useState<Record<string, React.ReactNode>>({});
+    const [validating, setValidating] = React.useState<Record<string, boolean>>({});
     const initialModelRef = React.useRef({ ...model });
+
+    function setFieldValidating(name: string, nextValidating: boolean) {
+      setValidating((current) => {
+        const next = { ...current };
+        if (nextValidating) next[name] = true;
+        else delete next[name];
+        return next;
+      });
+    }
 
     const clearValidate = React.useCallback((names?: string | string[]) => {
       setErrors((current) => {
@@ -76,14 +88,19 @@ export const Form = React.forwardRef<FormRef, FormProps>(
 
     const validateField = React.useCallback(
       async (name: string) => {
-        const error = await runFieldValidation(name);
-        setErrors((current) => {
-          const next = { ...current };
-          if (error) next[name] = error;
-          else delete next[name];
-          return next;
-        });
-        return !error;
+        setFieldValidating(name, true);
+        try {
+          const error = await runFieldValidation(name);
+          setErrors((current) => {
+            const next = { ...current };
+            if (error) next[name] = error;
+            else delete next[name];
+            return next;
+          });
+          return !error;
+        } finally {
+          setFieldValidating(name, false);
+        }
       },
       [model, rules]
     );
@@ -93,8 +110,13 @@ export const Form = React.forwardRef<FormRef, FormProps>(
       const nextErrors: Record<string, React.ReactNode> = {};
 
       for (const name of names) {
-        const error = await runFieldValidation(name);
-        if (error) nextErrors[name] = error;
+        setFieldValidating(name, true);
+        try {
+          const error = await runFieldValidation(name);
+          if (error) nextErrors[name] = error;
+        } finally {
+          setFieldValidating(name, false);
+        }
       }
 
       setErrors(nextErrors);
@@ -104,6 +126,7 @@ export const Form = React.forwardRef<FormRef, FormProps>(
     React.useImperativeHandle(ref, () => ({
       clearValidate,
       getFieldError: (name) => errors[name],
+      isFieldValidating: (name) => Boolean(validating[name]),
       resetFields: (names) => {
         clearValidate(names);
         const selectedNames = normalizeNames(names, Object.keys(initialModelRef.current));
@@ -116,7 +139,7 @@ export const Form = React.forwardRef<FormRef, FormProps>(
       scrollToField: (name) => fieldsRef.current.get(name)?.scrollIntoView({ block: "center", behavior: "smooth" }),
       validate,
       validateField
-    }), [clearValidate, errors, model, validate, validateField]);
+    }), [clearValidate, errors, model, validate, validateField, validating]);
 
     const context = React.useMemo<FormContextValue>(
       () => ({
@@ -125,9 +148,10 @@ export const Form = React.forwardRef<FormRef, FormProps>(
         registerField: (name, element) => {
           if (element) fieldsRef.current.set(name, element);
           return () => fieldsRef.current.delete(name);
-        }
+        },
+        validating
       }),
-      [clearValidate, errors]
+      [clearValidate, errors, validating]
     );
 
     return (
@@ -149,13 +173,15 @@ export interface FormFieldProps extends React.HTMLAttributes<HTMLDivElement> {
   label: React.ReactNode;
   name?: string;
   required?: boolean;
+  validatingMessage?: React.ReactNode;
 }
 
 export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
-  ({ children, className, description, error, htmlFor, label, name, required, ...props }, ref) => {
+  ({ children, className, description, error, htmlFor, label, name, required, validatingMessage, ...props }, ref) => {
     const context = React.useContext(FormContext);
     const localRef = React.useRef<HTMLDivElement>(null);
     const fieldError = (name ? context?.errors[name] : undefined) ?? error;
+    const fieldValidating = Boolean(name ? context?.validating[name] : false);
 
     React.useImperativeHandle(ref, () => localRef.current as HTMLDivElement);
 
@@ -165,13 +191,24 @@ export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
     }, [context, name]);
 
     return (
-      <div ref={localRef} className={cn("pinepost-form-field", className)} data-invalid={Boolean(fieldError)} {...props}>
+      <div
+        ref={localRef}
+        className={cn("pinepost-form-field", className)}
+        data-invalid={Boolean(fieldError)}
+        data-validating={fieldValidating || undefined}
+        {...props}
+      >
         <label className="pinepost-form-field__label" htmlFor={htmlFor}>
           {label}
           {required && <span aria-hidden="true">*</span>}
         </label>
         <div className="pinepost-form-field__control">{children}</div>
-        {description && !fieldError && <p className="pinepost-form-field__description">{description}</p>}
+        {description && !fieldError && !fieldValidating && <p className="pinepost-form-field__description">{description}</p>}
+        {fieldValidating && validatingMessage && (
+          <p className="pinepost-form-field__description" role="status">
+            {validatingMessage}
+          </p>
+        )}
         {fieldError && (
           <p className="pinepost-form-field__error" role="alert">
             {fieldError}

@@ -21,6 +21,9 @@ export interface TableSortState<T> {
   order: TableSortOrder;
 }
 
+export type TableColumnWidth = number | string;
+export type TableColumnWidthMap = Partial<Record<string, TableColumnWidth>>;
+
 export interface TableRef<T> {
   clearExpansion: () => void;
   clearSelection: () => void;
@@ -28,24 +31,33 @@ export interface TableRef<T> {
   getExpandedRows: () => T[];
   getSelectionRows: () => T[];
   getSortState: () => TableSortState<T> | undefined;
+  getVisibleColumns: () => Array<TableColumn<T>>;
   setCurrentRow: (row?: T) => void;
+  setColumnHidden: (key: keyof T | string, hidden?: boolean) => void;
+  setColumnWidth: (key: keyof T | string, width: TableColumnWidth) => void;
   sort: (key: keyof T | string, order?: TableSortOrder) => void;
   toggleRowExpansion: (row: T, expanded?: boolean) => void;
   toggleRowSelection: (row: T, selected?: boolean) => void;
 }
 
 export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
+  columnWidths?: TableColumnWidthMap;
   columns: Array<TableColumn<T>>;
   data: T[];
+  defaultColumnWidths?: TableColumnWidthMap;
   defaultExpandedRowKeys?: React.Key[];
+  defaultHiddenColumns?: Array<keyof T | string>;
   editable?: boolean;
   emptyText?: React.ReactNode;
   expandedRowKeys?: React.Key[];
   filters?: Partial<Record<string, (row: T) => boolean>>;
+  hiddenColumns?: Array<keyof T | string>;
   loading?: boolean;
   loadingText?: React.ReactNode;
   onCellClick?: (row: T, column: TableColumn<T>, rowIndex: number) => void;
   onCellEdit?: (row: T, key: keyof T | string, value: string) => void;
+  onColumnResize?: (key: keyof T | string, width: TableColumnWidth, widths: TableColumnWidthMap) => void;
+  onColumnVisibilityChange?: (hiddenColumns: string[]) => void;
   onCurrentChange?: (row?: T) => void;
   onExpandChange?: (expandedKeys: React.Key[]) => void;
   onRowClick?: (row: T, index: number) => void;
@@ -53,6 +65,7 @@ export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
   onSortChange?: (state?: TableSortState<T>) => void;
   renderExpandedRow?: (row: T, index: number) => React.ReactNode;
   rowKey?: keyof T | ((row: T, index: number) => React.Key);
+  resizableColumns?: boolean;
   selectable?: boolean;
   sortState?: TableSortState<T>;
   summary?: Partial<Record<string, React.ReactNode>> | ((rows: T[]) => Partial<Record<string, React.ReactNode>>);
@@ -78,34 +91,49 @@ function leafCount<T>(column: TableColumn<T>) {
   return flattenColumns([column]).length;
 }
 
-function columnWidthValue(width: TableColumn<object>["width"]) {
+function filterVisibleColumns<T>(columns: Array<TableColumn<T>>, hidden: Set<string>): Array<TableColumn<T>> {
+  return columns.flatMap((column) => {
+    if (column.children?.length) {
+      const children = filterVisibleColumns(column.children, hidden);
+      return children.length ? [{ ...column, children }] : [];
+    }
+
+    return hidden.has(String(column.key)) ? [] : [column];
+  });
+}
+
+function getColumnWidth<T>(column: TableColumn<T>, widths: TableColumnWidthMap) {
+  return widths[String(column.key)] ?? column.width;
+}
+
+function columnWidthValue(width: TableColumnWidth | undefined) {
   if (typeof width === "number") return `${width}px`;
   return width;
 }
 
-function numericWidth(width: TableColumn<object>["width"]) {
+function numericWidth(width: TableColumnWidth | undefined) {
   if (typeof width === "number") return width;
   if (typeof width === "string" && width.endsWith("px")) return Number(width.replace("px", "")) || 0;
   return 0;
 }
 
-function fixedOffset<T>(columns: Array<TableColumn<T>>, columnIndex: number, fixed: "left" | "right") {
+function fixedOffset<T>(columns: Array<TableColumn<T>>, columnIndex: number, fixed: "left" | "right", widths: TableColumnWidthMap) {
   if (fixed === "left") {
-    return columns.slice(0, columnIndex).filter((column) => column.fixed === "left").reduce((total, column) => total + numericWidth(column.width), 0);
+    return columns.slice(0, columnIndex).filter((column) => column.fixed === "left").reduce((total, column) => total + numericWidth(getColumnWidth(column, widths)), 0);
   }
 
-  return columns.slice(columnIndex + 1).filter((column) => column.fixed === "right").reduce((total, column) => total + numericWidth(column.width), 0);
+  return columns.slice(columnIndex + 1).filter((column) => column.fixed === "right").reduce((total, column) => total + numericWidth(getColumnWidth(column, widths)), 0);
 }
 
-function columnStyle<T>(column: TableColumn<T>, columnIndex: number, leafColumns: Array<TableColumn<T>>): React.CSSProperties {
+function columnStyle<T>(column: TableColumn<T>, columnIndex: number, leafColumns: Array<TableColumn<T>>, widths: TableColumnWidthMap): React.CSSProperties {
   const style: React.CSSProperties = {
     textAlign: column.align,
-    width: columnWidthValue(column.width as TableColumn<object>["width"])
+    width: columnWidthValue(getColumnWidth(column, widths))
   };
 
   if (column.fixed) {
     style.position = "sticky";
-    style[column.fixed] = fixedOffset(leafColumns, columnIndex, column.fixed);
+    style[column.fixed] = fixedOffset(leafColumns, columnIndex, column.fixed, widths);
     style.zIndex = 2;
   }
 
@@ -114,17 +142,23 @@ function columnStyle<T>(column: TableColumn<T>, columnIndex: number, leafColumns
 
 function TableInner<T extends object>({
   className,
+  columnWidths,
   columns,
   data,
+  defaultColumnWidths = {},
   defaultExpandedRowKeys = [],
+  defaultHiddenColumns = [],
   editable,
   emptyText = "No data",
   expandedRowKeys,
   filters,
+  hiddenColumns,
   loading,
   loadingText = "Loading",
   onCellClick,
   onCellEdit,
+  onColumnResize,
+  onColumnVisibilityChange,
   onCurrentChange,
   onExpandChange,
   onRowClick,
@@ -132,6 +166,7 @@ function TableInner<T extends object>({
   onSortChange,
   renderExpandedRow,
   rowKey,
+  resizableColumns,
   selectable,
   sortState,
   summary,
@@ -141,12 +176,18 @@ function TableInner<T extends object>({
   const [currentRowKey, setCurrentRowKey] = React.useState<React.Key | undefined>();
   const [editingCell, setEditingCell] = React.useState<{ key: keyof T | string; rowKey: React.Key } | null>(null);
   const [editDraft, setEditDraft] = React.useState("");
+  const [internalColumnWidths, setInternalColumnWidths] = React.useState<TableColumnWidthMap>(defaultColumnWidths);
   const [internalExpandedKeys, setInternalExpandedKeys] = React.useState<React.Key[]>(defaultExpandedRowKeys);
+  const [internalHiddenColumns, setInternalHiddenColumns] = React.useState<string[]>(defaultHiddenColumns.map(String));
   const [internalSortState, setInternalSortState] = React.useState<TableSortState<T> | undefined>();
   const activeSort = sortState ?? internalSortState;
   const activeExpandedKeys = expandedRowKeys ?? internalExpandedKeys;
-  const leafColumns = React.useMemo(() => flattenColumns(columns), [columns]);
-  const hasColumnGroups = columns.some((column) => Boolean(column.children?.length));
+  const activeColumnWidths = columnWidths ?? internalColumnWidths;
+  const activeHiddenColumns = hiddenColumns?.map(String) ?? internalHiddenColumns;
+  const hiddenColumnSet = React.useMemo(() => new Set(activeHiddenColumns), [activeHiddenColumns]);
+  const visibleColumnTree = React.useMemo(() => filterVisibleColumns(columns, hiddenColumnSet), [columns, hiddenColumnSet]);
+  const leafColumns = React.useMemo(() => flattenColumns(visibleColumnTree), [visibleColumnTree]);
+  const hasColumnGroups = visibleColumnTree.some((column) => Boolean(column.children?.length));
 
   function getRowKey(row: T, index: number) {
     if (typeof rowKey === "function") return rowKey(row, index);
@@ -198,6 +239,29 @@ function TableInner<T extends object>({
     setEditingCell(null);
   }
 
+  function commitColumnWidths(nextWidths: TableColumnWidthMap, key: keyof T | string, width: TableColumnWidth) {
+    if (columnWidths === undefined) setInternalColumnWidths(nextWidths);
+    onColumnResize?.(key, width, nextWidths);
+  }
+
+  function setColumnWidth(key: keyof T | string, width: TableColumnWidth) {
+    commitColumnWidths({ ...activeColumnWidths, [String(key)]: width }, key, width);
+  }
+
+  function resizeColumn(column: TableColumn<T>, delta: number) {
+    const currentWidth = numericWidth(getColumnWidth(column, activeColumnWidths)) || 120;
+    setColumnWidth(column.key, Math.max(48, currentWidth + delta));
+  }
+
+  function setColumnHidden(key: keyof T | string, hidden = true) {
+    const normalizedKey = String(key);
+    const next = hidden
+      ? Array.from(new Set([...activeHiddenColumns, normalizedKey]))
+      : activeHiddenColumns.filter((item) => item !== normalizedKey);
+    if (hiddenColumns === undefined) setInternalHiddenColumns(next);
+    onColumnVisibilityChange?.(next);
+  }
+
   function toggleSort(column: TableColumn<T>) {
     if (!column.sortable) return;
     const key = column.key;
@@ -212,12 +276,15 @@ function TableInner<T extends object>({
     getExpandedRows: () => data.filter((row, index) => activeExpandedKeys.includes(getRowKey(row, index))),
     getSelectionRows: () => data.filter((row, index) => selectedKeys.includes(getRowKey(row, index))),
     getSortState: () => activeSort,
+    getVisibleColumns: () => leafColumns,
     setCurrentRow: (row) => {
       const rowIndex = row ? data.indexOf(row) : -1;
       const nextKey = row ? getRowKey(row, rowIndex) : undefined;
       setCurrentRowKey(nextKey);
       onCurrentChange?.(row);
     },
+    setColumnHidden,
+    setColumnWidth,
     sort: (key, order = "asc") => setSort({ key, order }),
     toggleRowExpansion: toggleExpansion,
     toggleRowSelection: (row, selected) => {
@@ -226,7 +293,7 @@ function TableInner<T extends object>({
       const nextSelected = selected ?? !selectedKeys.includes(key);
       commitSelection(nextSelected ? Array.from(new Set([...selectedKeys, key])) : selectedKeys.filter((item) => item !== key));
     }
-  }), [activeExpandedKeys, activeSort, data, onCurrentChange, selectedKeys]);
+  }), [activeColumnWidths, activeExpandedKeys, activeHiddenColumns, activeSort, data, leafColumns, onCurrentChange, selectedKeys]);
 
   const extraColumnCount = (selectable ? 1 : 0) + (renderExpandedRow ? 1 : 0);
   const summaryValues = typeof summary === "function" ? summary(visibleData) : summary;
@@ -236,23 +303,36 @@ function TableInner<T extends object>({
 
     return (
       <th
+        aria-label={typeof column.title === "string" ? column.title : undefined}
         key={String(column.key)}
         colSpan={spanProps?.colSpan}
         data-fixed={fixed}
         data-group={Boolean(column.children?.length) || undefined}
         rowSpan={spanProps?.rowSpan}
-        style={column.children?.length ? { textAlign: column.align } : columnStyle(column, columnIndex, leafColumns)}
+        style={column.children?.length ? { textAlign: column.align } : columnStyle(column, columnIndex, leafColumns, activeColumnWidths)}
       >
-        {column.sortable && !column.children?.length ? (
-          <button className="pinepost-table__sort" onClick={() => toggleSort(column)} type="button">
-            {column.title}
-            <span aria-hidden="true">
-              {activeSort?.key === column.key ? (activeSort.order === "asc" ? " ↑" : " ↓") : ""}
+        <span className="pinepost-table__header-content">
+          {column.sortable && !column.children?.length ? (
+            <button className="pinepost-table__sort" onClick={() => toggleSort(column)} type="button">
+              {column.title}
+              <span aria-hidden="true">
+                {activeSort?.key === column.key ? (activeSort.order === "asc" ? " ↑" : " ↓") : ""}
+              </span>
+            </button>
+          ) : (
+            column.title
+          )}
+          {resizableColumns && !column.children?.length && (
+            <span className="pinepost-table__resize-controls">
+              <button aria-label={`Decrease ${String(column.title)} width`} onClick={() => resizeColumn(column, -16)} type="button">
+                -
+              </button>
+              <button aria-label={`Increase ${String(column.title)} width`} onClick={() => resizeColumn(column, 16)} type="button">
+                +
+              </button>
             </span>
-          </button>
-        ) : (
-          column.title
-        )}
+          )}
+        </span>
       </th>
     );
   }
@@ -266,14 +346,14 @@ function TableInner<T extends object>({
               <tr>
                 {renderExpandedRow && <th aria-label="Expand rows" rowSpan={2} />}
                 {selectable && <th aria-label="Selection" rowSpan={2} />}
-                {columns.map((column) =>
+                {visibleColumnTree.map((column) =>
                   column.children?.length
                     ? renderHeaderCell(column, -1, { colSpan: leafCount(column) })
                     : renderHeaderCell(column, leafColumns.indexOf(column), { rowSpan: 2 })
                 )}
               </tr>
               <tr>
-                {columns.flatMap((column) =>
+                {visibleColumnTree.flatMap((column) =>
                   column.children?.length ? flattenColumns(column.children).map((child) => renderHeaderCell(child, leafColumns.indexOf(child))) : []
                 )}
               </tr>
@@ -355,7 +435,7 @@ function TableInner<T extends object>({
                             setEditingCell({ rowKey: key, key: column.key });
                             setEditDraft(String(getCellValue(row, column.key) ?? ""));
                           }}
-                          style={columnStyle(column, columnIndex, leafColumns)}
+                          style={columnStyle(column, columnIndex, leafColumns, activeColumnWidths)}
                         >
                           {editing ? (
                             <input
@@ -397,7 +477,7 @@ function TableInner<T extends object>({
               {renderExpandedRow && <td />}
               {selectable && <td />}
               {leafColumns.map((column, columnIndex) => (
-                <td key={String(column.key)} data-fixed={column.fixed} style={columnStyle(column, columnIndex, leafColumns)}>
+                <td key={String(column.key)} data-fixed={column.fixed} style={columnStyle(column, columnIndex, leafColumns, activeColumnWidths)}>
                   {summaryValues[String(column.key)]}
                 </td>
               ))}

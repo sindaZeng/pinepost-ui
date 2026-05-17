@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0
+
+- Added Table column resizing, controlled/default column width maps, column visibility state, and related ref methods.
+- Added async Form validation state with `isFieldValidating` and field-level validating messages.
+- Added lazy TreeSelect loading and custom node rendering support.
+- Expanded docs and tests for dense table, async form, and tree selection workflows.
+
 ## 0.8.0
 
 - Added Table column groups, fixed left/right columns, and width support for dense data views.

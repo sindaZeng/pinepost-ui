@@ -82,6 +82,9 @@ TimePickerPanel, and DateTimePickerPanel.
 The v0.8 expansion adds dense-data refinements with Table column groups, fixed
 columns, DateRangePickerPanel, and TimeRangePickerPanel.
 
+The v0.9 expansion adds Table column resize and visibility controls, async Form
+validation state, and lazy TreeSelect loading for larger product workflows.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, and API table.
 

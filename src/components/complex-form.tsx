@@ -4,6 +4,7 @@ import { cn } from "../lib/cn";
 export interface CascaderOption {
   children?: CascaderOption[];
   disabled?: boolean;
+  isLeaf?: boolean;
   label: React.ReactNode;
   value: string;
 }
@@ -391,12 +392,15 @@ export interface TreeSelectProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   defaultExpanded?: string[];
   defaultValue?: string | string[];
   filterable?: boolean;
+  lazy?: boolean;
+  loadData?: (node: TreeSelectOption) => Promise<TreeSelectOption[]>;
   multiple?: boolean;
   onChange?: (value: string | string[]) => void;
   onNodeClick?: (node: TreeSelectOption) => void;
   onValueChange?: (value: string | string[]) => void;
   onVisibleChange?: (open: boolean) => void;
   placeholder?: React.ReactNode;
+  renderNode?: (node: TreeSelectOption) => React.ReactNode;
   value?: string | string[];
 }
 
@@ -413,12 +417,15 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
       defaultExpanded = [],
       defaultValue,
       filterable,
+      lazy,
+      loadData,
       multiple,
       onChange,
       onNodeClick,
       onValueChange,
       onVisibleChange,
       placeholder = "Select",
+      renderNode: renderNodeContent,
       value,
       ...props
     },
@@ -426,12 +433,14 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
   ) => {
     const triggerRef = React.useRef<HTMLButtonElement>(null);
     const [open, setOpen] = React.useState(false);
+    const [treeData, setTreeData] = React.useState(data);
     const [expanded, setExpanded] = React.useState(() => new Set(defaultExpanded));
+    const [loadingKeys, setLoadingKeys] = React.useState(() => new Set<string>());
     const [query, setQuery] = React.useState("");
     const fallbackValue = multiple ? [] : "";
     const [internalValue, setInternalValue] = React.useState<string | string[]>(defaultValue ?? fallbackValue);
     const currentValue = value ?? internalValue;
-    const allNodes = React.useMemo(() => flattenTreeSelect(data), [data]);
+    const allNodes = React.useMemo(() => flattenTreeSelect(treeData), [treeData]);
     const selectedValues = Array.isArray(currentValue) ? currentValue : currentValue ? [currentValue] : [];
     const selectedLabels = allNodes
       .filter((node) => selectedValues.includes(node.value))
@@ -458,8 +467,34 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
       });
     }
 
+    React.useEffect(() => setTreeData(data), [data]);
+
+    function applyChildren(nodes: TreeSelectOption[], value: string, children: TreeSelectOption[]): TreeSelectOption[] {
+      return nodes.map((node) => {
+        if (node.value === value) return { ...node, children };
+        if (node.children) return { ...node, children: applyChildren(node.children, value, children) };
+        return node;
+      });
+    }
+
+    function loadChildren(node: TreeSelectOption) {
+      if (!lazy || !loadData || node.children?.length || node.isLeaf || loadingKeys.has(node.value)) return;
+      setLoadingKeys((current) => new Set([...current, node.value]));
+      void loadData(node)
+        .then((children) => {
+          setTreeData((current) => applyChildren(current, node.value, children));
+        })
+        .finally(() => {
+          setLoadingKeys((current) => {
+            const next = new Set(current);
+            next.delete(node.value);
+            return next;
+          });
+        });
+    }
+
     function renderNode(node: TreeSelectOption, level = 0): React.ReactNode {
-      const hasChildren = Boolean(node.children?.length);
+      const hasChildren = Boolean(node.children?.length) || Boolean(lazy && !node.isLeaf);
       const isOpen = expanded.has(node.value);
       const selected = selectedValues.includes(node.value);
       const hidden = query && !optionText(node).toLowerCase().includes(query.toLowerCase());
@@ -476,6 +511,7 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
               onNodeClick?.(node);
               if (hasChildren) {
                 toggleExpanded(node);
+                loadChildren(node);
               } else if (multiple) {
                 const next = selected ? selectedValues.filter((item) => item !== node.value) : [...selectedValues, node.value];
                 commit(next);
@@ -487,9 +523,9 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
             style={{ "--pinepost-tree-level": level } as React.CSSProperties}
             type="button"
           >
-            <span aria-hidden="true">{hasChildren ? (isOpen ? "-" : "+") : ""}</span>
+            <span aria-hidden="true">{loadingKeys.has(node.value) ? "..." : hasChildren ? (isOpen ? "-" : "+") : ""}</span>
             {multiple && !hasChildren && <input readOnly checked={selected} tabIndex={-1} type="checkbox" />}
-            {node.label}
+            {renderNodeContent ? renderNodeContent(node) : node.label}
           </button>
           {hasChildren && (isOpen || query) && node.children?.map((child) => renderNode(child, level + 1))}
         </React.Fragment>
@@ -540,7 +576,7 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
                 value={query}
               />
             )}
-            <div className="pinepost-tree-select__body">{data.map((node) => renderNode(node))}</div>
+            <div className="pinepost-tree-select__body">{treeData.map((node) => renderNode(node))}</div>
           </div>
         )}
       </div>

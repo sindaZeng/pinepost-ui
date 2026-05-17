@@ -645,16 +645,20 @@ function App() {
       code: code([
         'import { Form, FormField, Input } from "pinepost-ui";',
         "",
-        "<Form>",
-        '  <FormField label="收件处" required description="用于路线分配。">',
+        "<Form model={model} rules={rules}>",
+        '  <FormField name="desk" label="收件处" required validatingMessage="检查桌台中...">',
         '    <Input placeholder="苔藓桌" />',
         "  </FormField>",
         "</Form>"
       ]),
       api: [
         { prop: "layout", type: '"vertical" | "horizontal" | "inline"', defaultValue: "vertical", description: zh ? "表单布局。" : "Form layout." },
+        { prop: "model", type: "Record<string, unknown>", defaultValue: "{}", description: zh ? "字段数据模型。" : "Field data model." },
+        { prop: "rules", type: "Record<string, FormRule[]>", defaultValue: "{}", description: zh ? "同步或异步校验规则。" : "Sync or async validation rules." },
         { prop: "description", type: "ReactNode", defaultValue: "-", description: zh ? "字段说明。" : "Field hint." },
-        { prop: "error", type: "ReactNode", defaultValue: "-", description: zh ? "字段错误提示。" : "Field error." }
+        { prop: "error", type: "ReactNode", defaultValue: "-", description: zh ? "字段错误提示。" : "Field error." },
+        { prop: "validatingMessage", type: "ReactNode", defaultValue: "-", description: zh ? "异步校验中提示。" : "Message shown while async validation is running." },
+        { prop: "validate / validateField / isFieldValidating", type: "FormRef methods", defaultValue: "-", description: zh ? "命令式校验和校验中状态读取。" : "Imperative validation and validating-state lookup." }
       ]
     },
     {
@@ -816,14 +820,20 @@ function App() {
       id: "tree-select",
       group: labels.groups.form,
       title: zh ? "TreeSelect 树形选择" : "TreeSelect",
-      description: zh ? "树结构选择器，支持单选、多选、筛选、清空和节点点击事件。" : "Tree selector with single or multiple selection, filtering, clear action, and node events.",
+      description: zh ? "树结构选择器，支持单选、多选、筛选、懒加载、自定义节点和节点点击事件。" : "Tree selector with single or multiple selection, filtering, lazy loading, custom nodes, and node events.",
       preview: (
         <TreeSelect
           clearable
-          data={routeOptions}
-          defaultExpanded={["north"]}
+          data={[{ value: "routes", label: zh ? "路线分组" : "Route group" }]}
           filterable
+          lazy
+          loadData={async () => [
+            { value: "cedar", label: zh ? "雪松桌" : "Cedar desk", isLeaf: true },
+            { value: "moss", label: zh ? "苔藓桌" : "Moss desk", isLeaf: true }
+          ]}
           onValueChange={setTreeSelectValue}
+          placeholder={zh ? "选择路线" : "Choose route"}
+          renderNode={(node) => <span>{node.label}</span>}
           value={treeSelectValue}
         />
       ),
@@ -833,7 +843,10 @@ function App() {
         "<TreeSelect",
         "  clearable",
         "  filterable",
+        "  lazy",
         "  data={routeOptions}",
+        "  loadData={loadRouteChildren}",
+        "  renderNode={(node) => <span>{node.label}</span>}",
         "  value={value}",
         "  onValueChange={setValue}",
         "/>"
@@ -845,7 +858,18 @@ function App() {
           rows: [
             { prop: "data", type: "TreeSelectOption[]", defaultValue: "[]", description: zh ? "树节点。" : "Tree nodes." },
             { prop: "multiple", type: "boolean", defaultValue: "false", description: zh ? "启用多选。" : "Enables multiple selection." },
-            { prop: "defaultExpanded", type: "string[]", defaultValue: "[]", description: zh ? "默认展开节点。" : "Initially expanded nodes." }
+            { prop: "defaultExpanded", type: "string[]", defaultValue: "[]", description: zh ? "默认展开节点。" : "Initially expanded nodes." },
+            { prop: "lazy", type: "boolean", defaultValue: "false", description: zh ? "展开无子节点的分支时懒加载。" : "Loads branch children when an empty branch opens." },
+            { prop: "loadData", type: "(node) => Promise<TreeSelectOption[]>", defaultValue: "-", description: zh ? "懒加载节点数据。" : "Loads lazy node children." },
+            { prop: "renderNode", type: "(node) => ReactNode", defaultValue: "-", description: zh ? "自定义节点内容。" : "Custom node content." }
+          ]
+        },
+        {
+          title: labels.options,
+          rows: [
+            { prop: "TreeSelectOption.children", type: "TreeSelectOption[]", defaultValue: "-", description: zh ? "子节点。" : "Child nodes." },
+            { prop: "TreeSelectOption.disabled", type: "boolean", defaultValue: "false", description: zh ? "禁用节点。" : "Disabled node." },
+            { prop: "TreeSelectOption.isLeaf", type: "boolean", defaultValue: "false", description: zh ? "标记为叶子节点，懒加载时不会继续请求。" : "Marks a lazy node as a leaf." }
           ]
         },
         {
@@ -1130,6 +1154,8 @@ function App() {
           rowKey="id"
           selectable
           editable
+          resizableColumns
+          defaultColumnWidths={{ route: 140, count: 90 }}
           defaultExpandedRowKeys={["a7"]}
           renderExpandedRow={(row) => <Text>{zh ? `${row.route} 今日优先投递。` : `${row.route} ships first today.`}</Text>}
           summary={(rows) => ({ route: zh ? "合计" : "Total", count: rows.reduce((total, row) => total + row.count, 0) })}
@@ -1158,6 +1184,8 @@ function App() {
         '  rowKey="id"',
         "  selectable",
         "  editable",
+        "  resizableColumns",
+        "  defaultColumnWidths={{ route: 140, count: 90 }}",
         '  defaultExpandedRowKeys={["a7"]}',
         "  renderExpandedRow={(row) => <p>{row.route} detail</p>}",
         "  summary={(rows) => ({ count: rows.reduce((sum, row) => sum + row.count, 0) })}",
@@ -1183,7 +1211,10 @@ function App() {
             { prop: "selectable", type: "boolean", defaultValue: "false", description: zh ? "显示行选择列。" : "Shows row selection." },
             { prop: "editable", type: "boolean", defaultValue: "false", description: zh ? "允许可编辑列双击编辑。" : "Allows double-click editing on editable columns." },
             { prop: "expandedRowKeys / defaultExpandedRowKeys", type: "React.Key[]", defaultValue: "[]", description: zh ? "受控或默认展开行。" : "Controlled or default expanded rows." },
-            { prop: "summary", type: "Record | (rows) => Record", defaultValue: "-", description: zh ? "汇总行内容。" : "Summary row content." }
+            { prop: "summary", type: "Record | (rows) => Record", defaultValue: "-", description: zh ? "汇总行内容。" : "Summary row content." },
+            { prop: "resizableColumns", type: "boolean", defaultValue: "false", description: zh ? "显示列宽调整控件。" : "Shows column resize controls." },
+            { prop: "columnWidths / defaultColumnWidths", type: "Record<string, number | string>", defaultValue: "{}", description: zh ? "受控或默认列宽映射。" : "Controlled or default column width map." },
+            { prop: "hiddenColumns / defaultHiddenColumns", type: "string[]", defaultValue: "[]", description: zh ? "受控或默认隐藏列 key。" : "Controlled or default hidden column keys." }
           ]
         },
         {
@@ -1205,7 +1236,9 @@ function App() {
             { prop: "onSelectionChange", type: "(rows) => void", defaultValue: "-", description: zh ? "行选择变化。" : "Selection changes." },
             { prop: "onCurrentChange", type: "(row?) => void", defaultValue: "-", description: zh ? "当前行变化。" : "Current row changes." },
             { prop: "onCellEdit", type: "(row, key, value) => void", defaultValue: "-", description: zh ? "单元格提交编辑。" : "Cell edit is committed." },
-            { prop: "onExpandChange", type: "(keys) => void", defaultValue: "-", description: zh ? "展开行变化。" : "Expanded rows change." }
+            { prop: "onExpandChange", type: "(keys) => void", defaultValue: "-", description: zh ? "展开行变化。" : "Expanded rows change." },
+            { prop: "onColumnResize", type: "(key, width, widths) => void", defaultValue: "-", description: zh ? "列宽变化。" : "Column width changes." },
+            { prop: "onColumnVisibilityChange", type: "(keys) => void", defaultValue: "-", description: zh ? "隐藏列变化。" : "Hidden columns change." }
           ]
         },
         {
@@ -1214,7 +1247,9 @@ function App() {
             { prop: "toggleRowSelection / clearSelection", type: "ref methods", defaultValue: "-", description: zh ? "控制行选择。" : "Controls row selection." },
             { prop: "sort / clearSort", type: "ref methods", defaultValue: "-", description: zh ? "控制排序。" : "Controls sorting." },
             { prop: "toggleRowExpansion / clearExpansion", type: "ref methods", defaultValue: "-", description: zh ? "控制展开行。" : "Controls expanded rows." },
-            { prop: "getSelectionRows / getExpandedRows", type: "ref methods", defaultValue: "-", description: zh ? "读取当前状态行。" : "Reads stateful rows." }
+            { prop: "getSelectionRows / getExpandedRows", type: "ref methods", defaultValue: "-", description: zh ? "读取当前状态行。" : "Reads stateful rows." },
+            { prop: "setColumnWidth / setColumnHidden", type: "ref methods", defaultValue: "-", description: zh ? "命令式调整列宽和隐藏状态。" : "Imperatively updates column width and visibility." },
+            { prop: "getVisibleColumns", type: "ref method", defaultValue: "-", description: zh ? "读取当前可见列。" : "Reads currently visible columns." }
           ]
         }
       ]
@@ -2527,7 +2562,7 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs</span><Tag variant="parcel">Beta</Tag><span>Table, Upload, Tree, Select, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "列宽拖拽、格式化助手、视觉回归" : "Resizable columns, format helpers, visual checks"}</span></div>,
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs</span><Tag variant="parcel">Beta</Tag><span>Table, Form, Upload, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "视图配方、格式化助手、视觉回归" : "View recipes, format helpers, visual checks"}</span></div>,
       code: code(["Stable: production-ready basics", "Beta: deep interaction surfaces", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },
