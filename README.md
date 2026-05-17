@@ -67,6 +67,10 @@ FormField, InputNumber, Rate, Upload, Autocomplete, ColorPicker, DatePicker,
 DateTimePicker, TimePicker, Table, Calendar, Image, Carousel, Tree, PageHeader,
 Affix, Anchor, Backtop, Loading, Message, Notification, and MessageBox.
 
+The v0.5 expansion adds larger interaction surfaces: Cascader, Transfer,
+TreeSelect, VirtualizedSelect, InputTag, InputOTP, Mention, TimeSelect,
+VirtualizedTable, VirtualizedTree, and Tour.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, and API table.
 

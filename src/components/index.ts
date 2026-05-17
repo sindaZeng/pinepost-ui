@@ -2,6 +2,8 @@ export * from "./badge";
 export * from "./button";
 export * from "./card";
 export * from "./checkbox";
+export * from "./complex-data";
+export * from "./complex-form";
 export * from "./data-extras";
 export * from "./display";
 export * from "./dialog";

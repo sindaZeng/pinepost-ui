@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0
+
+- Added complex form components: Cascader, Transfer, TreeSelect, VirtualizedSelect, InputTag, InputOTP, Mention, and TimeSelect.
+- Added complex data and guidance components: VirtualizedTable, VirtualizedTree, and Tour.
+- Expanded the docs API tables with grouped Attributes, Options, Events, Methods, and Shortcuts sections for complex components.
+- Added interactive previews for the new complex components.
+- Added v0.5 behavior tests.
+
 ## 0.4.0
 
 - Added layout helpers: Container, Header, Aside, Main, Footer, Row, Col, Scrollbar, and Splitter.

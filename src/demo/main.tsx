@@ -16,6 +16,7 @@ import {
   Button,
   Calendar,
   Carousel,
+  Cascader,
   Card,
   CardContent,
   CardDescription,
@@ -57,12 +58,15 @@ import {
   Image,
   Input,
   InputNumber,
+  InputOTP,
+  InputTag,
   Link,
   Loading,
   Main,
   Menu,
   Message,
   MessageBox,
+  Mention,
   Notification,
   Pagination,
   PageHeader,
@@ -102,6 +106,7 @@ import {
   Text,
   Textarea,
   TimePicker,
+  TimeSelect,
   Timeline,
   Toast,
   ToastClose,
@@ -113,8 +118,14 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
+  Transfer,
   Tree,
+  TreeSelect,
+  Tour,
   Upload,
+  VirtualizedSelect,
+  VirtualizedTable,
+  VirtualizedTree,
   Watermark,
   type PinepostLocale,
   type PinepostTheme
@@ -129,8 +140,14 @@ type ApiRow = {
   description: string;
 };
 
+type ApiSection = {
+  rows: ApiRow[];
+  title: string;
+};
+
 type DocItem = {
   api: ApiRow[];
+  apiSections?: ApiSection[];
   code: string;
   description: string;
   group: string;
@@ -164,6 +181,11 @@ const copy = {
     preview: "预览",
     usage: "使用示例",
     api: "API",
+    attributes: "属性",
+    events: "事件",
+    methods: "方法",
+    options: "选项",
+    shortcuts: "快捷键",
     prop: "属性",
     type: "类型",
     defaultValue: "默认值",
@@ -196,6 +218,11 @@ const copy = {
     preview: "Preview",
     usage: "Usage",
     api: "API",
+    attributes: "Attributes",
+    events: "Events",
+    methods: "Methods",
+    options: "Options",
+    shortcuts: "Shortcuts",
     prop: "Prop",
     type: "Type",
     defaultValue: "Default",
@@ -235,31 +262,38 @@ function code(lines: string[]) {
 }
 
 function ApiTable({ item, labels }: { item: DocItem; labels: (typeof copy)["zh-CN"] }) {
+  const sections = item.apiSections ?? [{ rows: item.api, title: labels.api }];
+
   return (
-    <div className="docs-api-wrap" aria-label={`${item.title} ${labels.api}`}>
-      <table className="docs-api">
-        <thead>
-          <tr>
-            <th>{labels.prop}</th>
-            <th>{labels.type}</th>
-            <th>{labels.defaultValue}</th>
-            <th>{labels.description}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {item.api.map((row) => (
-            <tr key={row.prop}>
-              <td>
-                <code>{row.prop}</code>
-              </td>
-              <td>{row.type}</td>
-              <td>{row.defaultValue}</td>
-              <td>{row.description}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <>
+      {sections.map((section) => (
+        <div className="docs-api-wrap" aria-label={`${item.title} ${section.title}`} key={section.title}>
+          <strong className="docs-api-title">{section.title}</strong>
+          <table className="docs-api">
+            <thead>
+              <tr>
+                <th>{labels.prop}</th>
+                <th>{labels.type}</th>
+                <th>{labels.defaultValue}</th>
+                <th>{labels.description}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {section.rows.map((row) => (
+                <tr key={`${section.title}-${row.prop}`}>
+                  <td>
+                    <code>{row.prop}</code>
+                  </td>
+                  <td>{row.type}</td>
+                  <td>{row.defaultValue}</td>
+                  <td>{row.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -355,6 +389,16 @@ function App() {
   const [selectValue, setSelectValue] = React.useState("cedar");
   const [radioValue, setRadioValue] = React.useState("standard");
   const [rateValue, setRateValue] = React.useState(4);
+  const [cascaderValue, setCascaderValue] = React.useState(["north", "cedar"]);
+  const [transferValue, setTransferValue] = React.useState(["stamp"]);
+  const [treeSelectValue, setTreeSelectValue] = React.useState<string | string[]>("moss");
+  const [virtualSelectValue, setVirtualSelectValue] = React.useState("route-12");
+  const [inputTags, setInputTags] = React.useState(["优先", "路线 A7"]);
+  const [otpValue, setOtpValue] = React.useState("247");
+  const [mentionValue, setMentionValue] = React.useState("请交给 @cedar ");
+  const [timeSelectValue, setTimeSelectValue] = React.useState("09:30");
+  const [tourOpen, setTourOpen] = React.useState(false);
+  const [virtualTreeSelected, setVirtualTreeSelected] = React.useState("north-3");
   const [messageBoxOpen, setMessageBoxOpen] = React.useState(false);
   const [toastOpen, setToastOpen] = React.useState(false);
   const labels = copy[locale] as (typeof copy)["zh-CN"];
@@ -364,6 +408,58 @@ function App() {
     setToastOpen(false);
     window.setTimeout(() => setToastOpen(true), 70);
   }
+
+  const routeOptions = [
+    {
+      value: "north",
+      label: zh ? "北线" : "North line",
+      children: [
+        { value: "cedar", label: zh ? "雪松桌" : "Cedar desk" },
+        { value: "moss", label: zh ? "苔藓桌" : "Moss desk" }
+      ]
+    },
+    {
+      value: "south",
+      label: zh ? "南线" : "South line",
+      children: [
+        { value: "river", label: zh ? "河岸桌" : "River desk" },
+        { value: "window", label: zh ? "窗口桌" : "Window desk" }
+      ]
+    }
+  ];
+  const transferData = [
+    { key: "sort", label: zh ? "分拣清单" : "Sorting list", description: zh ? "准备进入待发托盘。" : "Ready for the outgoing tray." },
+    { key: "stamp", label: zh ? "盖章清单" : "Stamp list", description: zh ? "需要复核邮戳。" : "Needs stamp review." },
+    { key: "parcel", label: zh ? "包裹清单" : "Parcel list", description: zh ? "等待打包。" : "Waiting to be packed." },
+    { key: "archive", label: zh ? "归档清单" : "Archive list", description: zh ? "已完成路线。" : "Completed route." }
+  ];
+  const virtualOptions = Array.from({ length: 60 }, (_, index) => ({
+    value: `route-${index}`,
+    label: zh ? `路线 ${index}` : `Route ${index}`
+  }));
+  const virtualRows = Array.from({ length: 120 }, (_, index) => ({
+    count: (index % 9) + 1,
+    route: zh ? `路线 ${index}` : `Route ${index}`,
+    status: index % 3 === 0 ? (zh ? "复核" : "Review") : zh ? "就绪" : "Ready"
+  }));
+  const virtualTreeItems = [
+    {
+      value: "north",
+      label: zh ? "北线批次" : "North batches",
+      children: Array.from({ length: 18 }, (_, index) => ({
+        value: `north-${index}`,
+        label: zh ? `北线 ${index}` : `North ${index}`
+      }))
+    },
+    {
+      value: "south",
+      label: zh ? "南线批次" : "South batches",
+      children: Array.from({ length: 18 }, (_, index) => ({
+        value: `south-${index}`,
+        label: zh ? `南线 ${index}` : `South ${index}`
+      }))
+    }
+  ];
 
   const docs: DocItem[] = [
     {
@@ -601,6 +697,372 @@ function App() {
       ]
     },
     {
+      id: "cascader",
+      group: labels.groups.form,
+      title: zh ? "Cascader 级联选择" : "Cascader",
+      description: zh ? "多层路线选择器，支持筛选、清空、展开事件和方法调用。" : "Layered route selection with filtering, clear action, expand events, and methods.",
+      preview: (
+        <Cascader
+          clearable
+          filterable
+          onValueChange={(value) => setCascaderValue(value)}
+          options={routeOptions}
+          value={cascaderValue}
+        />
+      ),
+      code: code([
+        'import { Cascader } from "pinepost-ui";',
+        "",
+        "<Cascader",
+        "  clearable",
+        "  filterable",
+        "  options={routeOptions}",
+        "  value={value}",
+        "  onValueChange={setValue}",
+        "/>"
+      ]),
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "options", type: "CascaderOption[]", defaultValue: "[]", description: zh ? "级联节点。" : "Cascading nodes." },
+            { prop: "value", type: "string[]", defaultValue: "-", description: zh ? "受控路径值。" : "Controlled path value." },
+            { prop: "filterable", type: "boolean", defaultValue: "false", description: zh ? "启用筛选输入。" : "Enables option filtering." },
+            { prop: "showAllLevels", type: "boolean", defaultValue: "true", description: zh ? "显示完整路径或只显示末级。" : "Shows full path or only the leaf label." }
+          ]
+        },
+        {
+          title: labels.options,
+          rows: [
+            { prop: "CascaderOption", type: "{ value; label; children?; disabled? }", defaultValue: "-", description: zh ? "节点数据结构。" : "Node data shape." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onValueChange / onChange", type: "(value, selectedOptions) => void", defaultValue: "-", description: zh ? "选择完成时触发。" : "Fires when a path is selected." },
+            { prop: "onExpandChange", type: "(value: string[]) => void", defaultValue: "-", description: zh ? "展开层级变化。" : "Expanded path changes." },
+            { prop: "onVisibleChange", type: "(open: boolean) => void", defaultValue: "-", description: zh ? "面板显示状态变化。" : "Panel visibility changes." }
+          ]
+        },
+        {
+          title: labels.methods,
+          rows: [
+            { prop: "focus / blur / clear", type: "CascaderRef", defaultValue: "-", description: zh ? "聚焦、失焦和清空。" : "Focus, blur, and clear." }
+          ]
+        }
+      ]
+    },
+    {
+      id: "tree-select",
+      group: labels.groups.form,
+      title: zh ? "TreeSelect 树形选择" : "TreeSelect",
+      description: zh ? "树结构选择器，支持单选、多选、筛选、清空和节点点击事件。" : "Tree selector with single or multiple selection, filtering, clear action, and node events.",
+      preview: (
+        <TreeSelect
+          clearable
+          data={routeOptions}
+          defaultExpanded={["north"]}
+          filterable
+          onValueChange={setTreeSelectValue}
+          value={treeSelectValue}
+        />
+      ),
+      code: code([
+        'import { TreeSelect } from "pinepost-ui";',
+        "",
+        "<TreeSelect",
+        "  clearable",
+        "  filterable",
+        "  data={routeOptions}",
+        "  value={value}",
+        "  onValueChange={setValue}",
+        "/>"
+      ]),
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "data", type: "TreeSelectOption[]", defaultValue: "[]", description: zh ? "树节点。" : "Tree nodes." },
+            { prop: "multiple", type: "boolean", defaultValue: "false", description: zh ? "启用多选。" : "Enables multiple selection." },
+            { prop: "defaultExpanded", type: "string[]", defaultValue: "[]", description: zh ? "默认展开节点。" : "Initially expanded nodes." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onValueChange / onChange", type: "(value) => void", defaultValue: "-", description: zh ? "值变化。" : "Value changes." },
+            { prop: "onNodeClick", type: "(node) => void", defaultValue: "-", description: zh ? "节点点击。" : "Node click." },
+            { prop: "onVisibleChange", type: "(open) => void", defaultValue: "-", description: zh ? "面板显示变化。" : "Panel visibility changes." }
+          ]
+        },
+        {
+          title: labels.methods,
+          rows: [
+            { prop: "focus / blur / clear", type: "TreeSelectRef", defaultValue: "-", description: zh ? "聚焦、失焦和清空。" : "Focus, blur, and clear." }
+          ]
+        }
+      ]
+    },
+    {
+      id: "virtualized-select",
+      group: labels.groups.form,
+      title: zh ? "VirtualizedSelect 虚拟选择器" : "VirtualizedSelect",
+      description: zh ? "用于大量选项的选择器，只渲染当前视窗附近的条目。" : "Select for large option sets, rendering only the visible window.",
+      preview: (
+        <VirtualizedSelect
+          clearable
+          filterable
+          onValueChange={setVirtualSelectValue}
+          options={virtualOptions}
+          value={virtualSelectValue}
+        />
+      ),
+      code: code([
+        'import { VirtualizedSelect } from "pinepost-ui";',
+        "",
+        "<VirtualizedSelect",
+        "  height={220}",
+        "  itemHeight={38}",
+        "  options={largeOptions}",
+        "/>"
+      ]),
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "options", type: "Array<{ value; label; disabled? }>", defaultValue: "[]", description: zh ? "大量选项。" : "Large option list." },
+            { prop: "height", type: "number", defaultValue: "220", description: zh ? "滚动面板高度。" : "List viewport height." },
+            { prop: "itemHeight", type: "number", defaultValue: "38", description: zh ? "单项高度。" : "Option row height." },
+            { prop: "filterable", type: "boolean", defaultValue: "false", description: zh ? "启用筛选。" : "Enables filtering." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onValueChange / onChange", type: "(value: string) => void", defaultValue: "-", description: zh ? "选择变化。" : "Selection changes." }
+          ]
+        },
+        {
+          title: labels.methods,
+          rows: [
+            { prop: "focus / blur / clear", type: "CascaderRef", defaultValue: "-", description: zh ? "聚焦、失焦和清空。" : "Focus, blur, and clear." }
+          ]
+        }
+      ]
+    },
+    {
+      id: "transfer",
+      group: labels.groups.form,
+      title: zh ? "Transfer 穿梭框" : "Transfer",
+      description: zh ? "左右列表穿梭，支持筛选、默认选中、移动事件和命令式移动方法。" : "Dual-list transfer with filtering, checked state, move events, and imperative methods.",
+      preview: (
+        <Transfer
+          data={transferData}
+          filterable
+          onChange={setTransferValue}
+          titles={[zh ? "待处理" : "Inbox", zh ? "已打包" : "Packed"]}
+          value={transferValue}
+        />
+      ),
+      code: code([
+        'import { Transfer } from "pinepost-ui";',
+        "",
+        "<Transfer",
+        "  filterable",
+        "  data={items}",
+        "  value={value}",
+        "  onChange={setValue}",
+        "/>"
+      ]),
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "data", type: "TransferDataItem[]", defaultValue: "[]", description: zh ? "全部可穿梭项。" : "All transferable items." },
+            { prop: "value", type: "string[]", defaultValue: "[]", description: zh ? "右侧目标 key。" : "Target-side keys." },
+            { prop: "titles", type: "[ReactNode, ReactNode]", defaultValue: "Source / Target", description: zh ? "左右列表标题。" : "Source and target titles." },
+            { prop: "filterable", type: "boolean", defaultValue: "false", description: zh ? "启用列表筛选。" : "Enables list filtering." }
+          ]
+        },
+        {
+          title: labels.options,
+          rows: [
+            { prop: "TransferDataItem", type: "{ key; label; disabled?; description? }", defaultValue: "-", description: zh ? "穿梭项数据结构。" : "Transfer item shape." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onChange", type: "(value, direction, movedKeys) => void", defaultValue: "-", description: zh ? "移动后触发。" : "Fires after moving items." },
+            { prop: "onLeftCheckChange / onRightCheckChange", type: "(keys: string[]) => void", defaultValue: "-", description: zh ? "左右勾选变化。" : "Checked keys change." }
+          ]
+        },
+        {
+          title: labels.methods,
+          rows: [
+            { prop: "clearChecked", type: "() => void", defaultValue: "-", description: zh ? "清空勾选。" : "Clears checked items." },
+            { prop: "moveToTarget / moveToSource", type: "(keys?: string[]) => void", defaultValue: "-", description: zh ? "命令式移动。" : "Moves items imperatively." }
+          ]
+        }
+      ]
+    },
+    {
+      id: "input-tag",
+      group: labels.groups.form,
+      title: zh ? "InputTag 标签输入" : "InputTag",
+      description: zh ? "输入并管理标签，支持回车创建、退格删除、清空和最大数量。" : "Create and manage tags with Enter, Backspace, clear action, and max count.",
+      preview: <InputTag clearable max={5} onValueChange={setInputTags} value={inputTags} />,
+      code: code([
+        'import { InputTag } from "pinepost-ui";',
+        "",
+        '<InputTag value={tags} onValueChange={setTags} max={5} clearable />'
+      ]),
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "value", type: "string[]", defaultValue: "-", description: zh ? "受控标签。" : "Controlled tags." },
+            { prop: "max", type: "number", defaultValue: "-", description: zh ? "最大标签数。" : "Maximum tag count." },
+            { prop: "clearable", type: "boolean", defaultValue: "false", description: zh ? "显示清空按钮。" : "Shows clear button." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onValueChange / onChange", type: "(value: string[]) => void", defaultValue: "-", description: zh ? "标签变化。" : "Tag changes." }
+          ]
+        },
+        {
+          title: labels.shortcuts,
+          rows: [
+            { prop: "Enter", type: "keyboard", defaultValue: "-", description: zh ? "创建当前标签。" : "Creates the current tag." },
+            { prop: "Backspace", type: "keyboard", defaultValue: "-", description: zh ? "输入为空时删除末尾标签。" : "Removes the last tag when input is empty." }
+          ]
+        }
+      ]
+    },
+    {
+      id: "input-otp",
+      group: labels.groups.form,
+      title: zh ? "InputOTP 验证码输入" : "InputOTP",
+      description: zh ? "固定长度验证码输入，支持完成事件和掩码显示。" : "Fixed-length verification input with completion event and masking.",
+      preview: <InputOTP length={4} onValueChange={setOtpValue} value={otpValue} />,
+      code: code([
+        'import { InputOTP } from "pinepost-ui";',
+        "",
+        '<InputOTP length={4} value={code} onValueChange={setCode} onComplete={verify} />'
+      ]),
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "length", type: "number", defaultValue: "6", description: zh ? "输入长度。" : "Code length." },
+            { prop: "value", type: "string", defaultValue: "-", description: zh ? "受控值。" : "Controlled value." },
+            { prop: "mask", type: "boolean", defaultValue: "false", description: zh ? "隐藏输入内容。" : "Masks characters." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onValueChange / onChange", type: "(value: string) => void", defaultValue: "-", description: zh ? "输入变化。" : "Input changes." },
+            { prop: "onComplete", type: "(value: string) => void", defaultValue: "-", description: zh ? "达到长度时触发。" : "Fires when all digits are filled." }
+          ]
+        },
+        {
+          title: labels.shortcuts,
+          rows: [
+            { prop: "Backspace", type: "keyboard", defaultValue: "-", description: zh ? "空位时回到前一格。" : "Moves to the previous box when empty." }
+          ]
+        }
+      ]
+    },
+    {
+      id: "mention",
+      group: labels.groups.form,
+      title: zh ? "Mention 提及" : "Mention",
+      description: zh ? "文本域内触发建议列表，支持前缀、搜索事件和选择事件。" : "Textarea mention suggestions with prefixes, search event, and select event.",
+      preview: (
+        <Mention
+          aria-label={zh ? "路线提及" : "Route mention"}
+          onChange={setMentionValue}
+          options={[
+            { value: "cedar", label: zh ? "雪松桌" : "Cedar desk" },
+            { value: "moss", label: zh ? "苔藓桌" : "Moss desk" }
+          ]}
+          value={mentionValue}
+        />
+      ),
+      code: code([
+        'import { Mention } from "pinepost-ui";',
+        "",
+        "<Mention",
+        "  prefix=\"@\"",
+        "  options={[{ value: 'cedar', label: '雪松桌' }]}",
+        "  onSelect={(option) => console.log(option)}",
+        "/>"
+      ]),
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "options", type: "MentionOption[]", defaultValue: "[]", description: zh ? "建议项。" : "Suggestion options." },
+            { prop: "prefix", type: "string | string[]", defaultValue: "@", description: zh ? "触发前缀。" : "Trigger prefixes." },
+            { prop: "value", type: "string", defaultValue: "-", description: zh ? "受控文本。" : "Controlled text." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onSearch", type: "(pattern, prefix) => void", defaultValue: "-", description: zh ? "搜索词变化。" : "Search pattern changes." },
+            { prop: "onSelect", type: "(option, prefix) => void", defaultValue: "-", description: zh ? "选择建议项。" : "Suggestion selected." }
+          ]
+        },
+        {
+          title: labels.shortcuts,
+          rows: [
+            { prop: "@", type: "text trigger", defaultValue: "-", description: zh ? "打开提及建议。" : "Opens mention suggestions." }
+          ]
+        }
+      ]
+    },
+    {
+      id: "time-select",
+      group: labels.groups.form,
+      title: zh ? "TimeSelect 时间选择" : "TimeSelect",
+      description: zh ? "按起止时间和步长生成可选时间点。" : "Generates selectable time points from start, end, and step.",
+      preview: <TimeSelect aria-label={zh ? "配送时间" : "Delivery time"} onValueChange={setTimeSelectValue} value={timeSelectValue} />,
+      code: code([
+        'import { TimeSelect } from "pinepost-ui";',
+        "",
+        '<TimeSelect start="09:00" end="18:00" step="00:30" value={time} onValueChange={setTime} />'
+      ]),
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "start / end", type: "HH:mm", defaultValue: "09:00 / 18:00", description: zh ? "时间范围。" : "Time range." },
+            { prop: "step", type: "HH:mm", defaultValue: "00:30", description: zh ? "时间步长。" : "Time step." },
+            { prop: "value", type: "string", defaultValue: "-", description: zh ? "受控时间。" : "Controlled time." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onValueChange / onChange", type: "(value: string) => void", defaultValue: "-", description: zh ? "时间变化。" : "Time changes." }
+          ]
+        }
+      ]
+    },
+    {
       id: "table",
       group: labels.groups.display,
       title: zh ? "Table 表格" : "Table",
@@ -723,6 +1185,95 @@ function App() {
         { prop: "items", type: "TreeItem[]", defaultValue: "[]", description: zh ? "树节点。" : "Tree nodes." },
         { prop: "defaultExpanded", type: "string[]", defaultValue: "[]", description: zh ? "默认展开节点。" : "Initially expanded nodes." },
         { prop: "onSelect", type: "(value: string) => void", defaultValue: "-", description: zh ? "叶子节点选择回调。" : "Leaf selection callback." }
+      ]
+    },
+    {
+      id: "virtualized-table",
+      group: labels.groups.display,
+      title: zh ? "VirtualizedTable 虚拟表格" : "VirtualizedTable",
+      description: zh ? "面向大量行数据的表格，只渲染滚动窗口内的行。" : "A table for large row sets that renders only the visible window.",
+      preview: (
+        <VirtualizedTable
+          columns={[
+            { key: "route", title: zh ? "路线" : "Route" },
+            { key: "status", title: zh ? "状态" : "Status" },
+            { key: "count", title: zh ? "数量" : "Count", align: "right" }
+          ]}
+          data={virtualRows}
+          height={220}
+        />
+      ),
+      code: code([
+        'import { VirtualizedTable } from "pinepost-ui";',
+        "",
+        "<VirtualizedTable",
+        "  height={260}",
+        "  rowHeight={44}",
+        "  columns={columns}",
+        "  data={rows}",
+        "/>"
+      ]),
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "columns", type: "TableColumn<T>[]", defaultValue: "[]", description: zh ? "列配置。" : "Column config." },
+            { prop: "data", type: "T[]", defaultValue: "[]", description: zh ? "大量行数据。" : "Large row data." },
+            { prop: "height", type: "number", defaultValue: "260", description: zh ? "滚动区域高度。" : "Scroll viewport height." },
+            { prop: "rowHeight", type: "number", defaultValue: "44", description: zh ? "行高。" : "Row height." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onRowClick", type: "(row, index) => void", defaultValue: "-", description: zh ? "点击行。" : "Row click." }
+          ]
+        }
+      ]
+    },
+    {
+      id: "virtualized-tree",
+      group: labels.groups.display,
+      title: zh ? "VirtualizedTree 虚拟树" : "VirtualizedTree",
+      description: zh ? "面向大量节点的树控件，保持可展开和选择行为。" : "Tree for many nodes while preserving expand and select behavior.",
+      preview: (
+        <VirtualizedTree
+          defaultExpanded={["north"]}
+          height={220}
+          items={virtualTreeItems}
+          onSelect={setVirtualTreeSelected}
+          selectedValue={virtualTreeSelected}
+        />
+      ),
+      code: code([
+        'import { VirtualizedTree } from "pinepost-ui";',
+        "",
+        "<VirtualizedTree",
+        "  height={260}",
+        "  itemHeight={38}",
+        "  items={nodes}",
+        "  onSelect={setValue}",
+        "/>"
+      ]),
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "items", type: "VirtualTreeItem[]", defaultValue: "[]", description: zh ? "树节点。" : "Tree nodes." },
+            { prop: "height", type: "number", defaultValue: "260", description: zh ? "滚动区域高度。" : "Scroll viewport height." },
+            { prop: "itemHeight", type: "number", defaultValue: "38", description: zh ? "节点高度。" : "Node row height." },
+            { prop: "selectedValue", type: "string", defaultValue: "-", description: zh ? "当前选中节点。" : "Selected node." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onSelect", type: "(value, item) => void", defaultValue: "-", description: zh ? "选择叶子节点。" : "Leaf selection." },
+            { prop: "onExpandChange", type: "(expandedKeys) => void", defaultValue: "-", description: zh ? "展开集合变化。" : "Expanded keys change." }
+          ]
+        }
       ]
     },
     {
@@ -851,6 +1402,68 @@ function App() {
         { prop: "open", type: "boolean", defaultValue: "-", description: zh ? "受控打开状态。" : "Controlled open state." },
         { prop: "title", type: "ReactNode", defaultValue: "-", description: zh ? "弹框标题。" : "Box title." },
         { prop: "onConfirm", type: "() => void", defaultValue: "-", description: zh ? "确认回调。" : "Confirm callback." }
+      ]
+    },
+    {
+      id: "tour",
+      group: labels.groups.feedback,
+      title: zh ? "Tour 漫游式引导" : "Tour",
+      description: zh ? "分步骤引导用户理解页面，支持受控步骤、遮罩、关闭和完成事件。" : "Step-by-step guidance with controlled current step, mask, close event, and finish event.",
+      preview: (
+        <>
+          <Button onClick={() => setTourOpen(true)}>{zh ? "开始引导" : "Start tour"}</Button>
+          <Tour
+            onFinish={showToast}
+            onOpenChange={setTourOpen}
+            open={tourOpen}
+            steps={[
+              { title: zh ? "选择路线" : "Choose route", description: zh ? "先在表单里选择需要处理的路线。" : "Start by selecting the route to process." },
+              { title: zh ? "确认状态" : "Confirm status", description: zh ? "再确认它的分拣和盖章状态。" : "Then confirm sorting and stamp status." }
+            ]}
+          />
+        </>
+      ),
+      code: code([
+        'import { Button, Tour } from "pinepost-ui";',
+        "",
+        "<Tour",
+        "  open={open}",
+        "  onOpenChange={setOpen}",
+        "  steps={[{ title: '选择路线', description: '先选择需要处理的路线。' }]}",
+        "/>"
+      ]),
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "steps", type: "TourStep[]", defaultValue: "[]", description: zh ? "引导步骤。" : "Tour steps." },
+            { prop: "open", type: "boolean", defaultValue: "-", description: zh ? "受控打开状态。" : "Controlled open state." },
+            { prop: "current", type: "number", defaultValue: "-", description: zh ? "受控当前步骤。" : "Controlled current step." },
+            { prop: "mask", type: "boolean", defaultValue: "true", description: zh ? "显示遮罩。" : "Shows mask." }
+          ]
+        },
+        {
+          title: labels.options,
+          rows: [
+            { prop: "TourStep", type: "{ title; description?; target?; placement? }", defaultValue: "-", description: zh ? "步骤结构。" : "Step data shape." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onCurrentChange", type: "(current: number) => void", defaultValue: "-", description: zh ? "步骤变化。" : "Step changes." },
+            { prop: "onClose", type: "() => void", defaultValue: "-", description: zh ? "关闭引导。" : "Tour closes." },
+            { prop: "onFinish", type: "() => void", defaultValue: "-", description: zh ? "完成引导。" : "Tour finishes." }
+          ]
+        },
+        {
+          title: labels.shortcuts,
+          rows: [
+            { prop: "Previous / Next", type: "button", defaultValue: "-", description: zh ? "切换步骤。" : "Moves between steps." },
+            { prop: "Finish", type: "button", defaultValue: "-", description: zh ? "完成并关闭。" : "Finishes and closes." }
+          ]
+        }
       ]
     },
     {

@@ -338,6 +338,14 @@ body {
   overflow: auto;
 }
 
+.docs-api-title {
+  background: color-mix(in srgb, var(--pinepost-moss) 54%, var(--pinepost-paper-raised));
+  border-bottom: 1px dashed color-mix(in srgb, var(--pinepost-border) 78%, transparent);
+  color: var(--pinepost-leaf-dark);
+  display: block;
+  padding: 10px 14px;
+}
+
 .docs-api {
   background: var(--pinepost-paper-raised);
   border-collapse: collapse;

@@ -4,15 +4,16 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 
 ## Near Term
 
-- Harden current v0.4 components with more keyboard, focus, and edge-case tests.
-- Add advanced form components: Cascader, Transfer, Mention, InputTag, and richer validation helpers.
-- Expand the docs with per-component edge cases, disabled states, and copyable recipes.
+- Harden current v0.5 components with more keyboard, focus, and edge-case tests.
+- Add richer validation helpers and async loading states for complex form controls.
+- Expand the docs with per-component disabled states, edge cases, and copyable recipes.
 - Publish the demo to GitHub Pages from `main`.
 
 ## Mid Term
 
-- Add larger data components: advanced Table states, VirtualizedTable, VirtualizedTree, and Tour.
+- Add richer table states: fixed columns, sorting, filtering, selection, summaries, and inline editing.
 - Add date and time variants beyond the native picker wrappers.
+- Add Cascader and TreeSelect async loading, lazy nodes, and custom render slots.
 - Add theme token documentation and customization examples.
 - Add visual regression checks for the demo catalog.
 
