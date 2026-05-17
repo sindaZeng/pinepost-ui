@@ -550,32 +550,51 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
 
 TreeSelect.displayName = "TreeSelect";
 
+export interface VirtualizedSelectOption {
+  disabled?: boolean;
+  group?: React.ReactNode;
+  label: React.ReactNode;
+  value: string;
+}
+
+export interface VirtualizedSelectRef {
+  blur: () => void;
+  clear: () => void;
+  focus: () => void;
+}
+
 export interface VirtualizedSelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "defaultValue" | "onChange"> {
   clearable?: boolean;
-  defaultValue?: string;
+  defaultValue?: string | string[];
   filterable?: boolean;
   height?: number;
   itemHeight?: number;
-  onChange?: (value: string) => void;
-  onValueChange?: (value: string) => void;
-  options: Array<{ disabled?: boolean; label: React.ReactNode; value: string }>;
+  multiple?: boolean;
+  onChange?: (value: string | string[]) => void;
+  onClear?: () => void;
+  onValueChange?: (value: string | string[]) => void;
+  options: VirtualizedSelectOption[];
   placeholder?: React.ReactNode;
-  value?: string;
+  remoteMethod?: (query: string) => void;
+  value?: string | string[];
 }
 
-export const VirtualizedSelect = React.forwardRef<CascaderRef, VirtualizedSelectProps>(
+export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, VirtualizedSelectProps>(
   (
     {
       className,
       clearable,
-      defaultValue = "",
+      defaultValue,
       filterable,
       height = 220,
       itemHeight = 38,
+      multiple,
       onChange,
+      onClear,
       onValueChange,
       options,
       placeholder = "Select",
+      remoteMethod,
       value,
       ...props
     },
@@ -585,39 +604,46 @@ export const VirtualizedSelect = React.forwardRef<CascaderRef, VirtualizedSelect
     const [open, setOpen] = React.useState(false);
     const [query, setQuery] = React.useState("");
     const [scrollTop, setScrollTop] = React.useState(0);
-    const [internalValue, setInternalValue] = React.useState(defaultValue);
+    const [internalValue, setInternalValue] = React.useState<string | string[]>(defaultValue ?? (multiple ? [] : ""));
     const currentValue = value ?? internalValue;
+    const selectedValues = Array.isArray(currentValue) ? currentValue : currentValue ? [currentValue] : [];
     const visibleOptions = query
       ? options.filter((option) => String(option.label).toLowerCase().includes(query.toLowerCase()))
       : options;
-    const selected = options.find((option) => option.value === currentValue);
+    const selected = options.filter((option) => selectedValues.includes(option.value));
     const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
     const endIndex = Math.min(visibleOptions.length, startIndex + Math.ceil(height / itemHeight) + 5);
     const windowed = visibleOptions.slice(startIndex, endIndex);
+    const displayValue = selected.map((option) => (typeof option.label === "string" ? option.label : option.value)).join(", ");
 
-    function commit(nextValue: string) {
+    function commit(nextValue: string | string[]) {
       if (value === undefined) setInternalValue(nextValue);
       onValueChange?.(nextValue);
       onChange?.(nextValue);
     }
 
+    function clear() {
+      commit(multiple ? [] : "");
+      onClear?.();
+    }
+
     React.useImperativeHandle(ref, () => ({
       blur: () => triggerRef.current?.blur(),
-      clear: () => commit(""),
+      clear,
       focus: () => triggerRef.current?.focus()
     }));
 
     return (
       <div className={cn("pinepost-virtual-select", className)} {...props}>
         <button ref={triggerRef} className="pinepost-picker-trigger" onClick={() => setOpen(!open)} type="button">
-          <span data-placeholder={!selected}>{selected?.label ?? placeholder}</span>
-          {clearable && selected ? (
+          <span data-placeholder={!displayValue}>{displayValue || placeholder}</span>
+          {clearable && selectedValues.length > 0 ? (
             <span
               aria-label="Clear"
               className="pinepost-picker-trigger__clear"
               onClick={(event) => {
                 event.stopPropagation();
-                commit("");
+                clear();
               }}
               role="button"
               tabIndex={0}
@@ -634,7 +660,10 @@ export const VirtualizedSelect = React.forwardRef<CascaderRef, VirtualizedSelect
               <input
                 aria-label="Filter virtual select"
                 className="pinepost-cascader__filter"
-                onChange={(event) => setQuery(event.currentTarget.value)}
+                onChange={(event) => {
+                  setQuery(event.currentTarget.value);
+                  remoteMethod?.(event.currentTarget.value);
+                }}
                 placeholder="Filter"
                 value={query}
               />
@@ -650,13 +679,21 @@ export const VirtualizedSelect = React.forwardRef<CascaderRef, VirtualizedSelect
                     <button
                       key={option.value}
                       disabled={option.disabled}
-                      data-selected={option.value === currentValue}
+                      data-selected={selectedValues.includes(option.value)}
                       onClick={() => {
-                        commit(option.value);
-                        setOpen(false);
+                        if (multiple) {
+                          const next = selectedValues.includes(option.value)
+                            ? selectedValues.filter((item) => item !== option.value)
+                            : [...selectedValues, option.value];
+                          commit(next);
+                        } else {
+                          commit(option.value);
+                          setOpen(false);
+                        }
                       }}
                       type="button"
                     >
+                      {multiple && <input checked={selectedValues.includes(option.value)} readOnly tabIndex={-1} type="checkbox" />}
                       {option.label}
                     </button>
                   ))}

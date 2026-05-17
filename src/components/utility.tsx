@@ -1,0 +1,234 @@
+import * as React from "react";
+import { cn } from "../lib/cn";
+
+export type IconName = "mail" | "parcel" | "stamp" | "leaf" | "pin";
+
+export interface IconProps extends React.SVGAttributes<SVGSVGElement> {
+  label?: string;
+  name: IconName;
+  size?: number | string;
+}
+
+const iconPaths: Record<IconName, React.ReactNode> = {
+  leaf: <path d="M15 4C8 5 4 10 4 16c0 4 3 7 7 7 6 0 10-6 10-17-2 2-4 3-6 3Z" />,
+  mail: <path d="M4 7h16v11H4Zm1-1 7 7 7-7" />,
+  parcel: <path d="M5 8 12 4l7 4v8l-7 4-7-4Zm7-4v16M5 8l7 4 7-4" />,
+  pin: <path d="M12 3a6 6 0 0 0-6 6c0 4.5 6 12 6 12s6-7.5 6-12a6 6 0 0 0-6-6Zm0 8.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z" />,
+  stamp: <path d="M7 4h10v5l3 3v7H4v-7l3-3Zm1 9h8M8 16h6M9 7h6" />
+};
+
+export const Icon = React.forwardRef<SVGSVGElement, IconProps>(
+  ({ className, label, name, size = 24, ...props }, ref) => (
+    <svg
+      ref={ref}
+      aria-hidden={label ? undefined : true}
+      aria-label={label}
+      className={cn("pinepost-icon", className)}
+      fill="none"
+      height={size}
+      role={label ? "img" : undefined}
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      width={size}
+      {...props}
+    >
+      {iconPaths[name]}
+    </svg>
+  )
+);
+
+Icon.displayName = "Icon";
+
+export interface ColorPickerPanelProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "defaultValue" | "onChange"> {
+  defaultValue?: string;
+  label?: React.ReactNode;
+  onValueChange?: (value: string) => void;
+  presets?: string[];
+  value?: string;
+}
+
+export const ColorPickerPanel = React.forwardRef<HTMLDivElement, ColorPickerPanelProps>(
+  ({ className, defaultValue = "#4f8f5f", label = "Color", onValueChange, presets = [], value, ...props }, ref) => {
+    const [internalValue, setInternalValue] = React.useState(defaultValue);
+    const currentValue = value ?? internalValue;
+
+    function commit(nextValue: string) {
+      if (value === undefined) setInternalValue(nextValue);
+      onValueChange?.(nextValue);
+    }
+
+    return (
+      <div ref={ref} className={cn("pinepost-color-panel", className)} {...props}>
+        <label>
+          <span>{label}</span>
+          <input type="color" value={currentValue} onChange={(event) => commit(event.currentTarget.value)} />
+        </label>
+        {presets.length > 0 && (
+          <div className="pinepost-color-panel__presets">
+            {presets.map((preset) => (
+              <button
+                key={preset}
+                aria-label={preset}
+                className="pinepost-color-panel__swatch"
+                data-active={preset.toLowerCase() === currentValue.toLowerCase()}
+                onClick={() => commit(preset)}
+                style={{ "--pinepost-swatch": preset } as React.CSSProperties}
+                type="button"
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+ColorPickerPanel.displayName = "ColorPickerPanel";
+
+export interface DatePickerShortcut {
+  label: React.ReactNode;
+  value: Date | (() => Date);
+}
+
+export interface DatePickerPanelProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "defaultValue" | "onChange"> {
+  defaultValue?: Date;
+  disabledDate?: (date: Date) => boolean;
+  month?: Date;
+  onValueChange?: (value: Date) => void;
+  renderDay?: (date: Date) => React.ReactNode;
+  shortcuts?: DatePickerShortcut[];
+  value?: Date;
+  weekStartsOn?: 0 | 1;
+}
+
+function sameDate(left?: Date, right?: Date) {
+  return Boolean(
+    left &&
+      right &&
+      left.getFullYear() === right.getFullYear() &&
+      left.getMonth() === right.getMonth() &&
+      left.getDate() === right.getDate()
+  );
+}
+
+function getMonthCells(month: Date, weekStartsOn: 0 | 1) {
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const firstDay = new Date(year, monthIndex, 1);
+  const leading = (firstDay.getDay() - weekStartsOn + 7) % 7;
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const cells = [
+    ...Array.from({ length: leading }, () => undefined),
+    ...Array.from({ length: daysInMonth }, (_, index) => new Date(year, monthIndex, index + 1))
+  ];
+  return [...cells, ...Array.from({ length: (7 - (cells.length % 7)) % 7 }, () => undefined)];
+}
+
+export const DatePickerPanel = React.forwardRef<HTMLDivElement, DatePickerPanelProps>(
+  (
+    {
+      className,
+      defaultValue,
+      disabledDate,
+      month,
+      onValueChange,
+      renderDay,
+      shortcuts = [],
+      value,
+      weekStartsOn = 1,
+      ...props
+    },
+    ref
+  ) => {
+    const [internalValue, setInternalValue] = React.useState<Date | undefined>(defaultValue);
+    const selectedDate = value ?? internalValue;
+    const activeMonth = month ?? selectedDate ?? new Date();
+    const cells = getMonthCells(activeMonth, weekStartsOn);
+    const weekdays = weekStartsOn === 1 ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    function commit(nextDate: Date) {
+      if (value === undefined) setInternalValue(nextDate);
+      onValueChange?.(nextDate);
+    }
+
+    return (
+      <div ref={ref} className={cn("pinepost-date-panel", className)} {...props}>
+        <div className="pinepost-date-panel__header">
+          <strong>{activeMonth.toLocaleString(undefined, { month: "long", year: "numeric" })}</strong>
+        </div>
+        {shortcuts.length > 0 && (
+          <div className="pinepost-date-panel__shortcuts">
+            {shortcuts.map((shortcut) => (
+              <button
+                key={String(shortcut.label)}
+                type="button"
+                onClick={() => commit(typeof shortcut.value === "function" ? shortcut.value() : shortcut.value)}
+              >
+                {shortcut.label}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="pinepost-date-panel__grid" role="grid">
+          {weekdays.map((day) => (
+            <span key={day} className="pinepost-date-panel__weekday" role="columnheader">
+              {day}
+            </span>
+          ))}
+          {cells.map((date, index) =>
+            date ? (
+              <button
+                key={date.toISOString()}
+                aria-pressed={sameDate(date, selectedDate)}
+                className="pinepost-date-panel__day"
+                disabled={disabledDate?.(date)}
+                onClick={() => commit(date)}
+                type="button"
+              >
+                {renderDay ? renderDay(date) : date.getDate()}
+              </button>
+            ) : (
+              <span key={`empty-${index}`} className="pinepost-date-panel__day" data-empty role="gridcell" />
+            )
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+DatePickerPanel.displayName = "DatePickerPanel";
+
+export interface InfiniteScrollProps extends React.HTMLAttributes<HTMLDivElement> {
+  hasMore?: boolean;
+  loading?: boolean;
+  loadingLabel?: React.ReactNode;
+  onLoadMore: () => void;
+  threshold?: number;
+}
+
+export const InfiniteScroll = React.forwardRef<HTMLDivElement, InfiniteScrollProps>(
+  ({ children, className, hasMore = true, loading, loadingLabel = "Loading more", onLoadMore, threshold = 64, onScroll, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("pinepost-infinite-scroll", className)}
+      data-testid="pinepost-infinite-scroll"
+      onScroll={(event) => {
+        onScroll?.(event);
+        const node = event.currentTarget;
+        if (hasMore && !loading && node.scrollTop + node.clientHeight >= node.scrollHeight - threshold) {
+          onLoadMore();
+        }
+      }}
+      {...props}
+    >
+      {children}
+      {loading && <div className="pinepost-infinite-scroll__loading">{loadingLabel}</div>}
+    </div>
+  )
+);
+
+InfiniteScroll.displayName = "InfiniteScroll";

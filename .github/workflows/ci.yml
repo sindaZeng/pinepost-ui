@@ -34,6 +34,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify public text
+        run: pnpm verify:public-text
+
       - name: Typecheck library
         run: pnpm typecheck
 

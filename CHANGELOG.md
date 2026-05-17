@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+
+- Added utility and panel components: Icon, InfiniteScroll, ColorPickerPanel, and DatePickerPanel.
+- Expanded core APIs for Form, Table, Upload, Select, VirtualizedSelect, Tree, and VirtualizedTree with richer events and ref methods.
+- Added method-style feedback hooks for messages, notifications, and loading states.
+- Split the docs catalog further into single-component pages and added Pinepost-only color, border, and coverage guide pages.
+- Added a public text verification script to keep published materials focused on Pinepost UI.
+- Added v0.6 behavior tests.
+
 ## 0.5.0
 
 - Added complex form components: Cascader, Transfer, TreeSelect, VirtualizedSelect, InputTag, InputOTP, Mention, and TimeSelect.

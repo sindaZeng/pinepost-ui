@@ -119,3 +119,137 @@ export function MessageBox({
     </AlertDialogPrimitive.Root>
   );
 }
+
+type ServiceItem<T> = T & { id: string };
+
+function createServiceId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+export type MessageServiceInput = Omit<MessageProps, "variant"> & {
+  id?: string;
+  variant?: FeedbackVariant;
+};
+
+export interface MessageService {
+  close: (id: string) => void;
+  closeAll: () => void;
+  danger: (message: Omit<MessageServiceInput, "variant">) => string;
+  holder: React.ReactNode;
+  info: (message: Omit<MessageServiceInput, "variant">) => string;
+  open: (message: MessageServiceInput) => string;
+  success: (message: Omit<MessageServiceInput, "variant">) => string;
+  warning: (message: Omit<MessageServiceInput, "variant">) => string;
+}
+
+export function useMessageService(): MessageService {
+  const [items, setItems] = React.useState<Array<ServiceItem<MessageServiceInput>>>([]);
+
+  const close = React.useCallback((id: string) => {
+    setItems((current) => current.filter((item) => item.id !== id));
+  }, []);
+
+  const open = React.useCallback((message: MessageServiceInput) => {
+    const id = message.id ?? createServiceId("message");
+    setItems((current) => [...current, { ...message, id }]);
+    return id;
+  }, []);
+
+  const closeAll = React.useCallback(() => setItems([]), []);
+
+  const holder = (
+    <div className="pinepost-message-stack" aria-live="polite">
+      {items.map(({ id, ...message }) => (
+        <Message key={id} {...message} />
+      ))}
+    </div>
+  );
+
+  return {
+    close,
+    closeAll,
+    danger: (message) => open({ ...message, variant: "danger" }),
+    holder,
+    info: (message) => open({ ...message, variant: "info" }),
+    open,
+    success: (message) => open({ ...message, variant: "success" }),
+    warning: (message) => open({ ...message, variant: "warning" })
+  };
+}
+
+export type NotificationServiceInput = Omit<NotificationProps, "variant"> & {
+  id?: string;
+  variant?: FeedbackVariant;
+};
+
+export interface NotificationService {
+  close: (id: string) => void;
+  closeAll: () => void;
+  danger: (notification: Omit<NotificationServiceInput, "variant">) => string;
+  holder: React.ReactNode;
+  info: (notification: Omit<NotificationServiceInput, "variant">) => string;
+  open: (notification: NotificationServiceInput) => string;
+  success: (notification: Omit<NotificationServiceInput, "variant">) => string;
+  warning: (notification: Omit<NotificationServiceInput, "variant">) => string;
+}
+
+export function useNotificationService(): NotificationService {
+  const [items, setItems] = React.useState<Array<ServiceItem<NotificationServiceInput>>>([]);
+
+  const close = React.useCallback((id: string) => {
+    setItems((current) => current.filter((item) => item.id !== id));
+  }, []);
+
+  const open = React.useCallback((notification: NotificationServiceInput) => {
+    const id = notification.id ?? createServiceId("notification");
+    setItems((current) => [...current, { ...notification, id }]);
+    return id;
+  }, []);
+
+  const closeAll = React.useCallback(() => setItems([]), []);
+
+  const holder = (
+    <div className="pinepost-notification-stack" aria-live="polite">
+      {items.map(({ id, ...notification }) => (
+        <Notification key={id} {...notification} />
+      ))}
+    </div>
+  );
+
+  return {
+    close,
+    closeAll,
+    danger: (notification) => open({ ...notification, variant: "danger" }),
+    holder,
+    info: (notification) => open({ ...notification, variant: "info" }),
+    open,
+    success: (notification) => open({ ...notification, variant: "success" }),
+    warning: (notification) => open({ ...notification, variant: "warning" })
+  };
+}
+
+export interface LoadingService {
+  close: () => void;
+  holder: React.ReactNode;
+  open: (label?: string) => void;
+  setLabel: (label: string) => void;
+}
+
+export function useLoadingService(initialOpen = false, initialLabel = "Loading"): LoadingService {
+  const [open, setOpen] = React.useState(initialOpen);
+  const [label, setLabel] = React.useState(initialLabel);
+
+  return {
+    close: () => setOpen(false),
+    holder: open ? (
+      <div className="pinepost-loading-stack">
+        <Loading overlay label={label} />
+      </div>
+    ) : null,
+    open: (nextLabel) => {
+      if (nextLabel) setLabel(nextLabel);
+      setOpen(true);
+    },
+    setLabel
+  };
+}

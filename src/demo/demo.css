@@ -431,6 +431,51 @@ body {
   padding: 18px;
 }
 
+.docs-token-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.docs-token-grid span {
+  align-items: end;
+  border: 2px solid var(--pinepost-border-strong);
+  border-radius: var(--pinepost-radius-md);
+  color: var(--pinepost-ink);
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 900;
+  min-height: 82px;
+  padding: 10px;
+}
+
+.docs-border-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.docs-border-stack span,
+.docs-border-stack strong {
+  background: var(--pinepost-paper-raised);
+  border-radius: var(--pinepost-radius-md);
+  padding: 18px;
+}
+
+.docs-border-stack span {
+  border: 1px solid var(--pinepost-border);
+}
+
+.docs-border-stack strong {
+  border: 3px solid var(--pinepost-border-strong);
+}
+
+.docs-roadmap {
+  align-items: center;
+  display: grid;
+  gap: 10px 14px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
 @media (max-width: 980px) {
   .docs-app {
     grid-template-columns: 1fr;

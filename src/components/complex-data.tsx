@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "../lib/cn";
-import type { TableColumn } from "./data-extras";
+import type { TableColumn, TableRef, TableSortOrder, TableSortState } from "./data-extras";
 import type { TreeItem } from "./data-extras";
 
 export interface VirtualizedTableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
@@ -8,24 +8,56 @@ export interface VirtualizedTableProps<T> extends React.HTMLAttributes<HTMLDivEl
   data: T[];
   height?: number;
   onRowClick?: (row: T, index: number) => void;
+  onSelectionChange?: (rows: T[]) => void;
+  onSortChange?: (state?: TableSortState<T>) => void;
   rowHeight?: number;
   rowKey?: keyof T | ((row: T, index: number) => React.Key);
+  selectable?: boolean;
+  sortState?: TableSortState<T>;
 }
 
-export function VirtualizedTable<T extends object>({
+function getCellValue<T extends object>(row: T, key: keyof T | string) {
+  return (row as Record<string, React.ReactNode>)[String(key)] as React.ReactNode;
+}
+
+function defaultCompare<T extends object>(left: T, right: T, key: keyof T | string) {
+  const leftValue = getCellValue(left, key);
+  const rightValue = getCellValue(right, key);
+  if (typeof leftValue === "number" && typeof rightValue === "number") return leftValue - rightValue;
+  return String(leftValue ?? "").localeCompare(String(rightValue ?? ""));
+}
+
+function VirtualizedTableInner<T extends object>({
   className,
   columns,
   data,
   height = 260,
   onRowClick,
+  onSelectionChange,
+  onSortChange,
   rowHeight = 44,
   rowKey,
+  selectable,
+  sortState,
   ...props
-}: VirtualizedTableProps<T>) {
+}: VirtualizedTableProps<T>, ref: React.ForwardedRef<VirtualizedTableRef<T>>) {
   const [scrollTop, setScrollTop] = React.useState(0);
+  const [selectedKeys, setSelectedKeys] = React.useState<React.Key[]>([]);
+  const [internalSortState, setInternalSortState] = React.useState<TableSortState<T> | undefined>();
+  const activeSort = sortState ?? internalSortState;
+  const sortedData = React.useMemo(() => {
+    if (!activeSort) return data;
+    const column = columns.find((item) => String(item.key) === String(activeSort.key));
+    if (!column) return data;
+    const compare =
+      typeof column.sortable === "function"
+        ? column.sortable
+        : (left: T, right: T) => defaultCompare(left, right, activeSort.key);
+    return [...data].sort((left, right) => compare(left, right) * (activeSort.order === "asc" ? 1 : -1));
+  }, [activeSort, columns, data]);
   const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - 3);
-  const endIndex = Math.min(data.length, startIndex + Math.ceil(height / rowHeight) + 7);
-  const visibleRows = data.slice(startIndex, endIndex);
+  const endIndex = Math.min(sortedData.length, startIndex + Math.ceil(height / rowHeight) + 7);
+  const visibleRows = sortedData.slice(startIndex, endIndex);
 
   function getRowKey(row: T, index: number) {
     if (typeof rowKey === "function") return rowKey(row, index);
@@ -33,14 +65,52 @@ export function VirtualizedTable<T extends object>({
     return index;
   }
 
+  function commitSelection(nextKeys: React.Key[]) {
+    setSelectedKeys(nextKeys);
+    onSelectionChange?.(data.filter((row, index) => nextKeys.includes(getRowKey(row, index))));
+  }
+
+  function setSort(nextSort?: TableSortState<T>) {
+    if (sortState === undefined) setInternalSortState(nextSort);
+    onSortChange?.(nextSort);
+  }
+
+  function toggleSort(column: TableColumn<T>) {
+    if (!column.sortable) return;
+    const nextOrder: TableSortOrder = activeSort?.key === column.key && activeSort.order === "asc" ? "desc" : "asc";
+    setSort({ key: column.key, order: nextOrder });
+  }
+
+  React.useImperativeHandle(ref, () => ({
+    clearSelection: () => commitSelection([]),
+    clearSort: () => setSort(undefined),
+    getSelectionRows: () => data.filter((row, index) => selectedKeys.includes(getRowKey(row, index))),
+    getSortState: () => activeSort,
+    setCurrentRow: () => undefined,
+    sort: (key, order = "asc") => setSort({ key, order }),
+    toggleRowSelection: (row, selected) => {
+      const rowIndex = data.indexOf(row);
+      const key = getRowKey(row, rowIndex >= 0 ? rowIndex : data.length);
+      const nextSelected = selected ?? !selectedKeys.includes(key);
+      commitSelection(nextSelected ? Array.from(new Set([...selectedKeys, key])) : selectedKeys.filter((item) => item !== key));
+    }
+  }), [activeSort, data, selectedKeys]);
+
   return (
     <div className={cn("pinepost-virtual-table", className)} {...props}>
       <table className="pinepost-table">
         <thead>
           <tr>
+            {selectable && <th aria-label="Selection" />}
             {columns.map((column) => (
               <th key={String(column.key)} style={{ textAlign: column.align }}>
-                {column.title}
+                {column.sortable ? (
+                  <button className="pinepost-table__sort" onClick={() => toggleSort(column)} type="button">
+                    {column.title}
+                  </button>
+                ) : (
+                  column.title
+                )}
               </th>
             ))}
           </tr>
@@ -51,19 +121,37 @@ export function VirtualizedTable<T extends object>({
         onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
         style={{ height, "--pinepost-row-height": `${rowHeight}px` } as React.CSSProperties}
       >
-        <div style={{ height: data.length * rowHeight, position: "relative" }}>
+        <div style={{ height: sortedData.length * rowHeight, position: "relative" }}>
           <table className="pinepost-table" style={{ left: 0, position: "absolute", right: 0, top: startIndex * rowHeight }}>
             <tbody>
               {visibleRows.map((row, windowIndex) => {
                 const index = startIndex + windowIndex;
+                const key = getRowKey(row, data.indexOf(row));
+                const selected = selectedKeys.includes(key);
 
                 return (
-                  <tr key={getRowKey(row, index)} onClick={() => onRowClick?.(row, index)}>
+                  <tr key={key} data-selected={selected} onClick={() => onRowClick?.(row, index)}>
+                    {selectable && (
+                      <td>
+                        <input
+                          aria-label={`Select ${String(getCellValue(row, columns[0]?.key ?? ""))}`}
+                          checked={selected}
+                          onChange={(event) => {
+                            const nextKeys = event.currentTarget.checked
+                              ? Array.from(new Set([...selectedKeys, key]))
+                              : selectedKeys.filter((item) => item !== key);
+                            commitSelection(nextKeys);
+                          }}
+                          onClick={(event) => event.stopPropagation()}
+                          type="checkbox"
+                        />
+                      </td>
+                    )}
                     {columns.map((column) => (
                       <td key={String(column.key)} style={{ textAlign: column.align }}>
                         {column.render
                           ? column.render(row, index)
-                          : ((row as Record<string, React.ReactNode>)[String(column.key)] as React.ReactNode)}
+                          : getCellValue(row, column.key)}
                       </td>
                     ))}
                   </tr>
@@ -77,6 +165,12 @@ export function VirtualizedTable<T extends object>({
   );
 }
 
+export interface VirtualizedTableRef<T> extends TableRef<T> {}
+
+export const VirtualizedTable = React.forwardRef(VirtualizedTableInner) as <T extends object>(
+  props: VirtualizedTableProps<T> & React.RefAttributes<VirtualizedTableRef<T>>
+) => React.ReactElement;
+
 export interface VirtualTreeItem extends TreeItem {}
 
 interface FlatTreeItem extends VirtualTreeItem {
@@ -84,59 +178,118 @@ interface FlatTreeItem extends VirtualTreeItem {
 }
 
 export interface VirtualizedTreeProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "onSelect"> {
+  checkable?: boolean;
+  checkedKeys?: string[];
+  defaultCheckedKeys?: string[];
   defaultExpanded?: string[];
+  expandedKeys?: string[];
   height?: number;
   itemHeight?: number;
   items: VirtualTreeItem[];
+  onCheckChange?: (checkedKeys: string[]) => void;
   onExpandChange?: (expandedKeys: string[]) => void;
+  onNodeClick?: (item: VirtualTreeItem) => void;
   onSelect?: (value: string, item: VirtualTreeItem) => void;
   selectedValue?: string;
 }
 
-function flattenVisibleTree(items: VirtualTreeItem[], expanded: Set<string>, level = 0): FlatTreeItem[] {
+export interface VirtualizedTreeRef {
+  clearChecked: () => void;
+  filter: (query: string) => void;
+  getCheckedKeys: () => string[];
+  getExpandedKeys: () => string[];
+  setCheckedKeys: (keys: string[]) => void;
+  setExpandedKeys: (keys: string[]) => void;
+}
+
+function treeLabelText(item: VirtualTreeItem) {
+  return typeof item.label === "string" ? item.label : item.value;
+}
+
+function virtualTreeMatches(item: VirtualTreeItem, query: string): boolean {
+  if (!query) return true;
+  return treeLabelText(item).toLowerCase().includes(query.toLowerCase()) || Boolean(item.children?.some((child) => virtualTreeMatches(child, query)));
+}
+
+function flattenVisibleTree(items: VirtualTreeItem[], expanded: Set<string>, query: string, level = 0): FlatTreeItem[] {
   return items.flatMap((item) => {
+    if (!virtualTreeMatches(item, query)) return [];
     const current = { ...item, level };
     if (item.children?.length && expanded.has(item.value)) {
-      return [current, ...flattenVisibleTree(item.children, expanded, level + 1)];
+      return [current, ...flattenVisibleTree(item.children, expanded, query, level + 1)];
     }
     return [current];
   });
 }
 
-export const VirtualizedTree = React.forwardRef<HTMLDivElement, VirtualizedTreeProps>(
+export const VirtualizedTree = React.forwardRef<VirtualizedTreeRef, VirtualizedTreeProps>(
   (
     {
+      checkable,
+      checkedKeys,
       className,
+      defaultCheckedKeys = [],
       defaultExpanded = [],
+      expandedKeys,
       height = 260,
       itemHeight = 38,
       items,
+      onCheckChange,
       onExpandChange,
+      onNodeClick,
       onSelect,
       selectedValue,
       ...props
     },
     ref
   ) => {
-    const [expanded, setExpanded] = React.useState(() => new Set(defaultExpanded));
+    const rootRef = React.useRef<HTMLDivElement>(null);
+    const [internalExpanded, setInternalExpanded] = React.useState(() => new Set(defaultExpanded));
+    const [internalChecked, setInternalChecked] = React.useState(() => new Set(defaultCheckedKeys));
+    const [query, setQuery] = React.useState("");
     const [scrollTop, setScrollTop] = React.useState(0);
-    const flattened = flattenVisibleTree(items, expanded);
+    const expanded = React.useMemo(() => new Set(expandedKeys ?? Array.from(internalExpanded)), [expandedKeys, internalExpanded]);
+    const checked = React.useMemo(() => new Set(checkedKeys ?? Array.from(internalChecked)), [checkedKeys, internalChecked]);
+    const flattened = flattenVisibleTree(items, expanded, query);
     const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 3);
     const endIndex = Math.min(flattened.length, startIndex + Math.ceil(height / itemHeight) + 7);
     const visibleItems = flattened.slice(startIndex, endIndex);
 
-    function toggle(item: VirtualTreeItem) {
-      setExpanded((current) => {
-        const next = new Set(current);
-        if (next.has(item.value)) next.delete(item.value);
-        else next.add(item.value);
-        onExpandChange?.(Array.from(next));
-        return next;
-      });
+    function commitExpanded(next: Set<string>) {
+      if (expandedKeys === undefined) setInternalExpanded(next);
+      onExpandChange?.(Array.from(next));
     }
 
+    function commitChecked(next: Set<string>) {
+      if (checkedKeys === undefined) setInternalChecked(next);
+      onCheckChange?.(Array.from(next));
+    }
+
+    function toggle(item: VirtualTreeItem) {
+      const next = new Set(expanded);
+      if (next.has(item.value)) next.delete(item.value);
+      else next.add(item.value);
+      commitExpanded(next);
+    }
+
+    function toggleChecked(item: VirtualTreeItem, selected: boolean) {
+      const next = new Set(checked);
+      if (selected) next.add(item.value);
+      else next.delete(item.value);
+      commitChecked(next);
+    }
+
+    React.useImperativeHandle(ref, () => ({
+      clearChecked: () => commitChecked(new Set()),
+      filter: setQuery,
+      getCheckedKeys: () => Array.from(checked),
+      getExpandedKeys: () => Array.from(expanded),
+      setCheckedKeys: (keys) => commitChecked(new Set(keys)),
+      setExpandedKeys: (keys) => commitExpanded(new Set(keys))
+    }), [checked, expanded]);
+
     return (
-      <div ref={ref} className={cn("pinepost-virtual-tree", className)} {...props}>
+      <div ref={rootRef} className={cn("pinepost-virtual-tree", className)} {...props}>
         <div
           className="pinepost-virtual-tree__body"
           onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
@@ -154,11 +307,26 @@ export const VirtualizedTree = React.forwardRef<HTMLDivElement, VirtualizedTreeP
                     className="pinepost-virtual-tree__row"
                     data-selected={selectedValue === item.value}
                     disabled={item.disabled}
-                    onClick={() => (hasChildren ? toggle(item) : onSelect?.(item.value, item))}
+                    onClick={() => {
+                      onNodeClick?.(item);
+                      if (hasChildren) toggle(item);
+                      else onSelect?.(item.value, item);
+                    }}
                     style={{ "--pinepost-tree-level": item.level } as React.CSSProperties}
                     type="button"
                   >
                     <span aria-hidden="true">{hasChildren ? (open ? "-" : "+") : ""}</span>
+                    {checkable && (
+                      <input
+                        aria-label={treeLabelText(item)}
+                        checked={checked.has(item.value)}
+                        disabled={item.disabled}
+                        onChange={(event) => toggleChecked(item, event.currentTarget.checked)}
+                        onClick={(event) => event.stopPropagation()}
+                        readOnly={false}
+                        type="checkbox"
+                      />
+                    )}
                     {item.label}
                   </button>
                 );

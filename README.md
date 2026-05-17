@@ -71,6 +71,10 @@ The v0.5 expansion adds larger interaction surfaces: Cascader, Transfer,
 TreeSelect, VirtualizedSelect, InputTag, InputOTP, Mention, TimeSelect,
 VirtualizedTable, VirtualizedTree, and Tour.
 
+The v0.6 expansion adds utility and panel coverage with Icon, InfiniteScroll,
+ColorPickerPanel, and DatePickerPanel, plus deeper Form, Table, Upload, Select,
+Tree, virtualized data, and feedback service APIs.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, and API table.
 
