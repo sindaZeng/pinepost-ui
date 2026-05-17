@@ -7,17 +7,23 @@ export type { PinepostLocale } from "./locale";
 export {
   createPinepostThemeCss,
   createPinepostThemeClassName,
+  createPinepostThemeCollectionExport,
   createPinepostThemeExport,
   mergePinepostThemeTokens,
+  parsePinepostThemeCollectionExport,
   parsePinepostThemeExport,
   pinepostThemePresets,
   pinepostThemes,
   pinepostThemeTokenNames,
+  stringifyPinepostThemeCollectionExport,
   stringifyPinepostThemeExport,
   validatePinepostThemeTokens
 } from "./theme";
 export type {
   PinepostTheme,
+  PinepostThemeCollectionExport,
+  PinepostThemeCollectionItem,
+  PinepostThemeCollectionParseResult,
   PinepostThemeExport,
   PinepostThemeParseResult,
   PinepostThemeTokenName,

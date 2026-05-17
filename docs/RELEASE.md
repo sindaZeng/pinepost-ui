@@ -12,6 +12,12 @@ This project is prepared for three publish surfaces:
 corepack pnpm check
 ```
 
+Draft release copy from the current package version and changelog:
+
+```sh
+corepack pnpm release:draft
+```
+
 ## GitHub Pages
 
 The `Deploy Demo` workflow builds the Vite demo app and publishes it through GitHub Pages. The repository should use GitHub Actions as its Pages source.

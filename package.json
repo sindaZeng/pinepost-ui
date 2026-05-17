@@ -1,6 +1,6 @@
 {
   "name": "pinepost-ui",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "A playful forest-post themed React component library.",
   "type": "module",
   "license": "Apache-2.0",
@@ -48,6 +48,7 @@
     "check": "corepack pnpm verify:public-text && corepack pnpm typecheck && corepack pnpm typecheck:demo && corepack pnpm test && corepack pnpm build && corepack pnpm build:demo && corepack pnpm verify:demo && corepack pnpm test:e2e && corepack pnpm pack --dry-run",
     "pack:dry": "corepack pnpm pack --dry-run",
     "prepublishOnly": "corepack pnpm typecheck && corepack pnpm test && corepack pnpm build",
+    "release:draft": "node scripts/draft-release-notes.mjs",
     "preview:demo": "vite preview --outDir dist-demo --base /pinepost-ui/",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "typecheck:demo": "tsc -p tsconfig.json --noEmit",

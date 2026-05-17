@@ -546,6 +546,24 @@ body {
   gap: 10px;
 }
 
+.docs-theme-studio__collection {
+  border: 1px dashed var(--pinepost-border);
+  border-radius: var(--pinepost-radius-sm);
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.docs-theme-studio__collection-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.docs-theme-studio__collection .pinepost-textarea {
+  min-height: 96px;
+}
+
 .docs-theme-studio__message {
   background: color-mix(in srgb, var(--pinepost-sky) 18%, var(--pinepost-paper-raised));
   border: 1px dashed color-mix(in srgb, var(--pinepost-border) 84%, transparent);

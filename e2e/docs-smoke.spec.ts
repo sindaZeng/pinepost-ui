@@ -20,6 +20,7 @@ test.describe("Pinepost docs smoke", () => {
     await expect(page.locator("h1")).toHaveText("Table 表格");
     await expect(page.locator("h1")).toHaveCount(1);
     await expect(page.getByText("业务表格配置台").first()).toBeVisible();
+    await expect(page.getByText("视图预设导出").first()).toBeVisible();
     await expect(page.getByText("TableColumnSettings", { exact: true })).toBeVisible();
     await expect(page.getByText("columnOrder / defaultColumnOrder")).toBeVisible();
 
@@ -59,13 +60,20 @@ test.describe("Pinepost docs smoke", () => {
     await page.getByLabel("--pinepost-leaf").fill("#267755");
     await expect(page.getByText("--pinepost-leaf: #267755;", { exact: false })).toBeVisible();
 
-    const copyButton = page.getByRole("button", { name: "复制" }).first();
+    const copyButton = page.getByRole("button", { name: "复制", exact: true }).first();
     await copyButton.click();
-    await expect(copyButton).toHaveText("已复制");
-    await expect(page.getByText('"version": 1')).toBeVisible();
+    await expect(page.getByRole("button", { name: "已复制" }).first()).toBeVisible();
+    await expect(page.getByText('"version": 1').first()).toBeVisible();
     await page.getByRole("button", { name: "填入当前主题" }).click();
     await page.getByRole("button", { name: "导入 JSON" }).click();
     await expect(page.getByText("主题已导入。")).toBeVisible();
+    await page.getByRole("button", { name: "保存到集合" }).click();
+    await expect(page.getByText("已保存到主题集合。")).toBeVisible();
+    await page.getByRole("button", { name: "复制主题" }).click();
+    await expect(page.getByRole("button", { name: /Pinepost workspace 副本/ })).toBeVisible();
+    await page.getByRole("button", { name: "填入主题集合" }).click();
+    await page.getByRole("button", { name: "导入集合" }).click();
+    await expect(page.getByText("主题集合已导入。")).toBeVisible();
 
     const preview = page.locator(".docs-theme-studio__preview");
     await expect(preview).toBeVisible();
@@ -117,6 +125,18 @@ test.describe("Pinepost docs smoke", () => {
     for (const term of ["loading", "上传", "dashboard", "commerce"]) {
       await page.getByLabel("搜索组件").fill(term);
       await expect(page.getByRole("button", { name: /业务模板|Recipe Gallery/ })).toBeVisible();
+    }
+  });
+
+  test("finds preset workflow pages through docs search", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByLabel("搜索组件").fill("theme collection");
+    await expect(page.getByRole("button", { name: /主题工作台|Theme Studio/ })).toBeVisible();
+
+    for (const term of ["table preset", "视图预设", "release notes"]) {
+      await page.getByLabel("搜索组件").fill(term);
+      await expect(page.getByRole("button", { name: "Table 表格" })).toBeVisible();
     }
   });
 });

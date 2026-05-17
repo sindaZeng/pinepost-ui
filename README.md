@@ -107,6 +107,10 @@ The v0.15 expansion hardens Recipe Gallery with eight templates, category
 filters, stateful previews, and visual baseline checks for key documentation
 pages.
 
+The v0.16 expansion adds portable theme collections, serializable table view
+preset helpers, Theme Studio collection workflows, and release notes draft
+automation.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, copyable recipes, and API table.
 

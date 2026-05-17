@@ -50,6 +50,24 @@ export interface PinepostThemeParseResult {
   value?: PinepostThemeExport;
 }
 
+export interface PinepostThemeCollectionItem extends PinepostThemeExport {
+  id: string;
+  name: string;
+}
+
+export interface PinepostThemeCollectionExport {
+  activeId?: string;
+  name?: string;
+  themes: PinepostThemeCollectionItem[];
+  version: 1;
+}
+
+export interface PinepostThemeCollectionParseResult {
+  issues: PinepostThemeValidationIssue[];
+  tokensById: Record<string, PinepostThemeTokens>;
+  value?: PinepostThemeCollectionExport;
+}
+
 export const pinepostThemePresets: Record<PinepostTheme, PinepostThemeTokens> = {
   calm: {
     "--pinepost-paper": "#fff8ea",
@@ -284,4 +302,115 @@ export function createPinepostThemeClassName(name: string) {
     .replace(/^-+|-+$/g, "");
 
   return `pinepost-theme-${slug || "custom"}`;
+}
+
+function normalizeThemeCollectionId(value: unknown, fallback: string) {
+  if (typeof value !== "string") return fallback;
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || fallback;
+}
+
+export function createPinepostThemeCollectionExport({
+  activeId,
+  name,
+  themes
+}: {
+  activeId?: string;
+  name?: string;
+  themes: Array<{ baseTheme: PinepostTheme; id: string; name: string; tokens: Partial<PinepostThemeTokens> }>;
+}): PinepostThemeCollectionExport {
+  const items = themes.map((item, index) => {
+    const id = normalizeThemeCollectionId(item.id, `theme-${index + 1}`);
+    const themeName = item.name.trim() || id;
+    return {
+      ...createPinepostThemeExport({ baseTheme: item.baseTheme, name: themeName, tokens: item.tokens }),
+      id,
+      name: themeName
+    };
+  });
+  const knownIds = new Set(items.map((item) => item.id));
+  const normalizedActiveId = activeId ? normalizeThemeCollectionId(activeId, "") : undefined;
+  const resolvedActiveId = normalizedActiveId && knownIds.has(normalizedActiveId) ? normalizedActiveId : items[0]?.id;
+
+  return {
+    ...(resolvedActiveId ? { activeId: resolvedActiveId } : {}),
+    ...(name?.trim() ? { name: name.trim() } : {}),
+    themes: items,
+    version: 1
+  };
+}
+
+export function stringifyPinepostThemeCollectionExport(value: PinepostThemeCollectionExport) {
+  return JSON.stringify(value, null, 2);
+}
+
+export function parsePinepostThemeCollectionExport(input: string, fallbackTheme: PinepostTheme = "calm"): PinepostThemeCollectionParseResult {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(input);
+  } catch {
+    return {
+      issues: [{ code: "invalid-json", message: "Theme collection import must be valid JSON." }],
+      tokensById: {}
+    };
+  }
+
+  if (!isPlainRecord(raw) || !Array.isArray(raw.themes)) {
+    return {
+      issues: [{ code: "invalid-json", message: "Theme collection import must include a themes array." }],
+      tokensById: {}
+    };
+  }
+
+  const issues: PinepostThemeValidationIssue[] = [];
+  const themes: PinepostThemeCollectionItem[] = [];
+  const tokensById: Record<string, PinepostThemeTokens> = {};
+
+  raw.themes.forEach((item, index) => {
+    if (!isPlainRecord(item)) {
+      issues.push({ code: "invalid-json", message: "Theme collection item must be an object." });
+      return;
+    }
+
+    const id = normalizeThemeCollectionId(item.id, `theme-${index + 1}`);
+    const name = typeof item.name === "string" && item.name.trim() ? item.name.trim() : id;
+    const baseTheme = isPinepostTheme(item.baseTheme) ? item.baseTheme : fallbackTheme;
+    if (!isPinepostTheme(item.baseTheme)) {
+      issues.push({ code: "invalid-theme", message: "Theme collection item has an unknown base theme.", token: id });
+    }
+
+    const looseTokens = isPlainRecord(item.tokens) ? (item.tokens as Partial<Record<string, string>>) : {};
+    issues.push(...validatePinepostThemeTokens(looseTokens));
+    const validTokens = cleanValidTokens(normalizeKnownTokens(item.tokens));
+    themes.push({
+      baseTheme,
+      id,
+      name,
+      tokens: validTokens,
+      version: 1
+    });
+    tokensById[id] = mergePinepostThemeTokens(baseTheme, validTokens);
+  });
+
+  const activeId = typeof raw.activeId === "string" ? normalizeThemeCollectionId(raw.activeId, "") : undefined;
+  const knownIds = new Set(themes.map((item) => item.id));
+  const resolvedActiveId = activeId && knownIds.has(activeId) ? activeId : themes[0]?.id;
+  if (activeId && activeId !== resolvedActiveId) {
+    issues.push({ code: "invalid-theme", message: "Theme collection active id was not found.", token: activeId });
+  }
+
+  return {
+    issues,
+    tokensById,
+    value: {
+      ...(resolvedActiveId ? { activeId: resolvedActiveId } : {}),
+      ...(typeof raw.name === "string" && raw.name.trim() ? { name: raw.name.trim() } : {}),
+      themes,
+      version: 1
+    }
+  };
 }

@@ -80,12 +80,17 @@ import {
   PageHeader,
   PinepostProvider,
   createPinepostThemeClassName,
+  createPinepostThemeCollectionExport,
   createPinepostThemeCss,
   createPinepostThemeExport,
+  createTableViewPresetExport,
   mergePinepostThemeTokens,
+  parsePinepostThemeCollectionExport,
   parsePinepostThemeExport,
   pinepostThemePresets,
+  stringifyPinepostThemeCollectionExport,
   stringifyPinepostThemeExport,
+  stringifyTableViewPresetExport,
   Popconfirm,
   PopconfirmAction,
   PopconfirmCancel,
@@ -148,6 +153,7 @@ import {
   validatePinepostThemeTokens,
   type PinepostLocale,
   type PinepostTheme,
+  type PinepostThemeCollectionItem,
   type PinepostThemeTokenName,
   type PinepostThemeTokens,
   type PinepostThemeValidationIssue,
@@ -184,6 +190,7 @@ type DocItem = {
   id: string;
   preview: React.ReactNode;
   recipes?: DocRecipe[];
+  searchText?: string;
   title: string;
 };
 
@@ -516,10 +523,31 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
   const [themeName, setThemeName] = React.useState("Pinepost workspace");
   const [importText, setImportText] = React.useState("");
   const [importMessage, setImportMessage] = React.useState("");
+  const [collectionThemes, setCollectionThemes] = React.useState<PinepostThemeCollectionItem[]>(() => [
+    { baseTheme: theme, id: "workspace", name: "Pinepost workspace", tokens: {}, version: 1 }
+  ]);
+  const [activeThemeId, setActiveThemeId] = React.useState("workspace");
+  const [collectionImportText, setCollectionImportText] = React.useState("");
+  const [collectionMessage, setCollectionMessage] = React.useState("");
   const tokens = React.useMemo(() => mergePinepostThemeTokens(preset, overrides), [overrides, preset]);
   const tokenIssues = React.useMemo(() => validatePinepostThemeTokens(tokens), [tokens]);
   const themeExport = React.useMemo(() => createPinepostThemeExport({ baseTheme: preset, name: themeName, tokens }), [preset, themeName, tokens]);
   const jsonText = React.useMemo(() => stringifyPinepostThemeExport(themeExport), [themeExport]);
+  const collectionExport = React.useMemo(
+    () =>
+      createPinepostThemeCollectionExport({
+        activeId: activeThemeId,
+        name: "Pinepost theme collection",
+        themes: collectionThemes.map((item) => ({
+          baseTheme: item.baseTheme,
+          id: item.id,
+          name: item.name,
+          tokens: item.tokens
+        }))
+      }),
+    [activeThemeId, collectionThemes]
+  );
+  const collectionJsonText = React.useMemo(() => stringifyPinepostThemeCollectionExport(collectionExport), [collectionExport]);
   const themeClassName = React.useMemo(() => createPinepostThemeClassName(themeName), [themeName]);
   const cssText = React.useMemo(() => createPinepostThemeCss({ selector: ".pinepost-workspace", tokens }), [tokens]);
 
@@ -562,6 +590,90 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
     );
   }
 
+  function collectionItemFromCurrent(id = activeThemeId, name = themeName): PinepostThemeCollectionItem {
+    const value = createPinepostThemeCollectionExport({
+      activeId: id,
+      themes: [{ baseTheme: preset, id, name, tokens }]
+    });
+    return value.themes[0];
+  }
+
+  function loadCollectionTheme(item: PinepostThemeCollectionItem) {
+    setActiveThemeId(item.id);
+    setPreset(item.baseTheme);
+    setOverrides(item.tokens);
+    setThemeName(item.name);
+    setCollectionMessage("");
+  }
+
+  function saveCurrentThemeToCollection() {
+    const item = collectionItemFromCurrent();
+    setCollectionThemes((current) => {
+      const exists = current.some((themeItem) => themeItem.id === item.id);
+      return exists ? current.map((themeItem) => themeItem.id === item.id ? item : themeItem) : [...current, item];
+    });
+    setActiveThemeId(item.id);
+    setCollectionMessage(zh ? "已保存到主题集合。" : "Saved to theme collection.");
+  }
+
+  function nextCollectionId(seed: string) {
+    const ids = new Set(collectionThemes.map((item) => item.id));
+    let index = 1;
+    let next = `${seed}-${index}`;
+    while (ids.has(next)) {
+      index += 1;
+      next = `${seed}-${index}`;
+    }
+    return next;
+  }
+
+  function duplicateCollectionTheme() {
+    const copyName = zh ? `${themeName} 副本` : `${themeName} Copy`;
+    const copyId = nextCollectionId(`${activeThemeId || "theme"}-copy`);
+    const item = collectionItemFromCurrent(copyId, copyName);
+    setCollectionThemes((current) => [...current, item]);
+    setActiveThemeId(item.id);
+    setThemeName(item.name);
+    setCollectionMessage(zh ? "主题副本已创建。" : "Theme copy created.");
+  }
+
+  function removeCollectionTheme() {
+    if (collectionThemes.length <= 1) {
+      setCollectionMessage(zh ? "至少保留一个主题。" : "Keep at least one theme.");
+      return;
+    }
+
+    const nextThemes = collectionThemes.filter((item) => item.id !== activeThemeId);
+    const nextTheme = nextThemes[0];
+    setCollectionThemes(nextThemes);
+    if (nextTheme) loadCollectionTheme(nextTheme);
+    setCollectionMessage(zh ? "主题已移除。" : "Theme removed.");
+  }
+
+  function importCollection() {
+    if (!collectionImportText.trim()) {
+      setCollectionMessage(zh ? "请先粘贴主题集合 JSON。" : "Paste theme collection JSON first.");
+      return;
+    }
+
+    const result = parsePinepostThemeCollectionExport(collectionImportText, preset);
+    if (!result.value || result.value.themes.length === 0) {
+      setCollectionMessage(result.issues.map((issue) => describeThemeIssue(issue, zh)).join(" "));
+      return;
+    }
+
+    setCollectionThemes(result.value.themes);
+    const nextTheme = result.value.themes.find((item) => item.id === result.value?.activeId) ?? result.value.themes[0];
+    loadCollectionTheme(nextTheme);
+    setCollectionMessage(
+      result.issues.length > 0
+        ? result.issues.map((issue) => describeThemeIssue(issue, zh)).join(" ")
+        : zh
+          ? "主题集合已导入。"
+          : "Theme collection imported."
+    );
+  }
+
   return (
     <section className="docs-section docs-section--guide docs-theme-studio">
       <div className="docs-section__head">
@@ -597,6 +709,42 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
               <Button size="sm" variant="soft" onClick={() => downloadTextFile(`${themeClassName}.json`, jsonText)}>
                 {zh ? "下载 JSON" : "Download JSON"}
               </Button>
+            </div>
+            <div className="docs-theme-studio__collection">
+              <strong>{zh ? "主题集合" : "Theme collection"}</strong>
+              <div className="docs-theme-studio__collection-list" aria-label={zh ? "主题集合列表" : "Theme collection list"}>
+                {collectionThemes.map((item) => (
+                  <Button
+                    key={item.id}
+                    size="sm"
+                    variant={item.id === activeThemeId ? "soft" : "primary"}
+                    onClick={() => loadCollectionTheme(item)}
+                  >
+                    {item.name}
+                  </Button>
+                ))}
+              </div>
+              <div className="docs-theme-studio__actions">
+                <Button size="sm" onClick={saveCurrentThemeToCollection}>{zh ? "保存到集合" : "Save to collection"}</Button>
+                <Button size="sm" variant="soft" onClick={duplicateCollectionTheme}>{zh ? "复制主题" : "Duplicate theme"}</Button>
+                <Button size="sm" variant="stamp" onClick={removeCollectionTheme}>{zh ? "移除主题" : "Remove theme"}</Button>
+              </div>
+              <div className="docs-theme-studio__actions">
+                <Button size="sm" variant="parcel" onClick={() => downloadTextFile("pinepost-theme-collection.json", collectionJsonText)}>
+                  {zh ? "下载集合 JSON" : "Download collection JSON"}
+                </Button>
+                <Button size="sm" variant="soft" onClick={() => setCollectionImportText(collectionJsonText)}>
+                  {zh ? "填入主题集合" : "Use collection JSON"}
+                </Button>
+              </div>
+              <Textarea
+                aria-label={zh ? "主题集合 JSON 输入" : "Theme collection JSON input"}
+                value={collectionImportText}
+                onChange={(event) => setCollectionImportText(event.target.value)}
+                placeholder={zh ? "粘贴主题集合 JSON" : "Paste theme collection JSON"}
+              />
+              <Button size="sm" onClick={importCollection}>{zh ? "导入集合" : "Import collection"}</Button>
+              {collectionMessage && <div className="docs-theme-studio__message" role="status">{collectionMessage}</div>}
             </div>
             {tokenIssues.length > 0 && (
               <div className="docs-theme-studio__message" role="status">
@@ -689,6 +837,7 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
 
       <CodeBlock codeText={cssText} label={zh ? "CSS 变量" : "CSS variables"} labels={labels} />
       <CodeBlock codeText={jsonText} label={zh ? "主题 JSON" : "Theme JSON"} labels={labels} />
+      <CodeBlock codeText={collectionJsonText} label={zh ? "主题集合 JSON" : "Theme collection JSON"} labels={labels} />
 
       <div className="docs-theme-studio__import">
         <div>
@@ -720,6 +869,22 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td>
+                <code>createPinepostThemeCollectionExport</code>
+              </td>
+              <td>helper</td>
+              <td>-</td>
+              <td>{zh ? "生成可迁移的多主题集合 JSON 数据。" : "Creates portable multi-theme collection JSON data."}</td>
+            </tr>
+            <tr>
+              <td>
+                <code>parsePinepostThemeCollectionExport</code>
+              </td>
+              <td>helper</td>
+              <td>-</td>
+              <td>{zh ? "解析并校验主题集合 JSON。" : "Parses and validates theme collection JSON."}</td>
+            </tr>
             {editableThemeTokens.map((token) => (
               <tr key={token.name}>
                 <td>
@@ -1063,6 +1228,32 @@ function App() {
   });
   const labels = copy[locale] as (typeof copy)["zh-CN"];
   const zh = locale === "zh-CN";
+  const tablePresetExportText = React.useMemo(
+    () =>
+      stringifyTableViewPresetExport(
+        createTableViewPresetExport({
+          activeKey: "ops",
+          presets: [
+            {
+              key: "ops",
+              label: zh ? "运营视图" : "Operations",
+              columnOrder: ["route", "status", "count"],
+              columnWidths: { route: 160, status: 120 },
+              hiddenColumns: [],
+              sortState: { key: "route", order: "asc" }
+            },
+            {
+              key: "review",
+              label: zh ? "复核视图" : "Review",
+              columnOrder: ["status", "route", "count"],
+              hiddenColumns: ["count"],
+              sortState: { key: "count", order: "desc" }
+            }
+          ]
+        })
+      ),
+    [zh]
+  );
 
   function showToast() {
     setToastOpen(false);
@@ -1981,6 +2172,7 @@ function App() {
       group: labels.groups.display,
       title: zh ? "Table 表格" : "Table",
       description: zh ? "数据表格支持列组、固定列、排序、筛选、选择、展开行、汇总行和内联编辑。" : "Data table with column groups, fixed columns, sorting, filtering, selection, row expansion, summaries, and inline editing.",
+      searchText: "table preset view preset 视图预设 release notes release draft preset workflow",
       preview: (
         <Table
           rowKey="id"
@@ -2104,6 +2296,46 @@ function App() {
             "  density={settings.density}",
             "/>"
           ])
+        },
+        {
+          title: zh ? "视图预设导出" : "View preset export",
+          description: zh ? "将产品表格的列顺序、隐藏列、列宽和排序保存成可迁移 JSON。" : "Save product table order, visibility, widths, and sorting as portable JSON.",
+          preview: (
+            <div className="docs-field-grid">
+              <Table
+                rowKey="route"
+                density="compact"
+                defaultViewPreset="ops"
+                viewPresetLabel={zh ? "预设" : "Preset"}
+                viewPresets={[
+                  { key: "ops", label: zh ? "运营视图" : "Operations", columnOrder: ["route", "status", "count"], columnWidths: { route: 160, status: 120 }, sortState: { key: "route", order: "asc" } },
+                  { key: "review", label: zh ? "复核视图" : "Review", columnOrder: ["status", "route", "count"], hiddenColumns: ["count"], sortState: { key: "count", order: "desc" } }
+                ]}
+                columns={[
+                  { key: "route", title: zh ? "路线" : "Route", sortable: true },
+                  { key: "count", title: zh ? "数量" : "Count", align: "right", sortable: true },
+                  { key: "status", title: zh ? "状态" : "Status" }
+                ]}
+                data={[
+                  { route: "A7", count: 8, status: zh ? "就绪" : "Ready" },
+                  { route: "B2", count: 3, status: zh ? "复核" : "Review" }
+                ]}
+              />
+              <Textarea readOnly aria-label={zh ? "表格视图预设 JSON" : "Table view preset JSON"} value={tablePresetExportText} />
+            </div>
+          ),
+          code: code([
+            'import { createTableViewPresetExport, stringifyTableViewPresetExport, Table } from "pinepost-ui";',
+            "",
+            "const presetJson = stringifyTableViewPresetExport(",
+            "  createTableViewPresetExport({",
+            '    activeKey: "ops",',
+            "    presets: viewPresets",
+            "  })",
+            ");",
+            "",
+            "<Table viewPresets={viewPresets} defaultViewPreset=\"ops\" />"
+          ])
         }
       ],
       api: [],
@@ -2135,6 +2367,8 @@ function App() {
           rows: [
             { prop: "TableColumnSettings", type: "{ columns; value?; defaultValue?; storageKey? }", defaultValue: "-", description: zh ? "列显示、顺序和密度设置面板。" : "Column visibility, order, and density settings panel." },
             { prop: "TableViewPreset", type: "{ key; label; columnWidths?; columnOrder?; hiddenColumns?; sortState? }", defaultValue: "-", description: zh ? "表格视图配方。" : "Table view recipe." },
+            { prop: "createTableViewPresetExport", type: "({ activeKey, presets }) => TableViewPresetExport", defaultValue: "-", description: zh ? "生成可迁移的表格视图预设 JSON 数据。" : "Creates portable table view preset JSON data." },
+            { prop: "parseTableViewPresetExport", type: "(json) => TableViewPresetParseResult", defaultValue: "-", description: zh ? "解析并校验表格视图预设 JSON。" : "Parses and validates table view preset JSON." },
             { prop: "TableColumn.sortable", type: "boolean | compareFn", defaultValue: "false", description: zh ? "启用列排序。" : "Enables column sorting." },
             { prop: "TableColumn.filter", type: "(row) => boolean", defaultValue: "-", description: zh ? "列过滤函数。" : "Column filter predicate." },
             { prop: "TableColumn.render", type: "(row, index) => ReactNode", defaultValue: "-", description: zh ? "自定义单元格。" : "Custom cell rendering." },
@@ -3553,8 +3787,8 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme Studio import/export, Recipe Gallery state recipes</span><Tag variant="parcel">Beta</Tag><span>Table, TableColumnSettings, Form, Cascader, TreeSelect, DateRangePickerPanel, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "多主题集合、表格配方预设、发布说明自动化" : "Theme collections, table recipe presets, release notes automation"}</span></div>,
-      code: code(["Stable: production-ready basics, theme editing, and stateful recipes", "Beta: deep interaction surfaces and visual checks", "Planned: future refinements"]),
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme collections, Recipe Gallery state recipes</span><Tag variant="parcel">Beta</Tag><span>Table presets, TableColumnSettings, Form, Cascader, TreeSelect, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "日期时间预设、级联多选、发布检查自动化" : "Date/time presets, Cascader multi-select, release checklist automation"}</span></div>,
+      code: code(["Stable: production-ready basics, theme collections, and stateful recipes", "Beta: table presets, deep interaction surfaces, and visual checks", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },
         { prop: "Beta", type: "status", defaultValue: "-", description: zh ? "API 已可用，继续打磨边界。" : "Usable API with active refinement." },
@@ -3567,7 +3801,9 @@ function App() {
 
   const hiddenDocIds = new Set(["choice", "navigation", "overlay", "display", "result"]);
   const visibleDocs = (group: string) =>
-    docs.filter((item) => item.group === group && !hiddenDocIds.has(item.id)).map((item) => ({ id: item.id, label: item.title }));
+    docs
+      .filter((item) => item.group === group && !hiddenDocIds.has(item.id))
+      .map((item) => ({ id: item.id, label: item.title, searchText: item.searchText }));
 
   const navGroups: NavGroup[] = [
     { title: labels.groups.basic, items: visibleDocs(labels.groups.basic) },
@@ -3580,7 +3816,11 @@ function App() {
       items: [
         { id: "install", label: zh ? "安装使用" : "Install" },
         { id: "theme", label: zh ? "主题语言" : "Theme and locale" },
-        { id: "theme-studio", label: zh ? "主题工作台" : "Theme Studio" },
+        {
+          id: "theme-studio",
+          label: zh ? "主题工作台" : "Theme Studio",
+          searchText: "theme collection theme preset 主题集合 主题预设 preset workflow"
+        },
         {
           id: "recipes",
           label: zh ? "业务模板" : "Recipe Gallery",

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.16.0
+
+- Added portable theme collections for saving, importing, and exporting multiple Pinepost token sets.
+- Added serializable table view preset helpers for product table workflows.
+- Added release notes draft automation for preparing GitHub and package release copy.
+- Expanded docs search, Theme Studio, Table recipes, and validation coverage for preset workflows.
+
 ## 0.15.0
 
 - Expanded Recipe Gallery to eight product templates with category filters.

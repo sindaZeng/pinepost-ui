@@ -33,6 +33,41 @@ export interface TableViewPreset<T> {
   sortState?: TableSortState<T>;
 }
 
+export type TableViewPresetValidationCode =
+  | "invalid-active"
+  | "invalid-json"
+  | "invalid-preset"
+  | "invalid-sort"
+  | "invalid-width";
+
+export interface TableViewPresetValidationIssue {
+  code: TableViewPresetValidationCode;
+  field?: string;
+  message: string;
+  presetKey?: string;
+}
+
+export interface TableViewPresetExportItem {
+  columnOrder?: string[];
+  columnWidths?: TableColumnWidthMap;
+  hiddenColumns?: string[];
+  key: string;
+  label: string;
+  sortState?: TableSortState<Record<string, unknown>>;
+}
+
+export interface TableViewPresetExport {
+  activeKey?: string;
+  presets: TableViewPresetExportItem[];
+  version: 1;
+}
+
+export interface TableViewPresetParseResult {
+  issues: TableViewPresetValidationIssue[];
+  presets: Array<TableViewPreset<Record<string, unknown>>>;
+  value?: TableViewPresetExport;
+}
+
 export interface TableFilterTag {
   key: string;
   label: React.ReactNode;
@@ -137,6 +172,160 @@ function filterVisibleColumns<T>(columns: Array<TableColumn<T>>, hidden: Set<str
 
 function findTablePreset<T>(presets: Array<TableViewPreset<T>>, key?: string) {
   return key ? presets.find((preset) => preset.key === key) : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringList(value: unknown) {
+  return Array.isArray(value) ? value.map(String) : undefined;
+}
+
+function serializableColumnWidths(value: unknown, issues?: TableViewPresetValidationIssue[], presetKey?: string) {
+  if (!isRecord(value)) return undefined;
+  const entries = Object.entries(value).filter(([, width]) => {
+    const valid = typeof width === "number" || typeof width === "string";
+    if (!valid) {
+      issues?.push({
+        code: "invalid-width",
+        field: "columnWidths",
+        message: "Table preset column widths must be numbers or strings.",
+        presetKey
+      });
+    }
+    return valid;
+  });
+  return entries.length > 0 ? Object.fromEntries(entries) as TableColumnWidthMap : undefined;
+}
+
+function serializableSortState(
+  value: unknown,
+  issues?: TableViewPresetValidationIssue[],
+  presetKey?: string
+): TableSortState<Record<string, unknown>> | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value) || typeof value.key !== "string" || (value.order !== "asc" && value.order !== "desc")) {
+    issues?.push({
+      code: "invalid-sort",
+      field: "sortState",
+      message: "Table preset sort state must include a key and asc or desc order.",
+      presetKey
+    });
+    return undefined;
+  }
+  const order: TableSortOrder = value.order;
+  return { key: value.key, order };
+}
+
+function presetLabelText(label: React.ReactNode, fallback: string) {
+  if (typeof label === "string" || typeof label === "number") return String(label);
+  return fallback;
+}
+
+export function createTableViewPresetExport<T>({
+  activeKey,
+  presets
+}: {
+  activeKey?: string;
+  presets: Array<TableViewPreset<T>>;
+}): TableViewPresetExport {
+  const items = presets
+    .filter((preset) => preset.key.trim())
+    .map((preset) => {
+      const columnOrder = preset.columnOrder?.map(String);
+      const hiddenColumns = preset.hiddenColumns?.map(String);
+      const columnWidths = serializableColumnWidths(preset.columnWidths);
+      const sortState = serializableSortState(preset.sortState);
+
+      return {
+        ...(columnOrder?.length ? { columnOrder } : {}),
+        ...(columnWidths ? { columnWidths } : {}),
+        ...(hiddenColumns?.length ? { hiddenColumns } : {}),
+        key: preset.key,
+        label: presetLabelText(preset.label, preset.key),
+        ...(sortState ? { sortState } : {})
+      };
+    });
+  const knownKeys = new Set(items.map((preset) => preset.key));
+  const resolvedActiveKey = activeKey && knownKeys.has(activeKey) ? activeKey : items[0]?.key;
+
+  return {
+    ...(resolvedActiveKey ? { activeKey: resolvedActiveKey } : {}),
+    presets: items,
+    version: 1
+  };
+}
+
+export function stringifyTableViewPresetExport(value: TableViewPresetExport) {
+  return JSON.stringify(value, null, 2);
+}
+
+export function parseTableViewPresetExport(input: string): TableViewPresetParseResult {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(input);
+  } catch {
+    return {
+      issues: [{ code: "invalid-json", message: "Table preset import must be valid JSON." }],
+      presets: []
+    };
+  }
+
+  if (!isRecord(raw) || !Array.isArray(raw.presets)) {
+    return {
+      issues: [{ code: "invalid-json", message: "Table preset import must include a presets array." }],
+      presets: []
+    };
+  }
+
+  const issues: TableViewPresetValidationIssue[] = [];
+  const items: TableViewPresetExportItem[] = [];
+
+  raw.presets.forEach((preset) => {
+    if (!isRecord(preset)) {
+      issues.push({ code: "invalid-preset", message: "Table preset item must be an object." });
+      return;
+    }
+
+    const key = typeof preset.key === "string" ? preset.key.trim() : "";
+    const label = typeof preset.label === "string" || typeof preset.label === "number" ? String(preset.label).trim() : "";
+    if (!key || !label) {
+      issues.push({ code: "invalid-preset", message: "Table preset needs a key and label.", presetKey: key || undefined });
+    }
+
+    const sortState = serializableSortState(preset.sortState, issues, key || undefined);
+    const columnWidths = serializableColumnWidths(preset.columnWidths, issues, key || undefined);
+    if (!key || !label) return;
+
+    items.push({
+      ...(stringList(preset.columnOrder)?.length ? { columnOrder: stringList(preset.columnOrder) } : {}),
+      ...(columnWidths ? { columnWidths } : {}),
+      ...(stringList(preset.hiddenColumns)?.length ? { hiddenColumns: stringList(preset.hiddenColumns) } : {}),
+      key,
+      label,
+      ...(sortState ? { sortState } : {})
+    });
+  });
+
+  const activeKey = typeof raw.activeKey === "string" ? raw.activeKey.trim() : undefined;
+  const knownKeys = new Set(items.map((preset) => preset.key));
+  const resolvedActiveKey = activeKey && knownKeys.has(activeKey) ? activeKey : items[0]?.key;
+  if (activeKey && activeKey !== resolvedActiveKey) {
+    issues.push({ code: "invalid-active", message: "Table preset active key was not found.", presetKey: activeKey });
+  }
+
+  const value: TableViewPresetExport = {
+    ...(resolvedActiveKey ? { activeKey: resolvedActiveKey } : {}),
+    presets: items,
+    version: 1
+  };
+
+  return {
+    issues,
+    presets: items.map((preset) => ({ ...preset })),
+    value
+  };
 }
 
 function normalizeHiddenColumns(columns: Array<unknown> = []) {
