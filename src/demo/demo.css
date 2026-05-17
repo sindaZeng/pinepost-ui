@@ -415,6 +415,25 @@ body {
   width: 100%;
 }
 
+.docs-upload-preview {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.docs-upload-preview__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.docs-upload-preview__actions span {
+  color: var(--pinepost-muted);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
 .docs-api-wrap {
   border: 2px solid var(--pinepost-border);
   border-radius: var(--pinepost-radius-md);
@@ -1037,29 +1056,29 @@ body {
 
 @media (max-width: 620px) {
   .docs-nav {
-    display: grid;
+    display: flex;
     gap: 10px;
-    max-height: 42vh;
-    overflow-x: hidden;
-    overflow-y: auto;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
     padding: 10px;
   }
 
   .docs-nav__group {
-    align-items: stretch;
-    display: grid;
+    align-items: center;
+    display: flex;
     flex: initial;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex: 0 0 auto;
   }
 
   .docs-nav__group > span {
-    grid-column: 1 / -1;
+    flex: 0 0 auto;
   }
 
   .docs-nav__group > span,
   .docs-nav button {
     min-width: 0;
-    white-space: normal;
+    white-space: nowrap;
   }
 
   .docs-topbar {

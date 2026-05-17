@@ -64,8 +64,11 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
     },
     ref
   ) => {
+    const contentRef = React.useRef<HTMLDivElement>(null);
     const triggerRef = React.useRef<HTMLButtonElement>(null);
+    const listboxId = React.useId();
     const [open, setOpen] = React.useState(false);
+    const [activeIndex, setActiveIndex] = React.useState(0);
     const [query, setQuery] = React.useState("");
     const fallbackValue = multiple ? [] : "";
     const [internalValue, setInternalValue] = React.useState<string | string[]>(defaultValue ?? fallbackValue);
@@ -82,6 +85,26 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       if (value === undefined) setInternalValue(nextValue);
       onValueChange?.(nextValue);
     }
+
+    React.useEffect(() => {
+      if (!open) return;
+
+      const selectedIndex = visibleOptions.findIndex((option) => selectedValues.includes(option.value) && !option.disabled);
+      setActiveIndex(selectedIndex >= 0 ? selectedIndex : Math.max(0, visibleOptions.findIndex((option) => !option.disabled)));
+    }, [open, query]);
+
+    React.useEffect(() => {
+      if (!open) return;
+
+      function onPointerDown(event: PointerEvent) {
+        const target = event.target as Node;
+        if (triggerRef.current?.contains(target) || contentRef.current?.contains(target)) return;
+        setOpen(false);
+      }
+
+      document.addEventListener("pointerdown", onPointerDown);
+      return () => document.removeEventListener("pointerdown", onPointerDown);
+    }, [open]);
 
     function clear() {
       commit(multiple ? [] : "");
@@ -108,15 +131,64 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       }
     }
 
-    function renderOption(option: SelectOption) {
+    function moveActive(offset: number) {
+      const enabled = visibleOptions
+        .map((option, index) => ({ index, option }))
+        .filter((item) => !item.option.disabled);
+      if (enabled.length === 0) return;
+      const current = enabled.findIndex((item) => item.index === activeIndex);
+      const nextIndex = current < 0 ? 0 : (current + offset + enabled.length) % enabled.length;
+      setActiveIndex(enabled[nextIndex].index);
+    }
+
+    function onTriggerKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        if (!open) {
+          setOpen(true);
+          return;
+        }
+        moveActive(event.key === "ArrowDown" ? 1 : -1);
+      }
+
+      if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        setOpen(true);
+        const enabledOptions = visibleOptions
+          .map((option, index) => ({ index, option }))
+          .filter((item) => !item.option.disabled);
+        const nextIndex = event.key === "Home"
+          ? enabledOptions[0]?.index
+          : enabledOptions[enabledOptions.length - 1]?.index;
+        if (typeof nextIndex === "number" && nextIndex >= 0) setActiveIndex(nextIndex);
+      }
+
+      if (event.key === "Enter" || event.key === " ") {
+        if (!open) return;
+        event.preventDefault();
+        const activeOption = visibleOptions[activeIndex];
+        if (activeOption) selectOption(activeOption);
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+      }
+    }
+
+    function renderOption(option: SelectOption, optionIndex: number) {
       const selected = selectedValues.includes(option.value);
+      const active = activeIndex === optionIndex;
       return (
         <button
           key={option.value}
           aria-selected={selected}
+          data-active={active || undefined}
+          id={`${listboxId}-${optionIndex}`}
           className="pinepost-select__item"
           disabled={option.disabled}
           onClick={() => selectOption(option)}
+          onMouseEnter={() => setActiveIndex(optionIndex)}
           role="option"
           type="button"
         >
@@ -131,6 +203,8 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       <div className={cn("pinepost-select-wrap", className)} {...props}>
         <button
           ref={triggerRef}
+          aria-activedescendant={open ? `${listboxId}-${activeIndex}` : undefined}
+          aria-controls={open ? listboxId : undefined}
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-label={ariaLabel ?? (displayValue || String(placeholder))}
@@ -139,6 +213,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
           onBlur={onBlur}
           onClick={() => setOpen(!open)}
           onFocus={onFocus}
+          onKeyDown={onTriggerKeyDown}
           role="combobox"
           type="button"
         >
@@ -160,7 +235,13 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
           </span>
         )}
         {open && (
-          <div className={cn("pinepost-select__content", contentClassName)} role="listbox" aria-multiselectable={multiple}>
+          <div
+            ref={contentRef}
+            id={listboxId}
+            className={cn("pinepost-select__content", contentClassName)}
+            role="listbox"
+            aria-multiselectable={multiple}
+          >
             {filterable && (
               <input
                 aria-label="Filter select"
@@ -178,7 +259,10 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
                 ? groups.map((group) => (
                     <div className="pinepost-select__group" key={String(group)}>
                       <strong>{group}</strong>
-                      {visibleOptions.filter((option) => option.group === group).map(renderOption)}
+                      {visibleOptions
+                        .map((option, index) => ({ option, index }))
+                        .filter((item) => item.option.group === group)
+                        .map((item) => renderOption(item.option, item.index))}
                     </div>
                   ))
                 : visibleOptions.map(renderOption)}

@@ -5,25 +5,30 @@ export interface PageHeaderProps extends Omit<React.HTMLAttributes<HTMLElement>,
   backLabel?: string;
   description?: React.ReactNode;
   extra?: React.ReactNode;
+  headingLevel?: 1 | 2 | 3 | 4 | 5 | 6;
   onBack?: () => void;
   title: React.ReactNode;
 }
 
 export const PageHeader = React.forwardRef<HTMLElement, PageHeaderProps>(
-  ({ backLabel = "Back", className, description, extra, onBack, title, ...props }, ref) => (
-    <header ref={ref} className={cn("pinepost-page-header", className)} {...props}>
-      {onBack && (
-        <button aria-label={backLabel} className="pinepost-page-header__back" onClick={onBack} type="button">
-          <span aria-hidden="true">←</span>
-        </button>
-      )}
-      <div className="pinepost-page-header__body">
-        <h1>{title}</h1>
-        {description && <p>{description}</p>}
-      </div>
-      {extra && <div className="pinepost-page-header__extra">{extra}</div>}
-    </header>
-  )
+  ({ backLabel = "Back", className, description, extra, headingLevel = 1, onBack, title, ...props }, ref) => {
+    const Heading = `h${headingLevel}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+
+    return (
+      <header ref={ref} className={cn("pinepost-page-header", className)} {...props}>
+        {onBack && (
+          <button aria-label={backLabel} className="pinepost-page-header__back" onClick={onBack} type="button">
+            <span aria-hidden="true">←</span>
+          </button>
+        )}
+        <div className="pinepost-page-header__body">
+          <Heading>{title}</Heading>
+          {description && <p>{description}</p>}
+        </div>
+        {extra && <div className="pinepost-page-header__extra">{extra}</div>}
+      </header>
+    );
+  }
 );
 
 PageHeader.displayName = "PageHeader";
@@ -107,4 +112,3 @@ export const Anchor = React.forwardRef<HTMLElement, AnchorProps>(({ className, i
 ));
 
 Anchor.displayName = "Anchor";
-

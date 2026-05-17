@@ -381,7 +381,8 @@
   padding: 7px 9px;
 }
 
-.pinepost-select__item[data-highlighted] {
+.pinepost-select__item[data-highlighted],
+.pinepost-select__item[data-active="true"] {
   background: color-mix(in srgb, var(--pinepost-moss) 62%, var(--pinepost-paper-raised));
 }
 
@@ -3244,7 +3245,9 @@
   font-family: var(--pinepost-font);
   font-weight: 900;
   min-width: 0;
+  overflow: hidden;
   text-align: left;
+  text-overflow: ellipsis;
 }
 
 .pinepost-upload__list span {

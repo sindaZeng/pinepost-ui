@@ -165,7 +165,8 @@ import {
   type PinepostThemeValidationIssue,
   type PinepostRecipeBundleValidationIssue,
   type CascaderMultipleValue,
-  type TableColumnSettingsValue
+  type TableColumnSettingsValue,
+  type UploadRef
 } from "../index";
 import "../styles.css";
 import "./demo.css";
@@ -1403,6 +1404,8 @@ function App() {
   const [virtualTreeSelected, setVirtualTreeSelected] = React.useState("north-3");
   const [messageBoxOpen, setMessageBoxOpen] = React.useState(false);
   const [toastOpen, setToastOpen] = React.useState(false);
+  const uploadRef = React.useRef<UploadRef>(null);
+  const [uploadPreviewStatus, setUploadPreviewStatus] = React.useState("");
   const [tableSettings, setTableSettings] = React.useState<TableColumnSettingsValue>({
     columnOrder: ["route", "count", "status"],
     density: "compact",
@@ -1576,7 +1579,9 @@ function App() {
       id: "select",
       group: labels.groups.form,
       title: zh ? "Select 选择器" : "Select",
-      description: zh ? "基于 Radix Select 的可访问下拉选择器，适合路线、状态和枚举字段。" : "Accessible dropdown selection for routes, statuses, and enum fields.",
+      description: zh
+        ? "可访问的下拉选择器，支持键盘选择、点外关闭、筛选和远程数据。"
+        : "Accessible dropdown selection with keyboard control, outside-dismiss, filtering, and remote data.",
       preview: (
         <Select
           aria-label={zh ? "路线桌" : "Route desk"}
@@ -1794,29 +1799,54 @@ function App() {
       title: zh ? "Upload 上传" : "Upload",
       description: zh ? "支持受控队列、拖拽、数量限制、生命周期事件和手动提交。" : "Supports controlled queues, drag upload, limits, lifecycle events, and manual submit.",
       preview: (
-        <Upload
-          drag
-          limit={3}
-          label={zh ? "拖放路线清单" : "Drop route manifests"}
-          description={zh ? "支持拖拽、预览、移除和业务侧上传请求。" : "Supports drag, preview, remove, and product-owned requests."}
-        />
+        <div className="docs-upload-preview">
+          <Upload
+            ref={uploadRef}
+            drag
+            limit={3}
+            label={zh ? "拖放路线清单" : "Drop route manifests"}
+            description={zh ? "选择文件后点击开始上传，预览会走完整生命周期。" : "Choose a file, then start upload to run the full lifecycle."}
+            customRequest={async ({ onProgress, onSuccess }) => {
+              onProgress?.(64);
+              await new Promise((resolve) => window.setTimeout(resolve, 90));
+              onSuccess?.({ ok: true });
+            }}
+            onChange={() => setUploadPreviewStatus(zh ? "文件已进入待上传队列。" : "File queued for upload.")}
+            onSuccess={() => setUploadPreviewStatus(zh ? "上传完成，队列状态已更新。" : "Upload complete; queue status updated.")}
+          />
+          <div className="docs-upload-preview__actions">
+            <Button size="sm" onClick={() => void uploadRef.current?.submit()}>
+              {zh ? "开始上传" : "Start upload"}
+            </Button>
+            <Button size="sm" variant="soft" onClick={() => {
+              uploadRef.current?.clearFiles();
+              setUploadPreviewStatus(zh ? "队列已清空。" : "Queue cleared.");
+            }}>
+              {zh ? "清空队列" : "Clear queue"}
+            </Button>
+            {uploadPreviewStatus && <span>{uploadPreviewStatus}</span>}
+          </div>
+        </div>
       ),
       code: code([
-        'import { Upload } from "pinepost-ui";',
+        'import { Button, Upload } from "pinepost-ui";',
         "",
         "const uploadRef = React.useRef<UploadRef>(null);",
         "",
-        "<Upload",
-        "  ref={uploadRef}",
-        "  drag",
-        "  limit={3}",
-        '  label="拖放路线清单"',
-        "  beforeUpload={(file) => file.size < 1024 * 1024}",
-        "  customRequest={async ({ onProgress, onSuccess }) => {",
-        "    onProgress?.(60);",
-        "    onSuccess?.({ ok: true });",
-        "  }}",
-        "/>"
+        "<>",
+        "  <Upload",
+        "    ref={uploadRef}",
+        "    drag",
+        "    limit={3}",
+        "    label=\"拖放路线清单\"",
+        "    beforeUpload={(file) => file.size < 1024 * 1024}",
+        "    customRequest={async ({ onProgress, onSuccess }) => {",
+        "      onProgress?.(60);",
+        "      onSuccess?.({ ok: true });",
+        "    }}",
+        "  />",
+        "  <Button onClick={() => uploadRef.current?.submit()}>开始上传</Button>",
+        "</>"
       ]),
       recipes: [
         {
@@ -2879,15 +2909,16 @@ function App() {
       group: labels.groups.navigation,
       title: zh ? "PageHeader 页头" : "PageHeader",
       description: zh ? "页面级标题、返回按钮、说明和右侧操作区。" : "Page title with back action, description, and extra actions.",
-      preview: <PageHeader title={zh ? "路线详情" : "Route detail"} description={zh ? "查看包裹、备注和状态。" : "View parcels, notes, and status."} onBack={showToast} extra={<Button size="sm">{zh ? "保存" : "Save"}</Button>} />,
+      preview: <PageHeader headingLevel={2} title={zh ? "路线详情" : "Route detail"} description={zh ? "查看包裹、备注和状态。" : "View parcels, notes, and status."} onBack={showToast} extra={<Button size="sm">{zh ? "保存" : "Save"}</Button>} />,
       code: code([
         'import { Button, PageHeader } from "pinepost-ui";',
         "",
-        '<PageHeader title="路线详情" onBack={goBack} extra={<Button>保存</Button>} />'
+        '<PageHeader headingLevel={2} title="路线详情" onBack={goBack} extra={<Button>保存</Button>} />'
       ]),
       api: [
         { prop: "title", type: "ReactNode", defaultValue: "-", description: zh ? "页头标题。" : "Header title." },
         { prop: "description", type: "ReactNode", defaultValue: "-", description: zh ? "页头说明。" : "Header description." },
+        { prop: "headingLevel", type: "1 | 2 | 3 | 4 | 5 | 6", defaultValue: "1", description: zh ? "标题层级，嵌入复杂页面时可避免重复 h1。" : "Heading level, useful when composing inside an existing page." },
         { prop: "onBack", type: "() => void", defaultValue: "-", description: zh ? "返回回调。" : "Back callback." }
       ]
     },
