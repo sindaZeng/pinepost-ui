@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0
+
+- Added advanced Table row expansion, summary rows, inline editing, and expansion ref methods.
+- Added DateTimePickerPanel and TimePickerPanel for embeddable date-time workflows.
+- Added drag-and-drop Upload handling with drop events and queue coverage.
+- Added lazy Tree loading support with node loading tests.
+- Expanded the docs previews and API tables for the newly deepened components.
+
 ## 0.6.0
 
 - Added utility and panel components: Icon, InfiniteScroll, ColorPickerPanel, and DatePickerPanel.

@@ -327,7 +327,7 @@ export interface UploadRef {
   submit: () => Promise<void>;
 }
 
-export interface UploadProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "children" | "type" | "onAbort" | "onChange" | "onError" | "onProgress" | "value" | "defaultValue"> {
+export interface UploadProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "children" | "type" | "onAbort" | "onChange" | "onDrop" | "onError" | "onProgress" | "value" | "defaultValue"> {
   beforeUpload?: (file: File, files: File[]) => boolean | Promise<boolean>;
   customRequest?: (options: UploadRequestOptions) => void | Promise<void>;
   defaultFileList?: UploadFile[];
@@ -337,6 +337,7 @@ export interface UploadProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
   label?: React.ReactNode;
   limit?: number;
   onChange?: (file: UploadFile, fileList: UploadFile[]) => void;
+  onDrop?: (files: File[]) => void;
   onError?: (error: unknown, file: UploadFile, fileList: UploadFile[]) => void;
   onExceed?: (files: File[], fileList: UploadFile[]) => void;
   onFilesChange?: (files: File[]) => void;
@@ -373,6 +374,7 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
       limit,
       multiple,
       onChange,
+      onDrop,
       onError,
       onExceed,
       onFilesChange,
@@ -472,7 +474,20 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
 
     return (
       <div className={cn("pinepost-upload", className)} data-drag={drag}>
-        <label className="pinepost-upload__dropzone" htmlFor={inputId}>
+        <label
+          className="pinepost-upload__dropzone"
+          htmlFor={inputId}
+          onDragOver={(event) => {
+            if (drag) event.preventDefault();
+          }}
+          onDrop={(event) => {
+            if (!drag) return;
+            event.preventDefault();
+            const files = Array.from(event.dataTransfer.files ?? []);
+            onDrop?.(files);
+            void addFiles(files);
+          }}
+        >
           <span className="pinepost-upload__icon" aria-hidden="true" />
           <strong>{label}</strong>
           {description && <span>{description}</span>}

@@ -31,6 +31,7 @@ import {
   Col,
   Container,
   ColorPickerPanel,
+  DateTimePickerPanel,
   DatePickerPanel,
   Descriptions,
   Dialog,
@@ -110,6 +111,7 @@ import {
   Text,
   Textarea,
   TimePicker,
+  TimePickerPanel,
   TimeSelect,
   Timeline,
   Toast,
@@ -401,6 +403,8 @@ function App() {
   const [otpValue, setOtpValue] = React.useState("247");
   const [mentionValue, setMentionValue] = React.useState("请交给 @cedar ");
   const [timeSelectValue, setTimeSelectValue] = React.useState("09:30");
+  const [timePanelValue, setTimePanelValue] = React.useState("09:30");
+  const [dateTimePanelValue, setDateTimePanelValue] = React.useState(new Date(2026, 4, 17, 9, 30));
   const [tourOpen, setTourOpen] = React.useState(false);
   const [virtualTreeSelected, setVirtualTreeSelected] = React.useState("north-3");
   const [messageBoxOpen, setMessageBoxOpen] = React.useState(false);
@@ -687,17 +691,63 @@ function App() {
       id: "upload",
       group: labels.groups.form,
       title: zh ? "Upload 上传" : "Upload",
-      description: zh ? "轻量文件选择区域，适合清单、图片和附件入口。" : "A lightweight file picker surface for manifests, images, and attachments.",
-      preview: <Upload label={zh ? "上传路线清单" : "Upload route manifest"} description={zh ? "支持业务侧自行校验类型和大小。" : "Let product code validate type and size."} />,
+      description: zh ? "支持受控队列、拖拽、数量限制、生命周期事件和手动提交。" : "Supports controlled queues, drag upload, limits, lifecycle events, and manual submit.",
+      preview: (
+        <Upload
+          drag
+          limit={3}
+          label={zh ? "拖放路线清单" : "Drop route manifests"}
+          description={zh ? "支持拖拽、预览、移除和业务侧上传请求。" : "Supports drag, preview, remove, and product-owned requests."}
+        />
+      ),
       code: code([
         'import { Upload } from "pinepost-ui";',
         "",
-        '<Upload label="上传路线清单" onFilesChange={(files) => console.log(files)} />'
+        "const uploadRef = React.useRef<UploadRef>(null);",
+        "",
+        "<Upload",
+        "  ref={uploadRef}",
+        "  drag",
+        "  limit={3}",
+        '  label="拖放路线清单"',
+        "  beforeUpload={(file) => file.size < 1024 * 1024}",
+        "  customRequest={async ({ onProgress, onSuccess }) => {",
+        "    onProgress?.(60);",
+        "    onSuccess?.({ ok: true });",
+        "  }}",
+        "/>"
       ]),
-      api: [
-        { prop: "label", type: "ReactNode", defaultValue: "Choose file", description: zh ? "上传区域标题。" : "Upload title." },
-        { prop: "description", type: "ReactNode", defaultValue: "-", description: zh ? "上传说明。" : "Upload hint." },
-        { prop: "onFilesChange", type: "(files: File[]) => void", defaultValue: "-", description: zh ? "文件变化回调。" : "File change callback." }
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "drag", type: "boolean", defaultValue: "false", description: zh ? "启用拖拽投放。" : "Enables drag and drop." },
+            { prop: "fileList / defaultFileList", type: "UploadFile[]", defaultValue: "[]", description: zh ? "受控或非受控文件队列。" : "Controlled or uncontrolled file queue." },
+            { prop: "limit", type: "number", defaultValue: "-", description: zh ? "最大接收数量。" : "Maximum accepted file count." },
+            { prop: "beforeUpload", type: "(file, files) => boolean | Promise<boolean>", defaultValue: "-", description: zh ? "加入队列前校验。" : "Checks before queuing." },
+            { prop: "customRequest", type: "(options) => void | Promise<void>", defaultValue: "-", description: zh ? "自定义上传请求。" : "Custom upload request." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onDrop", type: "(files: File[]) => void", defaultValue: "-", description: zh ? "拖拽投放后触发。" : "Fires after a drop." },
+            { prop: "onChange", type: "(file, fileList) => void", defaultValue: "-", description: zh ? "文件加入队列。" : "File enters the queue." },
+            { prop: "onRemove / onPreview", type: "(file, fileList?) => void", defaultValue: "-", description: zh ? "移除或预览文件。" : "Remove or preview a file." },
+            { prop: "onExceed", type: "(files, fileList) => void", defaultValue: "-", description: zh ? "超过限制时触发。" : "Fires when the limit is exceeded." },
+            { prop: "onProgress / onSuccess / onError", type: "upload lifecycle callbacks", defaultValue: "-", description: zh ? "上传生命周期回调。" : "Upload lifecycle callbacks." }
+          ]
+        },
+        {
+          title: labels.methods,
+          rows: [
+            { prop: "submit", type: "() => Promise<void>", defaultValue: "-", description: zh ? "手动开始上传 ready 文件。" : "Starts uploading ready files." },
+            { prop: "abort", type: "() => void", defaultValue: "-", description: zh ? "中止当前请求。" : "Aborts the active request." },
+            { prop: "clearFiles", type: "() => void", defaultValue: "-", description: zh ? "清空队列。" : "Clears the queue." },
+            { prop: "getFiles", type: "() => UploadFile[]", defaultValue: "-", description: zh ? "读取当前队列。" : "Reads the current queue." }
+          ]
+        }
       ]
     },
     {
@@ -1070,32 +1120,85 @@ function App() {
       id: "table",
       group: labels.groups.display,
       title: zh ? "Table 表格" : "Table",
-      description: zh ? "基础数据表格，支持列定义、空态和自定义单元格渲染。" : "Basic data table with columns, empty state, and custom cell rendering.",
+      description: zh ? "数据表格支持排序、筛选、选择、展开行、汇总行和内联编辑。" : "Data table with sorting, filtering, selection, row expansion, summaries, and inline editing.",
       preview: (
         <Table
+          rowKey="id"
+          selectable
+          editable
+          defaultExpandedRowKeys={["a7"]}
+          renderExpandedRow={(row) => <Text>{zh ? `${row.route} 今日优先投递。` : `${row.route} ships first today.`}</Text>}
+          summary={(rows) => ({ route: zh ? "合计" : "Total", count: rows.reduce((total, row) => total + row.count, 0) })}
           columns={[
-            { key: "route", title: zh ? "路线" : "Route" },
+            { key: "route", title: zh ? "路线" : "Route", editable: true, sortable: true },
             { key: "status", title: zh ? "状态" : "Status" },
-            { key: "count", title: zh ? "数量" : "Count", align: "right" }
+            { key: "count", title: zh ? "数量" : "Count", align: "right", sortable: true }
           ]}
-          data={[{ route: "A7", status: zh ? "就绪" : "Ready", count: 8 }, { route: "B2", status: zh ? "复核" : "Review", count: 3 }]}
+          data={[
+            { id: "a7", route: "A7", status: zh ? "就绪" : "Ready", count: 8 },
+            { id: "b2", route: "B2", status: zh ? "复核" : "Review", count: 3 }
+          ]}
         />
       ),
       code: code([
         'import { Table } from "pinepost-ui";',
         "",
         "<Table",
+        '  rowKey="id"',
+        "  selectable",
+        "  editable",
+        '  defaultExpandedRowKeys={["a7"]}',
+        "  renderExpandedRow={(row) => <p>{row.route} detail</p>}",
+        "  summary={(rows) => ({ count: rows.reduce((sum, row) => sum + row.count, 0) })}",
         "  columns={[",
-        '    { key: "route", title: "路线" },',
-        '    { key: "status", title: "状态" }',
+        '    { key: "route", title: "路线", editable: true, sortable: true },',
+        '    { key: "count", title: "数量", align: "right" }',
         "  ]}",
-        '  data={[{ route: "A7", status: "就绪" }]}',
+        '  data={[{ id: "a7", route: "A7", count: 8 }]}',
         "/>"
       ]),
-      api: [
-        { prop: "columns", type: "TableColumn<T>[]", defaultValue: "[]", description: zh ? "列配置。" : "Column config." },
-        { prop: "data", type: "T[]", defaultValue: "[]", description: zh ? "表格数据。" : "Table data." },
-        { prop: "rowKey", type: "keyof T | function", defaultValue: "index", description: zh ? "行 key。" : "Row key." }
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "columns", type: "TableColumn<T>[]", defaultValue: "[]", description: zh ? "列配置。" : "Column config." },
+            { prop: "data", type: "T[]", defaultValue: "[]", description: zh ? "表格数据。" : "Table data." },
+            { prop: "rowKey", type: "keyof T | function", defaultValue: "index", description: zh ? "行 key。" : "Row key." },
+            { prop: "selectable", type: "boolean", defaultValue: "false", description: zh ? "显示行选择列。" : "Shows row selection." },
+            { prop: "editable", type: "boolean", defaultValue: "false", description: zh ? "允许可编辑列双击编辑。" : "Allows double-click editing on editable columns." },
+            { prop: "expandedRowKeys / defaultExpandedRowKeys", type: "React.Key[]", defaultValue: "[]", description: zh ? "受控或默认展开行。" : "Controlled or default expanded rows." },
+            { prop: "summary", type: "Record | (rows) => Record", defaultValue: "-", description: zh ? "汇总行内容。" : "Summary row content." }
+          ]
+        },
+        {
+          title: labels.options,
+          rows: [
+            { prop: "TableColumn.sortable", type: "boolean | compareFn", defaultValue: "false", description: zh ? "启用列排序。" : "Enables column sorting." },
+            { prop: "TableColumn.filter", type: "(row) => boolean", defaultValue: "-", description: zh ? "列过滤函数。" : "Column filter predicate." },
+            { prop: "TableColumn.render", type: "(row, index) => ReactNode", defaultValue: "-", description: zh ? "自定义单元格。" : "Custom cell rendering." },
+            { prop: "TableColumn.editable", type: "boolean", defaultValue: "false", description: zh ? "列是否可编辑。" : "Whether the column can be edited." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onSortChange", type: "(state?) => void", defaultValue: "-", description: zh ? "排序变化。" : "Sort changes." },
+            { prop: "onSelectionChange", type: "(rows) => void", defaultValue: "-", description: zh ? "行选择变化。" : "Selection changes." },
+            { prop: "onCurrentChange", type: "(row?) => void", defaultValue: "-", description: zh ? "当前行变化。" : "Current row changes." },
+            { prop: "onCellEdit", type: "(row, key, value) => void", defaultValue: "-", description: zh ? "单元格提交编辑。" : "Cell edit is committed." },
+            { prop: "onExpandChange", type: "(keys) => void", defaultValue: "-", description: zh ? "展开行变化。" : "Expanded rows change." }
+          ]
+        },
+        {
+          title: labels.methods,
+          rows: [
+            { prop: "toggleRowSelection / clearSelection", type: "ref methods", defaultValue: "-", description: zh ? "控制行选择。" : "Controls row selection." },
+            { prop: "sort / clearSort", type: "ref methods", defaultValue: "-", description: zh ? "控制排序。" : "Controls sorting." },
+            { prop: "toggleRowExpansion / clearExpansion", type: "ref methods", defaultValue: "-", description: zh ? "控制展开行。" : "Controls expanded rows." },
+            { prop: "getSelectionRows / getExpandedRows", type: "ref methods", defaultValue: "-", description: zh ? "读取当前状态行。" : "Reads stateful rows." }
+          ]
+        }
       ]
     },
     {
@@ -1170,25 +1273,61 @@ function App() {
       id: "tree",
       group: labels.groups.display,
       title: zh ? "Tree 树形控件" : "Tree",
-      description: zh ? "用于路线、目录和分组层级的轻量树控件。" : "A lightweight tree for routes, folders, and grouped hierarchy.",
+      description: zh ? "用于路线、目录和分组层级，支持选择、勾选、过滤和懒加载节点。" : "A tree for routes, folders, and grouped hierarchy with selection, checking, filtering, and lazy nodes.",
       preview: (
         <Tree
-          defaultExpanded={["routes"]}
-          items={[{ value: "routes", label: zh ? "路线" : "Routes", children: [{ value: "north", label: zh ? "北线" : "North lane" }, { value: "south", label: zh ? "南线" : "South lane" }] }]}
+          lazy
+          checkable
+          loadData={async () => [{ value: "north-lane", label: zh ? "北线投递" : "North lane", isLeaf: true }]}
+          items={[{ value: "routes", label: zh ? "路线" : "Routes" }]}
         />
       ),
       code: code([
         'import { Tree } from "pinepost-ui";',
         "",
         "<Tree",
-        '  defaultExpanded={["routes"]}',
-        "  items={[{ value: 'routes', label: '路线', children: [{ value: 'north', label: '北线' }] }]}",
+        "  lazy",
+        "  checkable",
+        "  loadData={async (node) => [{ value: `${node.value}-north`, label: '北线', isLeaf: true }]}",
+        "  items={[{ value: 'routes', label: '路线' }]}",
         "/>"
       ]),
-      api: [
-        { prop: "items", type: "TreeItem[]", defaultValue: "[]", description: zh ? "树节点。" : "Tree nodes." },
-        { prop: "defaultExpanded", type: "string[]", defaultValue: "[]", description: zh ? "默认展开节点。" : "Initially expanded nodes." },
-        { prop: "onSelect", type: "(value: string) => void", defaultValue: "-", description: zh ? "叶子节点选择回调。" : "Leaf selection callback." }
+      api: [],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "items", type: "TreeItem[]", defaultValue: "[]", description: zh ? "树节点。" : "Tree nodes." },
+            { prop: "checkable", type: "boolean", defaultValue: "false", description: zh ? "显示复选框。" : "Shows checkboxes." },
+            { prop: "expandedKeys / defaultExpanded", type: "string[]", defaultValue: "[]", description: zh ? "受控或默认展开节点。" : "Controlled or default expanded nodes." },
+            { prop: "checkedKeys / defaultCheckedKeys", type: "string[]", defaultValue: "[]", description: zh ? "受控或默认勾选节点。" : "Controlled or default checked nodes." },
+            { prop: "lazy", type: "boolean", defaultValue: "false", description: zh ? "启用懒加载分支。" : "Enables lazy branches." },
+            { prop: "loadData", type: "(item) => Promise<TreeItem[]>", defaultValue: "-", description: zh ? "展开未加载分支时获取子节点。" : "Loads children for an unloaded branch." }
+          ]
+        },
+        {
+          title: labels.options,
+          rows: [
+            { prop: "TreeItem", type: "{ value; label; children?; disabled?; isLeaf? }", defaultValue: "-", description: zh ? "节点数据结构。" : "Node data shape." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onSelect", type: "(value) => void", defaultValue: "-", description: zh ? "叶子节点选择。" : "Leaf selection." },
+            { prop: "onNodeClick", type: "(item) => void", defaultValue: "-", description: zh ? "节点点击。" : "Node click." },
+            { prop: "onExpandChange", type: "(keys) => void", defaultValue: "-", description: zh ? "展开变化。" : "Expanded keys change." },
+            { prop: "onCheckChange", type: "(keys) => void", defaultValue: "-", description: zh ? "勾选变化。" : "Checked keys change." }
+          ]
+        },
+        {
+          title: labels.methods,
+          rows: [
+            { prop: "filter", type: "(query) => void", defaultValue: "-", description: zh ? "按文本过滤节点。" : "Filters nodes by text." },
+            { prop: "setExpandedKeys / getExpandedKeys", type: "ref methods", defaultValue: "-", description: zh ? "设置或读取展开节点。" : "Sets or reads expanded keys." },
+            { prop: "setCheckedKeys / getCheckedKeys / clearChecked", type: "ref methods", defaultValue: "-", description: zh ? "设置、读取或清空勾选。" : "Sets, reads, or clears checked keys." }
+          ]
+        }
       ]
     },
     {
@@ -1961,6 +2100,64 @@ function App() {
       ]
     },
     {
+      id: "time-picker-panel",
+      group: labels.groups.form,
+      title: zh ? "TimePickerPanel 时间面板" : "TimePickerPanel",
+      description: zh ? "独立时间面板，按起止时间和步长生成可点击时间点。" : "Standalone time panel generated from start, end, and step values.",
+      preview: (
+        <TimePickerPanel
+          aria-label={zh ? "时间面板" : "Time panel"}
+          role="group"
+          value={timePanelValue}
+          onValueChange={setTimePanelValue}
+          start="09:00"
+          end="12:00"
+          step="00:30"
+        />
+      ),
+      code: code([
+        'import { TimePickerPanel } from "pinepost-ui";',
+        "",
+        '<TimePickerPanel value={time} onValueChange={setTime} start="09:00" end="12:00" step="00:30" />'
+      ]),
+      api: [
+        { prop: "start / end", type: "HH:mm", defaultValue: "09:00 / 18:00", description: zh ? "时间范围。" : "Time range." },
+        { prop: "step", type: "HH:mm", defaultValue: "00:30", description: zh ? "时间步长。" : "Time step." },
+        { prop: "disabledTime", type: "(time: string) => boolean", defaultValue: "-", description: zh ? "禁用时间判断。" : "Disabled time predicate." },
+        { prop: "onValueChange", type: "(time: string) => void", defaultValue: "-", description: zh ? "时间变化回调。" : "Time change callback." }
+      ]
+    },
+    {
+      id: "date-time-picker-panel",
+      group: labels.groups.form,
+      title: zh ? "DateTimePickerPanel 日期时间面板" : "DateTimePickerPanel",
+      description: zh ? "组合日期和时间选择，快捷项可以直接写入完整日期时间。" : "Combines date and time selection; shortcuts can commit full date-time values.",
+      preview: (
+        <DateTimePickerPanel
+          value={dateTimePanelValue}
+          onValueChange={setDateTimePanelValue}
+          start="09:00"
+          end="12:00"
+          shortcuts={[{ label: zh ? "明日中午" : "Tomorrow noon", value: () => new Date(2026, 4, 18, 12, 0) }]}
+        />
+      ),
+      code: code([
+        'import { DateTimePickerPanel } from "pinepost-ui";',
+        "",
+        "<DateTimePickerPanel",
+        "  value={value}",
+        "  onValueChange={setValue}",
+        "  shortcuts={[{ label: '明日中午', value: () => new Date(2026, 4, 18, 12, 0) }]}",
+        "/>"
+      ]),
+      api: [
+        { prop: "value / defaultValue", type: "Date", defaultValue: "-", description: zh ? "受控或默认日期时间。" : "Controlled or default date-time." },
+        { prop: "shortcuts", type: "DatePickerShortcut[]", defaultValue: "[]", description: zh ? "快捷日期时间。" : "Shortcut date-times." },
+        { prop: "start / end / step", type: "HH:mm", defaultValue: "09:00 / 18:00 / 00:30", description: zh ? "时间面板范围和步长。" : "Time panel range and step." },
+        { prop: "onValueChange", type: "(date: Date) => void", defaultValue: "-", description: zh ? "日期时间变化回调。" : "Date-time change callback." }
+      ]
+    },
+    {
       id: "breadcrumb",
       group: labels.groups.navigation,
       title: zh ? "Breadcrumb 面包屑" : "Breadcrumb",
@@ -2248,7 +2445,7 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs</span><Tag variant="parcel">Beta</Tag><span>Table, Upload, Tree, Select</span><Tag variant="sky">Planned</Tag><span>{zh ? "更细的日期时间面板" : "Deeper date and time panels"}</span></div>,
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs</span><Tag variant="parcel">Beta</Tag><span>Table, Upload, Tree, Select, DateTimePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "固定列、范围选择、视觉回归" : "Fixed columns, ranges, visual checks"}</span></div>,
       code: code(["Stable: production-ready basics", "Beta: deep interaction surfaces", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },

@@ -82,12 +82,15 @@ function VirtualizedTableInner<T extends object>({
   }
 
   React.useImperativeHandle(ref, () => ({
+    clearExpansion: () => undefined,
     clearSelection: () => commitSelection([]),
     clearSort: () => setSort(undefined),
+    getExpandedRows: () => [],
     getSelectionRows: () => data.filter((row, index) => selectedKeys.includes(getRowKey(row, index))),
     getSortState: () => activeSort,
     setCurrentRow: () => undefined,
     sort: (key, order = "asc") => setSort({ key, order }),
+    toggleRowExpansion: () => undefined,
     toggleRowSelection: (row, selected) => {
       const rowIndex = data.indexOf(row);
       const key = getRowKey(row, rowIndex >= 0 ? rowIndex : data.length);

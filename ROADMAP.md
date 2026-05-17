@@ -4,16 +4,16 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 
 ## Near Term
 
-- Harden current v0.6 components with more keyboard, focus, and edge-case tests.
+- Harden current v0.7 components with more keyboard, focus, and edge-case tests.
 - Add richer validation helpers and async loading states for complex form controls.
 - Expand the docs with per-component disabled states, edge cases, and copyable recipes.
 - Publish the demo to GitHub Pages from `main`.
 
 ## Mid Term
 
-- Add richer table states: fixed columns, summaries, row expansion, and inline editing.
-- Add deeper date and time variants beyond the current native wrappers and panel component.
-- Add Cascader and TreeSelect async loading, lazy nodes, and custom render slots.
+- Add fixed columns, column grouping, and resizable headers for dense tables.
+- Add range selection and timezone-safe formatting helpers for date and time panels.
+- Add Cascader and TreeSelect async loading and custom render slots.
 - Add more theme token customization examples.
 - Add visual regression checks for the demo catalog.
 

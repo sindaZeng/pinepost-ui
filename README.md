@@ -75,6 +75,10 @@ The v0.6 expansion adds utility and panel coverage with Icon, InfiniteScroll,
 ColorPickerPanel, and DatePickerPanel, plus deeper Form, Table, Upload, Select,
 Tree, virtualized data, and feedback service APIs.
 
+The v0.7 expansion deepens high-frequency interaction surfaces with Table row
+expansion, summaries, inline editing, drag Upload, lazy Tree loading,
+TimePickerPanel, and DateTimePickerPanel.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, and API table.
 

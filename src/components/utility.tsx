@@ -202,6 +202,162 @@ export const DatePickerPanel = React.forwardRef<HTMLDivElement, DatePickerPanelP
 
 DatePickerPanel.displayName = "DatePickerPanel";
 
+export interface TimePickerPanelProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "defaultValue" | "onChange"> {
+  defaultValue?: string;
+  disabledTime?: (time: string) => boolean;
+  end?: string;
+  onValueChange?: (value: string) => void;
+  start?: string;
+  step?: string;
+  value?: string;
+}
+
+function timeToMinutes(time: string) {
+  const [hours = "0", minutes = "0"] = time.split(":");
+  return Number(hours) * 60 + Number(minutes);
+}
+
+function minutesToTime(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+function getTimeOptions(start: string, end: string, step: string) {
+  const options: string[] = [];
+  const stepMinutes = Math.max(1, timeToMinutes(step));
+
+  for (let current = timeToMinutes(start); current <= timeToMinutes(end); current += stepMinutes) {
+    options.push(minutesToTime(current));
+  }
+
+  return options;
+}
+
+export const TimePickerPanel = React.forwardRef<HTMLDivElement, TimePickerPanelProps>(
+  (
+    {
+      className,
+      defaultValue = "",
+      disabledTime,
+      end = "18:00",
+      onValueChange,
+      start = "09:00",
+      step = "00:30",
+      value,
+      ...props
+    },
+    ref
+  ) => {
+    const [internalValue, setInternalValue] = React.useState(defaultValue);
+    const currentValue = value ?? internalValue;
+
+    function commit(nextValue: string) {
+      if (value === undefined) setInternalValue(nextValue);
+      onValueChange?.(nextValue);
+    }
+
+    return (
+      <div ref={ref} className={cn("pinepost-time-panel", className)} {...props}>
+        {getTimeOptions(start, end, step).map((time) => (
+          <button
+            key={time}
+            aria-pressed={currentValue === time}
+            disabled={disabledTime?.(time)}
+            onClick={() => commit(time)}
+            type="button"
+          >
+            {time}
+          </button>
+        ))}
+      </div>
+    );
+  }
+);
+
+TimePickerPanel.displayName = "TimePickerPanel";
+
+export interface DateTimePickerPanelProps
+  extends Omit<DatePickerPanelProps, "defaultValue" | "onValueChange" | "shortcuts" | "value"> {
+  defaultValue?: Date;
+  end?: string;
+  onValueChange?: (value: Date) => void;
+  shortcuts?: DatePickerShortcut[];
+  start?: string;
+  step?: string;
+  value?: Date;
+}
+
+function dateWithTime(date: Date, time: string) {
+  const [hours = "0", minutes = "0"] = time.split(":");
+  const next = new Date(date);
+  next.setHours(Number(hours), Number(minutes), 0, 0);
+  return next;
+}
+
+function formatTime(date?: Date) {
+  if (!date) return "";
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+export const DateTimePickerPanel = React.forwardRef<HTMLDivElement, DateTimePickerPanelProps>(
+  (
+    {
+      className,
+      defaultValue,
+      end = "18:00",
+      onValueChange,
+      shortcuts = [],
+      start = "09:00",
+      step = "00:30",
+      value,
+      ...props
+    },
+    ref
+  ) => {
+    const [internalValue, setInternalValue] = React.useState<Date | undefined>(defaultValue);
+    const currentValue = value ?? internalValue;
+    const currentTime = formatTime(currentValue) || start;
+
+    function commit(nextValue: Date) {
+      if (value === undefined) setInternalValue(nextValue);
+      onValueChange?.(nextValue);
+    }
+
+    return (
+      <div ref={ref} className={cn("pinepost-date-time-panel", className)}>
+        {shortcuts.length > 0 && (
+          <div className="pinepost-date-time-panel__shortcuts">
+            {shortcuts.map((shortcut) => (
+              <button
+                key={String(shortcut.label)}
+                type="button"
+                onClick={() => commit(typeof shortcut.value === "function" ? shortcut.value() : shortcut.value)}
+              >
+                {shortcut.label}
+              </button>
+            ))}
+          </div>
+        )}
+        <DatePickerPanel
+          {...props}
+          value={currentValue}
+          onValueChange={(date) => commit(dateWithTime(date, currentTime))}
+        />
+        <TimePickerPanel
+          end={end}
+          start={start}
+          step={step}
+          value={currentTime}
+          onValueChange={(time) => commit(dateWithTime(currentValue ?? new Date(), time))}
+        />
+      </div>
+    );
+  }
+);
+
+DateTimePickerPanel.displayName = "DateTimePickerPanel";
+
 export interface InfiniteScrollProps extends React.HTMLAttributes<HTMLDivElement> {
   hasMore?: boolean;
   loading?: boolean;

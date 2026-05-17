@@ -3,6 +3,7 @@ import { cn } from "../lib/cn";
 
 export interface TableColumn<T> {
   align?: "left" | "center" | "right";
+  editable?: boolean;
   filter?: (row: T) => boolean;
   key: keyof T | string;
   render?: (row: T, index: number) => React.ReactNode;
@@ -18,30 +19,40 @@ export interface TableSortState<T> {
 }
 
 export interface TableRef<T> {
+  clearExpansion: () => void;
   clearSelection: () => void;
   clearSort: () => void;
+  getExpandedRows: () => T[];
   getSelectionRows: () => T[];
   getSortState: () => TableSortState<T> | undefined;
   setCurrentRow: (row?: T) => void;
   sort: (key: keyof T | string, order?: TableSortOrder) => void;
+  toggleRowExpansion: (row: T, expanded?: boolean) => void;
   toggleRowSelection: (row: T, selected?: boolean) => void;
 }
 
 export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
   columns: Array<TableColumn<T>>;
   data: T[];
+  defaultExpandedRowKeys?: React.Key[];
+  editable?: boolean;
   emptyText?: React.ReactNode;
+  expandedRowKeys?: React.Key[];
   filters?: Partial<Record<string, (row: T) => boolean>>;
   loading?: boolean;
   loadingText?: React.ReactNode;
   onCellClick?: (row: T, column: TableColumn<T>, rowIndex: number) => void;
+  onCellEdit?: (row: T, key: keyof T | string, value: string) => void;
   onCurrentChange?: (row?: T) => void;
+  onExpandChange?: (expandedKeys: React.Key[]) => void;
   onRowClick?: (row: T, index: number) => void;
   onSelectionChange?: (rows: T[]) => void;
   onSortChange?: (state?: TableSortState<T>) => void;
+  renderExpandedRow?: (row: T, index: number) => React.ReactNode;
   rowKey?: keyof T | ((row: T, index: number) => React.Key);
   selectable?: boolean;
   sortState?: TableSortState<T>;
+  summary?: Partial<Record<string, React.ReactNode>> | ((rows: T[]) => Partial<Record<string, React.ReactNode>>);
 }
 
 function getCellValue<T extends object>(row: T, key: keyof T | string) {
@@ -60,24 +71,35 @@ function TableInner<T extends object>({
   className,
   columns,
   data,
+  defaultExpandedRowKeys = [],
+  editable,
   emptyText = "No data",
+  expandedRowKeys,
   filters,
   loading,
   loadingText = "Loading",
   onCellClick,
+  onCellEdit,
   onCurrentChange,
+  onExpandChange,
   onRowClick,
   onSelectionChange,
   onSortChange,
+  renderExpandedRow,
   rowKey,
   selectable,
   sortState,
+  summary,
   ...props
 }: TableProps<T>, ref: React.ForwardedRef<TableRef<T>>) {
   const [selectedKeys, setSelectedKeys] = React.useState<React.Key[]>([]);
   const [currentRowKey, setCurrentRowKey] = React.useState<React.Key | undefined>();
+  const [editingCell, setEditingCell] = React.useState<{ key: keyof T | string; rowKey: React.Key } | null>(null);
+  const [editDraft, setEditDraft] = React.useState("");
+  const [internalExpandedKeys, setInternalExpandedKeys] = React.useState<React.Key[]>(defaultExpandedRowKeys);
   const [internalSortState, setInternalSortState] = React.useState<TableSortState<T> | undefined>();
   const activeSort = sortState ?? internalSortState;
+  const activeExpandedKeys = expandedRowKeys ?? internalExpandedKeys;
 
   function getRowKey(row: T, index: number) {
     if (typeof rowKey === "function") return rowKey(row, index);
@@ -112,6 +134,23 @@ function TableInner<T extends object>({
     onSortChange?.(nextSort);
   }
 
+  function commitExpansion(nextKeys: React.Key[]) {
+    if (expandedRowKeys === undefined) setInternalExpandedKeys(nextKeys);
+    onExpandChange?.(nextKeys);
+  }
+
+  function toggleExpansion(row: T, expanded?: boolean) {
+    const rowIndex = data.indexOf(row);
+    const key = getRowKey(row, rowIndex >= 0 ? rowIndex : data.length);
+    const nextExpanded = expanded ?? !activeExpandedKeys.includes(key);
+    commitExpansion(nextExpanded ? Array.from(new Set([...activeExpandedKeys, key])) : activeExpandedKeys.filter((item) => item !== key));
+  }
+
+  function commitCellEdit(row: T, column: TableColumn<T>, value: string) {
+    onCellEdit?.(row, column.key, value);
+    setEditingCell(null);
+  }
+
   function toggleSort(column: TableColumn<T>) {
     if (!column.sortable) return;
     const key = column.key;
@@ -120,8 +159,10 @@ function TableInner<T extends object>({
   }
 
   React.useImperativeHandle(ref, () => ({
+    clearExpansion: () => commitExpansion([]),
     clearSelection: () => commitSelection([]),
     clearSort: () => setSort(undefined),
+    getExpandedRows: () => data.filter((row, index) => activeExpandedKeys.includes(getRowKey(row, index))),
     getSelectionRows: () => data.filter((row, index) => selectedKeys.includes(getRowKey(row, index))),
     getSortState: () => activeSort,
     setCurrentRow: (row) => {
@@ -131,19 +172,24 @@ function TableInner<T extends object>({
       onCurrentChange?.(row);
     },
     sort: (key, order = "asc") => setSort({ key, order }),
+    toggleRowExpansion: toggleExpansion,
     toggleRowSelection: (row, selected) => {
       const rowIndex = data.indexOf(row);
       const key = getRowKey(row, rowIndex >= 0 ? rowIndex : data.length);
       const nextSelected = selected ?? !selectedKeys.includes(key);
       commitSelection(nextSelected ? Array.from(new Set([...selectedKeys, key])) : selectedKeys.filter((item) => item !== key));
     }
-  }), [activeSort, data, onCurrentChange, selectedKeys]);
+  }), [activeExpandedKeys, activeSort, data, onCurrentChange, selectedKeys]);
+
+  const extraColumnCount = (selectable ? 1 : 0) + (renderExpandedRow ? 1 : 0);
+  const summaryValues = typeof summary === "function" ? summary(visibleData) : summary;
 
   return (
     <div className={cn("pinepost-table-wrap", className)} {...props}>
       <table className="pinepost-table">
         <thead>
           <tr>
+            {renderExpandedRow && <th aria-label="Expand rows" />}
             {selectable && <th aria-label="Selection" />}
             {columns.map((column) => (
               <th key={String(column.key)} style={{ textAlign: column.align }}>
@@ -164,56 +210,120 @@ function TableInner<T extends object>({
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={columns.length + (selectable ? 1 : 0)}>{loadingText}</td>
+              <td colSpan={columns.length + extraColumnCount}>{loadingText}</td>
             </tr>
           ) : visibleData.length > 0 ? (
             visibleData.map((row, index) => {
               const key = getRowKey(row, data.indexOf(row));
               const selected = selectedKeys.includes(key);
+              const expanded = activeExpandedKeys.includes(key);
+              const labelBase = String(getCellValue(row, columns[0]?.key ?? "") ?? key);
 
               return (
-              <tr
-                key={key}
-                data-current={currentRowKey === key}
-                data-selected={selected}
-                onClick={() => {
-                  setCurrentRowKey(key);
-                  onCurrentChange?.(row);
-                  onRowClick?.(row, index);
-                }}
-              >
-                {selectable && (
-                  <td>
-                    <input
-                      aria-label={`Select ${String(getCellValue(row, columns[0]?.key ?? ""))}`}
-                      checked={selected}
-                      onChange={(event) => {
-                        const nextKeys = event.currentTarget.checked
-                          ? Array.from(new Set([...selectedKeys, key]))
-                          : selectedKeys.filter((item) => item !== key);
-                        commitSelection(nextKeys);
-                      }}
-                      onClick={(event) => event.stopPropagation()}
-                      type="checkbox"
-                    />
-                  </td>
-                )}
-                {columns.map((column) => (
-                  <td key={String(column.key)} onClick={() => onCellClick?.(row, column, index)} style={{ textAlign: column.align }}>
-                    {column.render
-                      ? column.render(row, index)
-                      : getCellValue(row, column.key)}
-                  </td>
-                ))}
-              </tr>
+                <React.Fragment key={key}>
+                  <tr
+                    data-current={currentRowKey === key}
+                    data-selected={selected}
+                    onClick={() => {
+                      setCurrentRowKey(key);
+                      onCurrentChange?.(row);
+                      onRowClick?.(row, index);
+                    }}
+                  >
+                    {renderExpandedRow && (
+                      <td>
+                        <button
+                          aria-expanded={expanded}
+                          aria-label={`${expanded ? "Collapse" : "Expand"} ${labelBase}`}
+                          className="pinepost-table__expand"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleExpansion(row);
+                          }}
+                          type="button"
+                        >
+                          {expanded ? "-" : "+"}
+                        </button>
+                      </td>
+                    )}
+                    {selectable && (
+                      <td>
+                        <input
+                          aria-label={`Select ${labelBase}`}
+                          checked={selected}
+                          onChange={(event) => {
+                            const nextKeys = event.currentTarget.checked
+                              ? Array.from(new Set([...selectedKeys, key]))
+                              : selectedKeys.filter((item) => item !== key);
+                            commitSelection(nextKeys);
+                          }}
+                          onClick={(event) => event.stopPropagation()}
+                          type="checkbox"
+                        />
+                      </td>
+                    )}
+                    {columns.map((column) => {
+                      const editing = editingCell?.rowKey === key && editingCell.key === column.key;
+                      const cellValue = column.render ? column.render(row, index) : getCellValue(row, column.key);
+
+                      return (
+                        <td
+                          key={String(column.key)}
+                          onClick={() => onCellClick?.(row, column, index)}
+                          onDoubleClick={() => {
+                            if (!editable || !column.editable) return;
+                            setEditingCell({ rowKey: key, key: column.key });
+                            setEditDraft(String(getCellValue(row, column.key) ?? ""));
+                          }}
+                          style={{ textAlign: column.align }}
+                        >
+                          {editing ? (
+                            <input
+                              aria-label={`Edit ${String(column.title)} for ${labelBase}`}
+                              className="pinepost-table__editor"
+                              onBlur={(event) => commitCellEdit(row, column, event.currentTarget.value)}
+                              onChange={(event) => setEditDraft(event.currentTarget.value)}
+                              onClick={(event) => event.stopPropagation()}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") commitCellEdit(row, column, editDraft);
+                                if (event.key === "Escape") setEditingCell(null);
+                              }}
+                              value={editDraft}
+                            />
+                          ) : (
+                            cellValue
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  {renderExpandedRow && expanded && (
+                    <tr className="pinepost-table__expanded-row">
+                      <td colSpan={columns.length + extraColumnCount}>{renderExpandedRow(row, index)}</td>
+                    </tr>
+                  )}
+                </React.Fragment>
               );
             })
           ) : (
             <tr>
-              <td colSpan={columns.length + (selectable ? 1 : 0)}>{emptyText}</td>
+              <td colSpan={columns.length + extraColumnCount}>{emptyText}</td>
             </tr>
           )}
         </tbody>
+        {summaryValues && (
+          <tfoot>
+            <tr className="pinepost-table__summary-row">
+              {renderExpandedRow && <td />}
+              {selectable && <td />}
+              {columns.map((column) => (
+                <td key={String(column.key)} style={{ textAlign: column.align }}>
+                  {summaryValues[String(column.key)]}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   );
@@ -350,6 +460,7 @@ Carousel.displayName = "Carousel";
 export interface TreeItem {
   children?: TreeItem[];
   disabled?: boolean;
+  isLeaf?: boolean;
   label: React.ReactNode;
   value: string;
 }
@@ -370,6 +481,8 @@ export interface TreeProps extends Omit<React.HTMLAttributes<HTMLUListElement>, 
   defaultExpanded?: string[];
   expandedKeys?: string[];
   items: TreeItem[];
+  lazy?: boolean;
+  loadData?: (item: TreeItem) => Promise<TreeItem[]>;
   onCheckChange?: (checkedKeys: string[]) => void;
   onExpandChange?: (expandedKeys: string[]) => void;
   onNodeClick?: (item: TreeItem) => void;
@@ -390,6 +503,9 @@ function TreeBranch({
   checked,
   expanded,
   item,
+  lazy,
+  loadingKeys,
+  loadData,
   onCheck,
   onNodeClick,
   onSelect,
@@ -400,13 +516,16 @@ function TreeBranch({
   checked: Set<string>;
   expanded: Set<string>;
   item: TreeItem;
+  lazy?: boolean;
+  loadingKeys: Set<string>;
+  loadData?: (item: TreeItem) => Promise<TreeItem[]>;
   onCheck: (item: TreeItem, checked: boolean) => void;
   onNodeClick?: (item: TreeItem) => void;
   onSelect?: (value: string) => void;
-  toggle: (value: string) => void;
+  toggle: (item: TreeItem) => void;
   query: string;
 }) {
-  const hasChildren = Boolean(item.children?.length);
+  const hasChildren = Boolean(item.children?.length) || Boolean(lazy && !item.isLeaf);
   const open = expanded.has(item.value);
   const visibleChildren = item.children?.filter((child) => treeMatches(child, query)) ?? [];
 
@@ -429,12 +548,12 @@ function TreeBranch({
         disabled={item.disabled}
         onClick={() => {
           onNodeClick?.(item);
-          if (hasChildren) toggle(item.value);
+          if (hasChildren) toggle(item);
           else onSelect?.(item.value);
         }}
         type="button"
       >
-        <span aria-hidden="true">{hasChildren ? (open ? "-" : "+") : ""}</span>
+        <span aria-hidden="true">{loadingKeys.has(item.value) ? "…" : hasChildren ? (open ? "-" : "+") : ""}</span>
         {item.label}
       </button>
       </span>
@@ -447,6 +566,9 @@ function TreeBranch({
               checked={checked}
               expanded={expanded}
               item={child}
+              lazy={lazy}
+              loadingKeys={loadingKeys}
+              loadData={loadData}
               onCheck={onCheck}
               onNodeClick={onNodeClick}
               onSelect={onSelect}
@@ -470,6 +592,8 @@ export const Tree = React.forwardRef<TreeRef, TreeProps>(
       defaultExpanded = [],
       expandedKeys,
       items,
+      lazy,
+      loadData,
       onCheckChange,
       onExpandChange,
       onNodeClick,
@@ -479,11 +603,15 @@ export const Tree = React.forwardRef<TreeRef, TreeProps>(
     ref
   ) => {
     const listRef = React.useRef<HTMLUListElement>(null);
+    const [treeItems, setTreeItems] = React.useState(items);
     const [internalExpanded, setInternalExpanded] = React.useState(() => new Set(defaultExpanded));
     const [internalChecked, setInternalChecked] = React.useState(() => new Set(defaultCheckedKeys));
+    const [loadingKeys, setLoadingKeys] = React.useState(() => new Set<string>());
     const [query, setQuery] = React.useState("");
     const expanded = React.useMemo(() => new Set(expandedKeys ?? Array.from(internalExpanded)), [expandedKeys, internalExpanded]);
     const checked = React.useMemo(() => new Set(checkedKeys ?? Array.from(internalChecked)), [checkedKeys, internalChecked]);
+
+    React.useEffect(() => setTreeItems(items), [items]);
 
     function commitExpanded(next: Set<string>) {
       if (expandedKeys === undefined) setInternalExpanded(next);
@@ -495,11 +623,33 @@ export const Tree = React.forwardRef<TreeRef, TreeProps>(
       onCheckChange?.(Array.from(next));
     }
 
-    function toggle(value: string) {
+    function applyChildren(nodes: TreeItem[], value: string, children: TreeItem[]): TreeItem[] {
+      return nodes.map((node) => {
+        if (node.value === value) return { ...node, children };
+        if (node.children) return { ...node, children: applyChildren(node.children, value, children) };
+        return node;
+      });
+    }
+
+    function toggle(item: TreeItem) {
       const next = new Set(expanded);
+      const value = item.value;
       if (next.has(value)) next.delete(value);
       else next.add(value);
       commitExpanded(next);
+
+      if (lazy && loadData && !item.children?.length && !item.isLeaf && !loadingKeys.has(value)) {
+        setLoadingKeys((current) => new Set([...current, value]));
+        void loadData(item).then((children) => {
+          setTreeItems((current) => applyChildren(current, value, children));
+        }).finally(() => {
+          setLoadingKeys((current) => {
+            const after = new Set(current);
+            after.delete(value);
+            return after;
+          });
+        });
+      }
     }
 
     function onCheck(item: TreeItem, selected: boolean) {
@@ -520,13 +670,16 @@ export const Tree = React.forwardRef<TreeRef, TreeProps>(
 
     return (
       <ul ref={listRef} className={cn("pinepost-tree", className)} {...props}>
-        {items.filter((item) => treeMatches(item, query)).map((item) => (
+        {treeItems.filter((item) => treeMatches(item, query)).map((item) => (
           <TreeBranch
             key={item.value}
             checkable={checkable}
             checked={checked}
             expanded={expanded}
             item={item}
+            lazy={lazy}
+            loadingKeys={loadingKeys}
+            loadData={loadData}
             onCheck={onCheck}
             onNodeClick={onNodeClick}
             onSelect={onSelect}
