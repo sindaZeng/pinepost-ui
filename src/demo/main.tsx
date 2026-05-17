@@ -2,8 +2,11 @@ import * as React from "react";
 import { createRoot } from "react-dom/client";
 import {
   Alert,
+  Affix,
+  Anchor,
   Avatar,
   Badge,
+  Backtop,
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -11,6 +14,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
   Button,
+  Calendar,
+  Carousel,
   Card,
   CardContent,
   CardDescription,
@@ -22,6 +27,8 @@ import {
   CollapseContent,
   CollapseItem,
   CollapseTrigger,
+  Col,
+  Container,
   Descriptions,
   Dialog,
   DialogClose,
@@ -44,10 +51,21 @@ import {
   DropdownItem,
   DropdownTrigger,
   Empty,
+  Form,
+  FormField,
+  Header,
+  Image,
   Input,
+  InputNumber,
   Link,
+  Loading,
+  Main,
   Menu,
+  Message,
+  MessageBox,
+  Notification,
   Pagination,
+  PageHeader,
   PinepostProvider,
   Popconfirm,
   PopconfirmAction,
@@ -61,16 +79,21 @@ import {
   PopoverTrigger,
   Progress,
   RadioGroup,
+  Rate,
   Result,
+  Row,
+  Scrollbar,
   Segmented,
   Select,
   Skeleton,
   Slider,
   Space,
   Spinner,
+  Splitter,
   Statistic,
   Steps,
   Switch,
+  Table,
   Tabs,
   TabsContent,
   TabsList,
@@ -78,6 +101,7 @@ import {
   Tag,
   Text,
   Textarea,
+  TimePicker,
   Timeline,
   Toast,
   ToastClose,
@@ -89,6 +113,8 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
+  Tree,
+  Upload,
   Watermark,
   type PinepostLocale,
   type PinepostTheme
@@ -328,6 +354,8 @@ function App() {
   const [segment, setSegment] = React.useState("calm");
   const [selectValue, setSelectValue] = React.useState("cedar");
   const [radioValue, setRadioValue] = React.useState("standard");
+  const [rateValue, setRateValue] = React.useState(4);
+  const [messageBoxOpen, setMessageBoxOpen] = React.useState(false);
   const [toastOpen, setToastOpen] = React.useState(false);
   const labels = copy[locale] as (typeof copy)["zh-CN"];
   const zh = locale === "zh-CN";
@@ -443,6 +471,386 @@ function App() {
         { prop: "options", type: "SelectOption[]", defaultValue: "[]", description: zh ? "下拉选项。" : "Dropdown options." },
         { prop: "value", type: "string", defaultValue: "-", description: zh ? "受控值。" : "Controlled value." },
         { prop: "onValueChange", type: "(value: string) => void", defaultValue: "-", description: zh ? "值变化回调。" : "Value change callback." }
+      ]
+    },
+    {
+      id: "layout",
+      group: labels.groups.basic,
+      title: zh ? "Layout 布局" : "Layout",
+      description: zh ? "Container、Row、Col、Scrollbar 和 Splitter 用于搭建稳定页面结构。" : "Container, Row, Col, Scrollbar, and Splitter build stable page shells.",
+      preview: (
+        <Container>
+          <Header>{zh ? "路线台" : "Route desk"}</Header>
+          <Main>
+            <Row>
+              <Col span={6}>{zh ? "左侧分拣" : "Left sorting"}</Col>
+              <Col span={6}>{zh ? "右侧预览" : "Right preview"}</Col>
+            </Row>
+            <Scrollbar maxHeight={96}>
+              <Space direction="vertical">
+                <Text>{zh ? "路线日志 01" : "Route log 01"}</Text>
+                <Text>{zh ? "路线日志 02" : "Route log 02"}</Text>
+                <Text>{zh ? "路线日志 03" : "Route log 03"}</Text>
+              </Space>
+            </Scrollbar>
+            <Splitter>
+              <span>{zh ? "收件" : "Inbox"}</span>
+              <span>{zh ? "预览" : "Preview"}</span>
+            </Splitter>
+          </Main>
+        </Container>
+      ),
+      code: code([
+        'import { Col, Container, Header, Main, Row } from "pinepost-ui";',
+        "",
+        "<Container>",
+        "  <Header>路线台</Header>",
+        "  <Main>",
+        "    <Row>",
+        "      <Col span={6}>左侧分拣</Col>",
+        "      <Col span={6}>右侧预览</Col>",
+        "    </Row>",
+        "  </Main>",
+        "</Container>"
+      ]),
+      api: [
+        { prop: "direction", type: '"horizontal" | "vertical"', defaultValue: "vertical", description: zh ? "Container 排布方向。" : "Container direction." },
+        { prop: "span", type: "number", defaultValue: "12", description: zh ? "Col 占用的 12 栅格列数。" : "Col span in a 12-column grid." },
+        { prop: "maxHeight", type: "number | string", defaultValue: "220", description: zh ? "Scrollbar 最大高度。" : "Maximum scrollbar height." }
+      ]
+    },
+    {
+      id: "form",
+      group: labels.groups.form,
+      title: zh ? "Form 表单" : "Form",
+      description: zh ? "Form 与 FormField 提供标签、说明、校验错误和布局外壳。" : "Form and FormField provide labels, hints, errors, and layout shells.",
+      preview: (
+        <Form>
+          <FormField label={zh ? "收件处" : "Recipient"} htmlFor="demo-recipient" required description={zh ? "用于路线分配。" : "Used for route assignment."}>
+            <Input id="demo-recipient" placeholder={zh ? "苔藓桌" : "Moss desk"} />
+          </FormField>
+          <FormField label={zh ? "校验提示" : "Validation"} error={zh ? "请填写路线。" : "Route is required."}>
+            <Input placeholder={zh ? "路线编号" : "Route code"} />
+          </FormField>
+        </Form>
+      ),
+      code: code([
+        'import { Form, FormField, Input } from "pinepost-ui";',
+        "",
+        "<Form>",
+        '  <FormField label="收件处" required description="用于路线分配。">',
+        '    <Input placeholder="苔藓桌" />',
+        "  </FormField>",
+        "</Form>"
+      ]),
+      api: [
+        { prop: "layout", type: '"vertical" | "horizontal" | "inline"', defaultValue: "vertical", description: zh ? "表单布局。" : "Form layout." },
+        { prop: "description", type: "ReactNode", defaultValue: "-", description: zh ? "字段说明。" : "Field hint." },
+        { prop: "error", type: "ReactNode", defaultValue: "-", description: zh ? "字段错误提示。" : "Field error." }
+      ]
+    },
+    {
+      id: "input-number",
+      group: labels.groups.form,
+      title: zh ? "InputNumber 数字输入" : "InputNumber",
+      description: zh ? "带加减按钮的数字输入，适合数量、步进和库存字段。" : "Numeric input with stepper buttons for quantity and inventory fields.",
+      preview: <InputNumber aria-label={zh ? "包裹数量" : "Parcel count"} defaultValue={3} min={0} max={12} />,
+      code: code([
+        'import { InputNumber } from "pinepost-ui";',
+        "",
+        '<InputNumber defaultValue={3} min={0} max={12} onValueChange={setCount} />'
+      ]),
+      api: [
+        { prop: "value", type: "number", defaultValue: "-", description: zh ? "受控数值。" : "Controlled value." },
+        { prop: "step", type: "number", defaultValue: "1", description: zh ? "每次增减步长。" : "Stepper size." },
+        { prop: "onValueChange", type: "(value: number) => void", defaultValue: "-", description: zh ? "数值变化回调。" : "Value change callback." }
+      ]
+    },
+    {
+      id: "rate",
+      group: labels.groups.form,
+      title: zh ? "Rate 评分" : "Rate",
+      description: zh ? "使用邮戳形态表达评分，不依赖外部图标资源。" : "A stamp-like rating control without external icon assets.",
+      preview: <Rate label={zh ? "路线评分" : "Route rating"} value={rateValue} onValueChange={setRateValue} />,
+      code: code([
+        'import { Rate } from "pinepost-ui";',
+        "",
+        '<Rate value={4} onValueChange={setValue} />'
+      ]),
+      api: [
+        { prop: "count", type: "number", defaultValue: "5", description: zh ? "评分项数量。" : "Number of rating items." },
+        { prop: "value", type: "number", defaultValue: "0", description: zh ? "当前评分。" : "Current rating." },
+        { prop: "onValueChange", type: "(value: number) => void", defaultValue: "-", description: zh ? "评分变化回调。" : "Rating callback." }
+      ]
+    },
+    {
+      id: "upload",
+      group: labels.groups.form,
+      title: zh ? "Upload 上传" : "Upload",
+      description: zh ? "轻量文件选择区域，适合清单、图片和附件入口。" : "A lightweight file picker surface for manifests, images, and attachments.",
+      preview: <Upload label={zh ? "上传路线清单" : "Upload route manifest"} description={zh ? "支持业务侧自行校验类型和大小。" : "Let product code validate type and size."} />,
+      code: code([
+        'import { Upload } from "pinepost-ui";',
+        "",
+        '<Upload label="上传路线清单" onFilesChange={(files) => console.log(files)} />'
+      ]),
+      api: [
+        { prop: "label", type: "ReactNode", defaultValue: "Choose file", description: zh ? "上传区域标题。" : "Upload title." },
+        { prop: "description", type: "ReactNode", defaultValue: "-", description: zh ? "上传说明。" : "Upload hint." },
+        { prop: "onFilesChange", type: "(files: File[]) => void", defaultValue: "-", description: zh ? "文件变化回调。" : "File change callback." }
+      ]
+    },
+    {
+      id: "table",
+      group: labels.groups.display,
+      title: zh ? "Table 表格" : "Table",
+      description: zh ? "基础数据表格，支持列定义、空态和自定义单元格渲染。" : "Basic data table with columns, empty state, and custom cell rendering.",
+      preview: (
+        <Table
+          columns={[
+            { key: "route", title: zh ? "路线" : "Route" },
+            { key: "status", title: zh ? "状态" : "Status" },
+            { key: "count", title: zh ? "数量" : "Count", align: "right" }
+          ]}
+          data={[{ route: "A7", status: zh ? "就绪" : "Ready", count: 8 }, { route: "B2", status: zh ? "复核" : "Review", count: 3 }]}
+        />
+      ),
+      code: code([
+        'import { Table } from "pinepost-ui";',
+        "",
+        "<Table",
+        "  columns={[",
+        '    { key: "route", title: "路线" },',
+        '    { key: "status", title: "状态" }',
+        "  ]}",
+        '  data={[{ route: "A7", status: "就绪" }]}',
+        "/>"
+      ]),
+      api: [
+        { prop: "columns", type: "TableColumn<T>[]", defaultValue: "[]", description: zh ? "列配置。" : "Column config." },
+        { prop: "data", type: "T[]", defaultValue: "[]", description: zh ? "表格数据。" : "Table data." },
+        { prop: "rowKey", type: "keyof T | function", defaultValue: "index", description: zh ? "行 key。" : "Row key." }
+      ]
+    },
+    {
+      id: "calendar",
+      group: labels.groups.display,
+      title: zh ? "Calendar 日历" : "Calendar",
+      description: zh ? "月视图日历，可自定义周起始和日期渲染。" : "Month calendar with configurable week start and day rendering.",
+      preview: <Calendar month={new Date(2026, 4, 1)} selectedDate={new Date(2026, 4, 17)} />,
+      code: code([
+        'import { Calendar } from "pinepost-ui";',
+        "",
+        "<Calendar month={new Date(2026, 4, 1)} selectedDate={new Date(2026, 4, 17)} />"
+      ]),
+      api: [
+        { prop: "month", type: "Date", defaultValue: "new Date()", description: zh ? "展示月份。" : "Displayed month." },
+        { prop: "selectedDate", type: "Date", defaultValue: "-", description: zh ? "高亮日期。" : "Highlighted date." },
+        { prop: "renderDay", type: "(date: Date) => ReactNode", defaultValue: "-", description: zh ? "自定义日期内容。" : "Custom day content." }
+      ]
+    },
+    {
+      id: "image",
+      group: labels.groups.display,
+      title: zh ? "Image 图片" : "Image",
+      description: zh ? "带边框、比例和说明文字的图片容器。" : "Image frame with aspect ratio and caption support.",
+      preview: (
+        <Image
+          alt={zh ? "纸张纹理预览" : "Paper texture preview"}
+          caption={zh ? "可用于产品截图或素材预览。" : "Useful for screenshots and asset previews."}
+          src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 360'%3E%3Crect width='640' height='360' fill='%23fff8ea'/%3E%3Cpath d='M0 250c120-60 210-10 320-60s210-30 320-90v260H0z' fill='%23d8e3b5'/%3E%3Ccircle cx='470' cy='115' r='58' fill='%2387b9c9'/%3E%3C/svg%3E"
+        />
+      ),
+      code: code([
+        'import { Image } from "pinepost-ui";',
+        "",
+        '<Image alt="预览" src="/preview.png" caption="素材预览" />'
+      ]),
+      api: [
+        { prop: "fit", type: '"cover" | "contain"', defaultValue: "cover", description: zh ? "图片填充方式。" : "Object fit." },
+        { prop: "caption", type: "ReactNode", defaultValue: "-", description: zh ? "图片说明。" : "Image caption." },
+        { prop: "alt", type: "string", defaultValue: "-", description: zh ? "无障碍替代文本。" : "Accessible alternative text." }
+      ]
+    },
+    {
+      id: "carousel",
+      group: labels.groups.display,
+      title: zh ? "Carousel 走马灯" : "Carousel",
+      description: zh ? "受控回调友好的轮播容器，适合公告、活动和引导卡片。" : "Carousel for notices, campaigns, and onboarding cards.",
+      preview: (
+        <Carousel
+          items={[
+            { id: "morning", content: <strong>{zh ? "晨间路线准备完成" : "Morning route is ready"}</strong> },
+            { id: "evening", content: <strong>{zh ? "黄昏路线等待复核" : "Evening route needs review"}</strong> }
+          ]}
+        />
+      ),
+      code: code([
+        'import { Carousel } from "pinepost-ui";',
+        "",
+        "<Carousel",
+        "  items={[",
+        '    { id: "a", content: <strong>晨间路线准备完成</strong> }',
+        "  ]}",
+        "/>"
+      ]),
+      api: [
+        { prop: "items", type: "CarouselItem[]", defaultValue: "[]", description: zh ? "轮播项。" : "Slides." },
+        { prop: "defaultIndex", type: "number", defaultValue: "0", description: zh ? "初始索引。" : "Initial index." },
+        { prop: "onIndexChange", type: "(index: number) => void", defaultValue: "-", description: zh ? "切换回调。" : "Slide callback." }
+      ]
+    },
+    {
+      id: "tree",
+      group: labels.groups.display,
+      title: zh ? "Tree 树形控件" : "Tree",
+      description: zh ? "用于路线、目录和分组层级的轻量树控件。" : "A lightweight tree for routes, folders, and grouped hierarchy.",
+      preview: (
+        <Tree
+          defaultExpanded={["routes"]}
+          items={[{ value: "routes", label: zh ? "路线" : "Routes", children: [{ value: "north", label: zh ? "北线" : "North lane" }, { value: "south", label: zh ? "南线" : "South lane" }] }]}
+        />
+      ),
+      code: code([
+        'import { Tree } from "pinepost-ui";',
+        "",
+        "<Tree",
+        '  defaultExpanded={["routes"]}',
+        "  items={[{ value: 'routes', label: '路线', children: [{ value: 'north', label: '北线' }] }]}",
+        "/>"
+      ]),
+      api: [
+        { prop: "items", type: "TreeItem[]", defaultValue: "[]", description: zh ? "树节点。" : "Tree nodes." },
+        { prop: "defaultExpanded", type: "string[]", defaultValue: "[]", description: zh ? "默认展开节点。" : "Initially expanded nodes." },
+        { prop: "onSelect", type: "(value: string) => void", defaultValue: "-", description: zh ? "叶子节点选择回调。" : "Leaf selection callback." }
+      ]
+    },
+    {
+      id: "page-header",
+      group: labels.groups.navigation,
+      title: zh ? "PageHeader 页头" : "PageHeader",
+      description: zh ? "页面级标题、返回按钮、说明和右侧操作区。" : "Page title with back action, description, and extra actions.",
+      preview: <PageHeader title={zh ? "路线详情" : "Route detail"} description={zh ? "查看包裹、备注和状态。" : "View parcels, notes, and status."} onBack={showToast} extra={<Button size="sm">{zh ? "保存" : "Save"}</Button>} />,
+      code: code([
+        'import { Button, PageHeader } from "pinepost-ui";',
+        "",
+        '<PageHeader title="路线详情" onBack={goBack} extra={<Button>保存</Button>} />'
+      ]),
+      api: [
+        { prop: "title", type: "ReactNode", defaultValue: "-", description: zh ? "页头标题。" : "Header title." },
+        { prop: "description", type: "ReactNode", defaultValue: "-", description: zh ? "页头说明。" : "Header description." },
+        { prop: "onBack", type: "() => void", defaultValue: "-", description: zh ? "返回回调。" : "Back callback." }
+      ]
+    },
+    {
+      id: "backtop",
+      group: labels.groups.navigation,
+      title: zh ? "Backtop 回到顶部" : "Backtop",
+      description: zh ? "固定或普通按钮形态的回到顶部控件，可绑定滚动容器。" : "Back-to-top control for window or custom scroll containers.",
+      preview: (
+        <Space>
+          <Backtop>{zh ? "顶部" : "Top"}</Backtop>
+          <Affix offsetTop={0}>
+            <Anchor items={[{ href: "#", label: zh ? "当前页" : "Current page" }]} />
+          </Affix>
+        </Space>
+      ),
+      code: code([
+        'import { Affix, Anchor, Backtop } from "pinepost-ui";',
+        "",
+        '<Backtop visibilityHeight={240}>顶部</Backtop>',
+        '<Affix offsetTop={12}><Anchor items={[{ href: "#api", label: "API" }]} /></Affix>'
+      ]),
+      api: [
+        { prop: "visibilityHeight", type: "number", defaultValue: "0", description: zh ? "显示阈值。" : "Visibility threshold." },
+        { prop: "target", type: "() => HTMLElement | Window", defaultValue: "window", description: zh ? "滚动目标。" : "Scroll target." },
+        { prop: "offsetTop", type: "number", defaultValue: "0", description: zh ? "Affix 顶部距离。" : "Sticky top offset." }
+      ]
+    },
+    {
+      id: "loading",
+      group: labels.groups.feedback,
+      title: zh ? "Loading 加载" : "Loading",
+      description: zh ? "加载状态容器，可作为块级占位或覆盖层。" : "Loading surface for block placeholders or overlays.",
+      preview: <Loading label={zh ? "分拣中" : "Sorting"} overlay><div className="docs-watermark-card">{zh ? "路线内容" : "Route content"}</div></Loading>,
+      code: code([
+        'import { Loading } from "pinepost-ui";',
+        "",
+        '<Loading label="分拣中" overlay><Panel /></Loading>'
+      ]),
+      api: [
+        { prop: "label", type: "string", defaultValue: "Loading", description: zh ? "加载文案和无障碍标签。" : "Loading text and accessible label." },
+        { prop: "overlay", type: "boolean", defaultValue: "false", description: zh ? "是否显示覆盖层。" : "Show overlay." },
+        { prop: "children", type: "ReactNode", defaultValue: "-", description: zh ? "被覆盖内容。" : "Covered content." }
+      ]
+    },
+    {
+      id: "message",
+      group: labels.groups.feedback,
+      title: zh ? "Message 消息提示" : "Message",
+      description: zh ? "页面内轻提示，适合表单保存、状态反馈和短说明。" : "Inline feedback for saves, status changes, and short hints.",
+      preview: <Message variant="success" title={zh ? "已保存路线" : "Route saved"} description={zh ? "草稿已经进入待发托盘。" : "The draft is in the outgoing tray."} />,
+      code: code([
+        'import { Message } from "pinepost-ui";',
+        "",
+        '<Message variant="success" title="已保存路线" description="草稿已经进入待发托盘。" />'
+      ]),
+      api: [
+        { prop: "variant", type: '"info" | "success" | "warning" | "danger"', defaultValue: "info", description: zh ? "消息状态。" : "Message status." },
+        { prop: "title", type: "ReactNode", defaultValue: "-", description: zh ? "消息标题。" : "Message title." },
+        { prop: "description", type: "ReactNode", defaultValue: "-", description: zh ? "消息说明。" : "Message description." }
+      ]
+    },
+    {
+      id: "notification",
+      group: labels.groups.feedback,
+      title: zh ? "Notification 通知" : "Notification",
+      description: zh ? "更强的通知卡片，适合带操作的异步结果。" : "A stronger notification card for async results with actions.",
+      preview: <Notification title={zh ? "窗口桌提醒" : "Window desk notice"} description={zh ? "北线路线需要在黄昏前复核。" : "North route needs review before dusk."} action={<Button size="sm" variant="soft">{zh ? "查看" : "View"}</Button>} />,
+      code: code([
+        'import { Button, Notification } from "pinepost-ui";',
+        "",
+        '<Notification title="窗口桌提醒" action={<Button>查看</Button>} />'
+      ]),
+      api: [
+        { prop: "variant", type: '"info" | "success" | "warning" | "danger"', defaultValue: "info", description: zh ? "通知状态。" : "Notification status." },
+        { prop: "action", type: "ReactNode", defaultValue: "-", description: zh ? "通知操作区。" : "Notification action." },
+        { prop: "description", type: "ReactNode", defaultValue: "-", description: zh ? "通知说明。" : "Notification description." }
+      ]
+    },
+    {
+      id: "message-box",
+      group: labels.groups.feedback,
+      title: zh ? "MessageBox 弹框" : "MessageBox",
+      description: zh ? "基于确认对话框的命令式确认视觉，适合危险操作和流程确认。" : "A confirmation dialog surface for destructive or important flows.",
+      preview: (
+        <>
+          <Button variant="stamp" onClick={() => setMessageBoxOpen(true)}>{zh ? "打开确认弹框" : "Open message box"}</Button>
+          <MessageBox
+            cancelText={zh ? "取消" : "Cancel"}
+            confirmText={zh ? "确认" : "Confirm"}
+            description={zh ? "便签会进入归档柜。" : "The note will move into storage."}
+            onConfirm={showToast}
+            onOpenChange={setMessageBoxOpen}
+            open={messageBoxOpen}
+            title={zh ? "归档这条路线？" : "Archive this route?"}
+          />
+        </>
+      ),
+      code: code([
+        'import { Button, MessageBox } from "pinepost-ui";',
+        "",
+        "<MessageBox",
+        "  open={open}",
+        "  onOpenChange={setOpen}",
+        '  title="归档这条路线？"',
+        '  description="便签会进入归档柜。"',
+        "/>"
+      ]),
+      api: [
+        { prop: "open", type: "boolean", defaultValue: "-", description: zh ? "受控打开状态。" : "Controlled open state." },
+        { prop: "title", type: "ReactNode", defaultValue: "-", description: zh ? "弹框标题。" : "Box title." },
+        { prop: "onConfirm", type: "() => void", defaultValue: "-", description: zh ? "确认回调。" : "Confirm callback." }
       ]
     },
     {

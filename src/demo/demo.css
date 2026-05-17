@@ -430,12 +430,34 @@ body {
 
   .docs-sidebar {
     height: auto;
-    position: relative;
+    overflow: hidden;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  .docs-sidebar::after {
+    display: none;
   }
 
   .docs-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding-bottom: 22px;
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 12px;
+    scrollbar-color: var(--pinepost-border-strong) transparent;
+  }
+
+  .docs-nav__group {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .docs-nav__group > span,
+  .docs-nav button {
+    white-space: nowrap;
   }
 
   .docs-main {
@@ -450,7 +472,7 @@ body {
 
 @media (max-width: 620px) {
   .docs-nav {
-    grid-template-columns: 1fr;
+    padding: 10px;
   }
 
   .docs-topbar {

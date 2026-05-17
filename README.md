@@ -61,6 +61,12 @@ Empty, Progress, Skeleton, Descriptions, Statistic, Result, Timeline,
 Watermark, Breadcrumb, Menu, Steps, Pagination, Segmented, Dropdown, Popover,
 Collapse, Popconfirm, and Drawer.
 
+The v0.4 expansion adds layout, form, data, navigation, and feedback coverage:
+Container, Header, Aside, Main, Footer, Row, Col, Scrollbar, Splitter, Form,
+FormField, InputNumber, Rate, Upload, Autocomplete, ColorPicker, DatePicker,
+DateTimePicker, TimePicker, Table, Calendar, Image, Carousel, Tree, PageHeader,
+Affix, Anchor, Backtop, Loading, Message, Notification, and MessageBox.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, and API table.
 

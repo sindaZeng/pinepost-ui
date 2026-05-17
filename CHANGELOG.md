@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+- Added layout helpers: Container, Header, Aside, Main, Footer, Row, Col, Scrollbar, and Splitter.
+- Added form coverage: Form, FormField, InputNumber, Rate, Upload, Autocomplete, ColorPicker, DatePicker, DateTimePicker, and TimePicker.
+- Added data and navigation components: Table, Calendar, Image, Carousel, Tree, PageHeader, Affix, Anchor, and Backtop.
+- Added feedback components: Loading, Message, Notification, and MessageBox.
+- Expanded the docs catalog with dedicated previews, usage snippets, and API tables for the new components.
+- Added v0.4 component tests.
+
 ## 0.3.0
 
 - Added form controls: Select, RadioGroup, Slider, and Spinner.
