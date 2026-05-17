@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.vite/
+.playwright-cli/
+.idea/
+.turbo/
+output/
+vite-dev.log
+*.log
+*.local
+.DS_Store
+Thumbs.db
