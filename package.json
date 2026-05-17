@@ -5,10 +5,13 @@
   "type": "module",
   "license": "Apache-2.0",
   "author": "",
-  "homepage": "https://pinepost-ui.local",
+  "homepage": "https://sindazeng.github.io/pinepost-ui/",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+ssh://git@github.com/sindaZeng/pinepost-ui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sindaZeng/pinepost-ui/issues"
   },
   "keywords": [
     "react",
@@ -41,7 +44,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:demo": "vite build --config vite.demo.config.ts --base /pinepost-ui/",
+    "check": "corepack pnpm typecheck && corepack pnpm typecheck:demo && corepack pnpm test && corepack pnpm build && corepack pnpm build:demo && corepack pnpm pack --dry-run",
+    "pack:dry": "corepack pnpm pack --dry-run",
+    "prepublishOnly": "corepack pnpm typecheck && corepack pnpm test && corepack pnpm build",
+    "preview:demo": "vite preview --outDir dist-demo",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "typecheck:demo": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "vite preview"

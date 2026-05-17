@@ -1,8 +1,13 @@
 # Pinepost UI
 
+[![CI](https://github.com/sindaZeng/pinepost-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/sindaZeng/pinepost-ui/actions/workflows/ci.yml)
+[![Demo](https://github.com/sindaZeng/pinepost-ui/actions/workflows/pages.yml/badge.svg)](https://github.com/sindaZeng/pinepost-ui/actions/workflows/pages.yml)
+
 Pinepost UI is a forest-post themed React component library for warm,
 commercial-friendly product interfaces. It ships a small set of practical
 components, a token-driven theme layer, and three ready-to-use mood presets.
+
+Demo: https://sindazeng.github.io/pinepost-ui/
 
 ## Goals
 
@@ -69,4 +74,5 @@ corepack pnpm install
 corepack pnpm dev
 corepack pnpm test
 corepack pnpm build
+corepack pnpm build:demo
 ```
