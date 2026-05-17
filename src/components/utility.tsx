@@ -474,6 +474,62 @@ export const TimeRangePickerPanel = React.forwardRef<HTMLDivElement, TimeRangePi
 
 TimeRangePickerPanel.displayName = "TimeRangePickerPanel";
 
+export type PinepostDateFormatStyle = "date" | "datetime" | "time";
+
+export interface PinepostDateFormatOptions {
+  fallback?: string;
+  locale?: "en" | "zh-CN";
+  style?: PinepostDateFormatStyle;
+}
+
+const pinepostMonthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December"
+];
+
+function pinepostTime(date: Date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+export function formatPinepostDate(date: Date | undefined, options: PinepostDateFormatOptions = {}) {
+  const { fallback = "-", locale = "en", style = "date" } = options;
+  if (!date) return fallback;
+  if (style === "time") return pinepostTime(date);
+
+  const dateText =
+    locale === "zh-CN"
+      ? `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
+      : `${pinepostMonthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+
+  return style === "datetime" ? `${dateText} ${pinepostTime(date)}` : dateText;
+}
+
+export function formatPinepostDateRange(value: DateRangeValue, options: PinepostDateFormatOptions = {}) {
+  const { fallback = "-", locale = "en" } = options;
+  const [start, end] = value;
+  const joiner = locale === "zh-CN" ? " 至 " : " to ";
+  if (!start && !end) return fallback;
+  return `${formatPinepostDate(start, { fallback, locale })}${joiner}${formatPinepostDate(end, { fallback, locale })}`;
+}
+
+export function formatPinepostTimeRange(value: TimeRangeValue, options: Omit<PinepostDateFormatOptions, "style"> = {}) {
+  const { fallback = "-", locale = "en" } = options;
+  const [start, end] = value;
+  const joiner = locale === "zh-CN" ? " 至 " : " to ";
+  if (!start && !end) return fallback;
+  return `${start ?? fallback}${joiner}${end ?? fallback}`;
+}
+
 export interface DateTimePickerPanelProps
   extends Omit<DatePickerPanelProps, "defaultValue" | "onValueChange" | "shortcuts" | "value"> {
   defaultValue?: Date;

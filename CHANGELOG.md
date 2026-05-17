@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.0
+
+- Added Cascader lazy loading and custom option rendering for async route trees.
+- Added Table view presets with saved column widths, hidden columns, sorting, and ref methods.
+- Added Pinepost date and time formatting helpers for date, date range, and time range display.
+- Expanded docs, roadmap, and tests for the new v0.10 workflow depth.
+
 ## 0.9.0
 
 - Added Table column resizing, controlled/default column width maps, column visibility state, and related ref methods.

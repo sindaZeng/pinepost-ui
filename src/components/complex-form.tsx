@@ -20,12 +20,16 @@ export interface CascaderProps extends Omit<React.HTMLAttributes<HTMLDivElement>
   defaultValue?: string[];
   disabled?: boolean;
   filterable?: boolean;
+  lazy?: boolean;
+  loadData?: (option: CascaderOption, path: CascaderOption[]) => Promise<CascaderOption[]>;
+  loadingText?: React.ReactNode;
   onChange?: (value: string[], selectedOptions: CascaderOption[]) => void;
   onExpandChange?: (value: string[]) => void;
   onValueChange?: (value: string[], selectedOptions: CascaderOption[]) => void;
   onVisibleChange?: (open: boolean) => void;
   options: CascaderOption[];
   placeholder?: React.ReactNode;
+  renderOption?: (option: CascaderOption, state: { active: boolean; leaf: boolean; level: number; loading: boolean; path: CascaderOption[] }) => React.ReactNode;
   showAllLevels?: boolean;
   value?: string[];
 }
@@ -69,6 +73,14 @@ function optionText(option: CascaderOption) {
   return typeof option.label === "string" ? option.label : option.value;
 }
 
+function applyCascaderChildren(options: CascaderOption[], value: string, children: CascaderOption[]): CascaderOption[] {
+  return options.map((option) => {
+    if (option.value === value) return { ...option, children };
+    if (option.children) return { ...option, children: applyCascaderChildren(option.children, value, children) };
+    return option;
+  });
+}
+
 export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
   (
     {
@@ -77,12 +89,16 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
       defaultValue = [],
       disabled,
       filterable,
+      lazy,
+      loadData,
+      loadingText = "...",
       onChange,
       onExpandChange,
       onValueChange,
       onVisibleChange,
       options,
       placeholder = "Select",
+      renderOption,
       showAllLevels = true,
       value,
       ...props
@@ -92,12 +108,15 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
     const triggerRef = React.useRef<HTMLButtonElement>(null);
     const [open, setOpen] = React.useState(false);
     const [query, setQuery] = React.useState("");
+    const [treeOptions, setTreeOptions] = React.useState(options);
+    const [activePath, setActivePath] = React.useState(defaultValue);
+    const [loadingKeys, setLoadingKeys] = React.useState(() => new Set<string>());
     const [internalValue, setInternalValue] = React.useState(defaultValue);
     const currentValue = value ?? internalValue;
-    const selectedOptions = findPath(options, currentValue);
-    const activePath = selectedOptions.map((item) => item.value);
-    const levels = getLevels(options, activePath);
-    const flattened = React.useMemo(() => flattenOptions(options), [options]);
+    const selectedOptions = findPath(treeOptions, currentValue);
+    const panelPath = activePath.length ? activePath : selectedOptions.map((item) => item.value);
+    const levels = getLevels(treeOptions, panelPath);
+    const flattened = React.useMemo(() => flattenOptions(treeOptions), [treeOptions]);
     const matches = query
       ? flattened.filter((path) => path.map(optionText).join(" / ").toLowerCase().includes(query.toLowerCase()))
       : [];
@@ -108,15 +127,37 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
       : "";
 
     function setOpenState(nextOpen: boolean) {
+      if (nextOpen) setActivePath(currentValue);
       setOpen(nextOpen);
       onVisibleChange?.(nextOpen);
     }
 
     function commit(nextValue: string[], path: CascaderOption[]) {
       if (value === undefined) setInternalValue(nextValue);
+      setActivePath(nextValue);
       onValueChange?.(nextValue, path);
       onChange?.(nextValue, path);
     }
+
+    function loadChildren(option: CascaderOption, path: CascaderOption[]) {
+      if (!lazy || !loadData || option.children?.length || option.isLeaf || loadingKeys.has(option.value)) return;
+      setLoadingKeys((current) => new Set([...current, option.value]));
+      void loadData(option, path)
+        .then((children) => {
+          setTreeOptions((current) => applyCascaderChildren(current, option.value, children));
+        })
+        .finally(() => {
+          setLoadingKeys((current) => {
+            const next = new Set(current);
+            next.delete(option.value);
+            return next;
+          });
+        });
+    }
+
+    React.useEffect(() => {
+      setTreeOptions(options);
+    }, [options]);
 
     React.useImperativeHandle(ref, () => ({
       blur: () => triggerRef.current?.blur(),
@@ -185,10 +226,12 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
                 {levels.map((level, levelIndex) => (
                   <div key={levelIndex} className="pinepost-cascader__menu">
                     {level.map((option) => {
-                      const nextPath = [...activePath.slice(0, levelIndex), option.value];
-                      const selected = activePath[levelIndex] === option.value;
-                      const pathOptions = findPath(options, nextPath);
-                      const isLeaf = !option.children?.length;
+                      const nextPath = [...panelPath.slice(0, levelIndex), option.value];
+                      const selected = panelPath[levelIndex] === option.value;
+                      const pathOptions = findPath(treeOptions, nextPath);
+                      const loading = loadingKeys.has(option.value);
+                      const expandable = Boolean(option.children?.length) || Boolean(lazy && !option.isLeaf);
+                      const isLeaf = !expandable;
 
                       return (
                         <button
@@ -196,18 +239,19 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
                           disabled={option.disabled}
                           data-active={selected}
                           onClick={() => {
+                            setActivePath(nextPath);
                             onExpandChange?.(nextPath);
                             if (isLeaf) {
                               commit(nextPath, pathOptions);
                               setOpenState(false);
-                            } else if (value === undefined) {
-                              setInternalValue(nextPath);
+                            } else {
+                              loadChildren(option, pathOptions);
                             }
                           }}
                           type="button"
                         >
-                          <span>{option.label}</span>
-                          {option.children?.length && <span aria-hidden="true">›</span>}
+                          <span>{renderOption ? renderOption(option, { active: selected, leaf: isLeaf, level: levelIndex, loading, path: pathOptions }) : option.label}</span>
+                          {loading ? <span aria-hidden="true">{loadingText}</span> : expandable && <span aria-hidden="true">›</span>}
                         </button>
                       );
                     })}

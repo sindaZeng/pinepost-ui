@@ -88,10 +88,12 @@ function VirtualizedTableInner<T extends object>({
     getExpandedRows: () => [],
     getSelectionRows: () => data.filter((row, index) => selectedKeys.includes(getRowKey(row, index))),
     getSortState: () => activeSort,
+    getViewPreset: () => undefined,
     getVisibleColumns: () => columns,
     setCurrentRow: () => undefined,
     setColumnHidden: () => undefined,
     setColumnWidth: () => undefined,
+    setViewPreset: () => undefined,
     sort: (key, order = "asc") => setSort({ key, order }),
     toggleRowExpansion: () => undefined,
     toggleRowSelection: (row, selected) => {

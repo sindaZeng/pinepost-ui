@@ -24,6 +24,14 @@ export interface TableSortState<T> {
 export type TableColumnWidth = number | string;
 export type TableColumnWidthMap = Partial<Record<string, TableColumnWidth>>;
 
+export interface TableViewPreset<T> {
+  columnWidths?: TableColumnWidthMap;
+  hiddenColumns?: Array<keyof T | string>;
+  key: string;
+  label: React.ReactNode;
+  sortState?: TableSortState<T>;
+}
+
 export interface TableRef<T> {
   clearExpansion: () => void;
   clearSelection: () => void;
@@ -31,10 +39,12 @@ export interface TableRef<T> {
   getExpandedRows: () => T[];
   getSelectionRows: () => T[];
   getSortState: () => TableSortState<T> | undefined;
+  getViewPreset: () => string | undefined;
   getVisibleColumns: () => Array<TableColumn<T>>;
   setCurrentRow: (row?: T) => void;
   setColumnHidden: (key: keyof T | string, hidden?: boolean) => void;
   setColumnWidth: (key: keyof T | string, width: TableColumnWidth) => void;
+  setViewPreset: (key: string) => void;
   sort: (key: keyof T | string, order?: TableSortOrder) => void;
   toggleRowExpansion: (row: T, expanded?: boolean) => void;
   toggleRowSelection: (row: T, selected?: boolean) => void;
@@ -47,6 +57,7 @@ export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
   defaultColumnWidths?: TableColumnWidthMap;
   defaultExpandedRowKeys?: React.Key[];
   defaultHiddenColumns?: Array<keyof T | string>;
+  defaultViewPreset?: string;
   editable?: boolean;
   emptyText?: React.ReactNode;
   expandedRowKeys?: React.Key[];
@@ -63,12 +74,16 @@ export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
   onRowClick?: (row: T, index: number) => void;
   onSelectionChange?: (rows: T[]) => void;
   onSortChange?: (state?: TableSortState<T>) => void;
+  onViewPresetChange?: (key: string, preset: TableViewPreset<T>) => void;
   renderExpandedRow?: (row: T, index: number) => React.ReactNode;
   rowKey?: keyof T | ((row: T, index: number) => React.Key);
   resizableColumns?: boolean;
   selectable?: boolean;
   sortState?: TableSortState<T>;
   summary?: Partial<Record<string, React.ReactNode>> | ((rows: T[]) => Partial<Record<string, React.ReactNode>>);
+  viewPreset?: string;
+  viewPresetLabel?: React.ReactNode;
+  viewPresets?: Array<TableViewPreset<T>>;
 }
 
 function getCellValue<T extends object>(row: T, key: keyof T | string) {
@@ -100,6 +115,14 @@ function filterVisibleColumns<T>(columns: Array<TableColumn<T>>, hidden: Set<str
 
     return hidden.has(String(column.key)) ? [] : [column];
   });
+}
+
+function findTablePreset<T>(presets: Array<TableViewPreset<T>>, key?: string) {
+  return key ? presets.find((preset) => preset.key === key) : undefined;
+}
+
+function normalizeHiddenColumns(columns: Array<unknown> = []) {
+  return columns.map(String);
 }
 
 function getColumnWidth<T>(column: TableColumn<T>, widths: TableColumnWidthMap) {
@@ -148,6 +171,7 @@ function TableInner<T extends object>({
   defaultColumnWidths = {},
   defaultExpandedRowKeys = [],
   defaultHiddenColumns = [],
+  defaultViewPreset,
   editable,
   emptyText = "No data",
   expandedRowKeys,
@@ -164,26 +188,35 @@ function TableInner<T extends object>({
   onRowClick,
   onSelectionChange,
   onSortChange,
+  onViewPresetChange,
   renderExpandedRow,
   rowKey,
   resizableColumns,
   selectable,
   sortState,
   summary,
+  viewPreset,
+  viewPresetLabel = "View",
+  viewPresets = [],
   ...props
 }: TableProps<T>, ref: React.ForwardedRef<TableRef<T>>) {
+  const initialPresetKey = viewPreset ?? defaultViewPreset;
+  const initialPreset = findTablePreset(viewPresets, initialPresetKey);
   const [selectedKeys, setSelectedKeys] = React.useState<React.Key[]>([]);
   const [currentRowKey, setCurrentRowKey] = React.useState<React.Key | undefined>();
   const [editingCell, setEditingCell] = React.useState<{ key: keyof T | string; rowKey: React.Key } | null>(null);
   const [editDraft, setEditDraft] = React.useState("");
-  const [internalColumnWidths, setInternalColumnWidths] = React.useState<TableColumnWidthMap>(defaultColumnWidths);
+  const [internalColumnWidths, setInternalColumnWidths] = React.useState<TableColumnWidthMap>(() => ({ ...defaultColumnWidths, ...(initialPreset?.columnWidths ?? {}) }));
   const [internalExpandedKeys, setInternalExpandedKeys] = React.useState<React.Key[]>(defaultExpandedRowKeys);
-  const [internalHiddenColumns, setInternalHiddenColumns] = React.useState<string[]>(defaultHiddenColumns.map(String));
-  const [internalSortState, setInternalSortState] = React.useState<TableSortState<T> | undefined>();
+  const [internalHiddenColumns, setInternalHiddenColumns] = React.useState<string[]>(() => normalizeHiddenColumns(initialPreset?.hiddenColumns ?? defaultHiddenColumns));
+  const [internalSortState, setInternalSortState] = React.useState<TableSortState<T> | undefined>(() => initialPreset?.sortState);
+  const [internalViewPreset, setInternalViewPreset] = React.useState<string | undefined>(initialPresetKey);
+  const controlledViewPresetRef = React.useRef(viewPreset);
   const activeSort = sortState ?? internalSortState;
   const activeExpandedKeys = expandedRowKeys ?? internalExpandedKeys;
   const activeColumnWidths = columnWidths ?? internalColumnWidths;
   const activeHiddenColumns = hiddenColumns?.map(String) ?? internalHiddenColumns;
+  const activeViewPresetKey = viewPreset ?? internalViewPreset;
   const hiddenColumnSet = React.useMemo(() => new Set(activeHiddenColumns), [activeHiddenColumns]);
   const visibleColumnTree = React.useMemo(() => filterVisibleColumns(columns, hiddenColumnSet), [columns, hiddenColumnSet]);
   const leafColumns = React.useMemo(() => flattenColumns(visibleColumnTree), [visibleColumnTree]);
@@ -262,6 +295,22 @@ function TableInner<T extends object>({
     onColumnVisibilityChange?.(next);
   }
 
+  function applyViewPreset(key: string) {
+    const preset = findTablePreset(viewPresets, key);
+    if (!preset) return undefined;
+    if (columnWidths === undefined) setInternalColumnWidths({ ...defaultColumnWidths, ...(preset.columnWidths ?? {}) });
+    if (hiddenColumns === undefined) setInternalHiddenColumns(normalizeHiddenColumns(preset.hiddenColumns ?? defaultHiddenColumns));
+    if (sortState === undefined) setInternalSortState(preset.sortState);
+    return preset;
+  }
+
+  function commitViewPreset(key: string) {
+    const preset = applyViewPreset(key);
+    if (!preset) return;
+    if (viewPreset === undefined) setInternalViewPreset(key);
+    onViewPresetChange?.(key, preset);
+  }
+
   function toggleSort(column: TableColumn<T>) {
     if (!column.sortable) return;
     const key = column.key;
@@ -276,6 +325,7 @@ function TableInner<T extends object>({
     getExpandedRows: () => data.filter((row, index) => activeExpandedKeys.includes(getRowKey(row, index))),
     getSelectionRows: () => data.filter((row, index) => selectedKeys.includes(getRowKey(row, index))),
     getSortState: () => activeSort,
+    getViewPreset: () => activeViewPresetKey,
     getVisibleColumns: () => leafColumns,
     setCurrentRow: (row) => {
       const rowIndex = row ? data.indexOf(row) : -1;
@@ -285,6 +335,7 @@ function TableInner<T extends object>({
     },
     setColumnHidden,
     setColumnWidth,
+    setViewPreset: commitViewPreset,
     sort: (key, order = "asc") => setSort({ key, order }),
     toggleRowExpansion: toggleExpansion,
     toggleRowSelection: (row, selected) => {
@@ -293,7 +344,13 @@ function TableInner<T extends object>({
       const nextSelected = selected ?? !selectedKeys.includes(key);
       commitSelection(nextSelected ? Array.from(new Set([...selectedKeys, key])) : selectedKeys.filter((item) => item !== key));
     }
-  }), [activeColumnWidths, activeExpandedKeys, activeHiddenColumns, activeSort, data, leafColumns, onCurrentChange, selectedKeys]);
+  }), [activeColumnWidths, activeExpandedKeys, activeHiddenColumns, activeSort, activeViewPresetKey, data, leafColumns, onCurrentChange, selectedKeys, viewPresets]);
+
+  React.useEffect(() => {
+    if (viewPreset === undefined || controlledViewPresetRef.current === viewPreset) return;
+    controlledViewPresetRef.current = viewPreset;
+    applyViewPreset(viewPreset);
+  }, [viewPreset, viewPresets]);
 
   const extraColumnCount = (selectable ? 1 : 0) + (renderExpandedRow ? 1 : 0);
   const summaryValues = typeof summary === "function" ? summary(visibleData) : summary;
@@ -339,6 +396,21 @@ function TableInner<T extends object>({
 
   return (
     <div className={cn("pinepost-table-wrap", className)} {...props}>
+      {viewPresets.length > 0 && (
+        <div aria-label="Table view presets" className="pinepost-table__viewbar" role="group">
+          <span>{viewPresetLabel}</span>
+          {viewPresets.map((preset) => (
+            <button
+              key={preset.key}
+              aria-pressed={activeViewPresetKey === preset.key}
+              onClick={() => commitViewPreset(preset.key)}
+              type="button"
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      )}
       <table className="pinepost-table">
         <thead>
           {hasColumnGroups ? (

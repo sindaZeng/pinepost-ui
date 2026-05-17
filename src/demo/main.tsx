@@ -58,6 +58,8 @@ import {
   Empty,
   Form,
   FormField,
+  formatPinepostDateRange,
+  formatPinepostTimeRange,
   Header,
   Icon,
   Image,
@@ -762,13 +764,19 @@ function App() {
       id: "cascader",
       group: labels.groups.form,
       title: zh ? "Cascader 级联选择" : "Cascader",
-      description: zh ? "多层路线选择器，支持筛选、清空、展开事件和方法调用。" : "Layered route selection with filtering, clear action, expand events, and methods.",
+      description: zh ? "多层路线选择器，支持筛选、清空、懒加载、自定义节点、展开事件和方法调用。" : "Layered route selection with filtering, clear action, lazy loading, custom nodes, expand events, and methods.",
       preview: (
         <Cascader
           clearable
           filterable
+          lazy
+          loadData={async () => [
+            { value: "archive-a", label: zh ? "归档 A" : "Archive A", isLeaf: true },
+            { value: "archive-b", label: zh ? "归档 B" : "Archive B", isLeaf: true }
+          ]}
           onValueChange={(value) => setCascaderValue(value)}
-          options={routeOptions}
+          options={[...routeOptions, { value: "archive", label: zh ? "归档路线" : "Archive routes" }]}
+          renderOption={(option) => <span>{option.label}</span>}
           value={cascaderValue}
         />
       ),
@@ -778,7 +786,10 @@ function App() {
         "<Cascader",
         "  clearable",
         "  filterable",
+        "  lazy",
+        "  loadData={loadRouteChildren}",
         "  options={routeOptions}",
+        "  renderOption={(option) => <span>{option.label}</span>}",
         "  value={value}",
         "  onValueChange={setValue}",
         "/>"
@@ -791,13 +802,17 @@ function App() {
             { prop: "options", type: "CascaderOption[]", defaultValue: "[]", description: zh ? "级联节点。" : "Cascading nodes." },
             { prop: "value", type: "string[]", defaultValue: "-", description: zh ? "受控路径值。" : "Controlled path value." },
             { prop: "filterable", type: "boolean", defaultValue: "false", description: zh ? "启用筛选输入。" : "Enables option filtering." },
-            { prop: "showAllLevels", type: "boolean", defaultValue: "true", description: zh ? "显示完整路径或只显示末级。" : "Shows full path or only the leaf label." }
+            { prop: "showAllLevels", type: "boolean", defaultValue: "true", description: zh ? "显示完整路径或只显示末级。" : "Shows full path or only the leaf label." },
+            { prop: "lazy", type: "boolean", defaultValue: "false", description: zh ? "展开无子节点的分支时懒加载。" : "Loads branch children when an empty branch opens." },
+            { prop: "loadData", type: "(option, path) => Promise<CascaderOption[]>", defaultValue: "-", description: zh ? "懒加载子节点。" : "Loads lazy children." },
+            { prop: "renderOption", type: "(option, state) => ReactNode", defaultValue: "-", description: zh ? "自定义菜单节点内容。" : "Custom menu option content." }
           ]
         },
         {
           title: labels.options,
           rows: [
-            { prop: "CascaderOption", type: "{ value; label; children?; disabled? }", defaultValue: "-", description: zh ? "节点数据结构。" : "Node data shape." }
+            { prop: "CascaderOption", type: "{ value; label; children?; disabled?; isLeaf? }", defaultValue: "-", description: zh ? "节点数据结构。" : "Node data shape." },
+            { prop: "renderOption state", type: "{ active; leaf; level; loading; path }", defaultValue: "-", description: zh ? "渲染函数状态参数。" : "Render callback state." }
           ]
         },
         {
@@ -1155,7 +1170,12 @@ function App() {
           selectable
           editable
           resizableColumns
-          defaultColumnWidths={{ route: 140, count: 90 }}
+          defaultViewPreset="full"
+          viewPresetLabel={zh ? "视图" : "View"}
+          viewPresets={[
+            { key: "full", label: zh ? "完整" : "Full", columnWidths: { route: 140, count: 90 }, hiddenColumns: [] },
+            { key: "compact", label: zh ? "紧凑" : "Compact", columnWidths: { route: 112, count: 76 }, hiddenColumns: ["status"], sortState: { key: "count", order: "desc" } }
+          ]}
           defaultExpandedRowKeys={["a7"]}
           renderExpandedRow={(row) => <Text>{zh ? `${row.route} 今日优先投递。` : `${row.route} ships first today.`}</Text>}
           summary={(rows) => ({ route: zh ? "合计" : "Total", count: rows.reduce((total, row) => total + row.count, 0) })}
@@ -1185,7 +1205,11 @@ function App() {
         "  selectable",
         "  editable",
         "  resizableColumns",
-        "  defaultColumnWidths={{ route: 140, count: 90 }}",
+        '  defaultViewPreset="full"',
+        "  viewPresets={[",
+        '    { key: "full", label: "完整", columnWidths: { route: 140, count: 90 } },',
+        '    { key: "compact", label: "紧凑", hiddenColumns: ["status"], sortState: { key: "count", order: "desc" } }',
+        "  ]}",
         '  defaultExpandedRowKeys={["a7"]}',
         "  renderExpandedRow={(row) => <p>{row.route} detail</p>}",
         "  summary={(rows) => ({ count: rows.reduce((sum, row) => sum + row.count, 0) })}",
@@ -1214,12 +1238,16 @@ function App() {
             { prop: "summary", type: "Record | (rows) => Record", defaultValue: "-", description: zh ? "汇总行内容。" : "Summary row content." },
             { prop: "resizableColumns", type: "boolean", defaultValue: "false", description: zh ? "显示列宽调整控件。" : "Shows column resize controls." },
             { prop: "columnWidths / defaultColumnWidths", type: "Record<string, number | string>", defaultValue: "{}", description: zh ? "受控或默认列宽映射。" : "Controlled or default column width map." },
-            { prop: "hiddenColumns / defaultHiddenColumns", type: "string[]", defaultValue: "[]", description: zh ? "受控或默认隐藏列 key。" : "Controlled or default hidden column keys." }
+            { prop: "hiddenColumns / defaultHiddenColumns", type: "string[]", defaultValue: "[]", description: zh ? "受控或默认隐藏列 key。" : "Controlled or default hidden column keys." },
+            { prop: "viewPresets", type: "TableViewPreset<T>[]", defaultValue: "[]", description: zh ? "预设列宽、隐藏列和排序视图。" : "Preset widths, hidden columns, and sort views." },
+            { prop: "viewPreset / defaultViewPreset", type: "string", defaultValue: "-", description: zh ? "受控或默认视图 key。" : "Controlled or default view key." },
+            { prop: "viewPresetLabel", type: "ReactNode", defaultValue: "View", description: zh ? "视图切换组标签。" : "View switcher label." }
           ]
         },
         {
           title: labels.options,
           rows: [
+            { prop: "TableViewPreset", type: "{ key; label; columnWidths?; hiddenColumns?; sortState? }", defaultValue: "-", description: zh ? "表格视图配方。" : "Table view recipe." },
             { prop: "TableColumn.sortable", type: "boolean | compareFn", defaultValue: "false", description: zh ? "启用列排序。" : "Enables column sorting." },
             { prop: "TableColumn.filter", type: "(row) => boolean", defaultValue: "-", description: zh ? "列过滤函数。" : "Column filter predicate." },
             { prop: "TableColumn.render", type: "(row, index) => ReactNode", defaultValue: "-", description: zh ? "自定义单元格。" : "Custom cell rendering." },
@@ -1238,7 +1266,8 @@ function App() {
             { prop: "onCellEdit", type: "(row, key, value) => void", defaultValue: "-", description: zh ? "单元格提交编辑。" : "Cell edit is committed." },
             { prop: "onExpandChange", type: "(keys) => void", defaultValue: "-", description: zh ? "展开行变化。" : "Expanded rows change." },
             { prop: "onColumnResize", type: "(key, width, widths) => void", defaultValue: "-", description: zh ? "列宽变化。" : "Column width changes." },
-            { prop: "onColumnVisibilityChange", type: "(keys) => void", defaultValue: "-", description: zh ? "隐藏列变化。" : "Hidden columns change." }
+            { prop: "onColumnVisibilityChange", type: "(keys) => void", defaultValue: "-", description: zh ? "隐藏列变化。" : "Hidden columns change." },
+            { prop: "onViewPresetChange", type: "(key, preset) => void", defaultValue: "-", description: zh ? "视图预设变化。" : "View preset changes." }
           ]
         },
         {
@@ -1249,7 +1278,8 @@ function App() {
             { prop: "toggleRowExpansion / clearExpansion", type: "ref methods", defaultValue: "-", description: zh ? "控制展开行。" : "Controls expanded rows." },
             { prop: "getSelectionRows / getExpandedRows", type: "ref methods", defaultValue: "-", description: zh ? "读取当前状态行。" : "Reads stateful rows." },
             { prop: "setColumnWidth / setColumnHidden", type: "ref methods", defaultValue: "-", description: zh ? "命令式调整列宽和隐藏状态。" : "Imperatively updates column width and visibility." },
-            { prop: "getVisibleColumns", type: "ref method", defaultValue: "-", description: zh ? "读取当前可见列。" : "Reads currently visible columns." }
+            { prop: "getVisibleColumns", type: "ref method", defaultValue: "-", description: zh ? "读取当前可见列。" : "Reads currently visible columns." },
+            { prop: "setViewPreset / getViewPreset", type: "ref methods", defaultValue: "-", description: zh ? "命令式切换或读取视图预设。" : "Sets or reads the active view preset." }
           ]
         }
       ]
@@ -2158,27 +2188,33 @@ function App() {
       title: zh ? "DateRangePickerPanel 日期范围面板" : "DateRangePickerPanel",
       description: zh ? "选择开始和结束日期，适合排班、活动和报表范围。" : "Selects start and end dates for schedules, campaigns, and report ranges.",
       preview: (
-        <DateRangePickerPanel
-          month={new Date(2026, 4, 1)}
-          value={dateRangeValue}
-          onValueChange={setDateRangeValue}
-          shortcuts={[{ label: zh ? "节庆周" : "Festival week", value: () => [new Date(2026, 4, 18), new Date(2026, 4, 24)] }]}
-        />
+        <Space direction="vertical">
+          <DateRangePickerPanel
+            month={new Date(2026, 4, 1)}
+            value={dateRangeValue}
+            onValueChange={setDateRangeValue}
+            shortcuts={[{ label: zh ? "节庆周" : "Festival week", value: () => [new Date(2026, 4, 18), new Date(2026, 4, 24)] }]}
+          />
+          <Text>{formatPinepostDateRange(dateRangeValue, { locale })}</Text>
+        </Space>
       ),
       code: code([
-        'import { DateRangePickerPanel } from "pinepost-ui";',
+        'import { DateRangePickerPanel, formatPinepostDateRange } from "pinepost-ui";',
         "",
         "<DateRangePickerPanel",
         "  value={range}",
         "  onValueChange={setRange}",
         "  shortcuts={[{ label: '节庆周', value: () => [start, end] }]}",
-        "/>"
+        "/>",
+        "",
+        "formatPinepostDateRange(range, { locale: 'zh-CN' })"
       ]),
       api: [
         { prop: "value / defaultValue", type: "[Date?, Date?]", defaultValue: "-", description: zh ? "受控或默认日期范围。" : "Controlled or default date range." },
         { prop: "shortcuts", type: "DateRangeShortcut[]", defaultValue: "[]", description: zh ? "快捷日期范围。" : "Shortcut ranges." },
         { prop: "disabledDate", type: "(date: Date) => boolean", defaultValue: "-", description: zh ? "禁用日期判断。" : "Disabled date predicate." },
-        { prop: "onValueChange", type: "(range) => void", defaultValue: "-", description: zh ? "范围变化回调。" : "Range change callback." }
+        { prop: "onValueChange", type: "(range) => void", defaultValue: "-", description: zh ? "范围变化回调。" : "Range change callback." },
+        { prop: "formatPinepostDate / formatPinepostDateRange", type: "helpers", defaultValue: "-", description: zh ? "格式化日期或日期范围。" : "Formats a date or date range." }
       ]
     },
     {
@@ -2215,18 +2251,21 @@ function App() {
       title: zh ? "TimeRangePickerPanel 时间范围面板" : "TimeRangePickerPanel",
       description: zh ? "并排选择开始和结束时间，适合配送窗口和预约时段。" : "Paired start and end time panels for delivery windows and appointments.",
       preview: (
-        <TimeRangePickerPanel
-          value={timeRangeValue}
-          onValueChange={setTimeRangeValue}
-          start="09:00"
-          end="12:00"
-          step="00:30"
-          startLabel={zh ? "开始时间" : "Start time"}
-          endLabel={zh ? "结束时间" : "End time"}
-        />
+        <Space direction="vertical">
+          <TimeRangePickerPanel
+            value={timeRangeValue}
+            onValueChange={setTimeRangeValue}
+            start="09:00"
+            end="12:00"
+            step="00:30"
+            startLabel={zh ? "开始时间" : "Start time"}
+            endLabel={zh ? "结束时间" : "End time"}
+          />
+          <Text>{formatPinepostTimeRange(timeRangeValue, { fallback: zh ? "未定" : "Open", locale })}</Text>
+        </Space>
       ),
       code: code([
-        'import { TimeRangePickerPanel } from "pinepost-ui";',
+        'import { TimeRangePickerPanel, formatPinepostTimeRange } from "pinepost-ui";',
         "",
         "<TimeRangePickerPanel",
         "  value={range}",
@@ -2234,14 +2273,17 @@ function App() {
         "  start=\"09:00\"",
         "  end=\"12:00\"",
         "  step=\"00:30\"",
-        "/>"
+        "/>",
+        "",
+        "formatPinepostTimeRange(range, { fallback: '未定', locale: 'zh-CN' })"
       ]),
       api: [
         { prop: "value / defaultValue", type: "[string?, string?]", defaultValue: "-", description: zh ? "受控或默认时间范围。" : "Controlled or default time range." },
         { prop: "start / end / step", type: "HH:mm", defaultValue: "09:00 / 18:00 / 00:30", description: zh ? "时间范围和步长。" : "Time range and step." },
         { prop: "startLabel / endLabel", type: "string", defaultValue: "Start time / End time", description: zh ? "两个面板的可访问名称。" : "Accessible names for each panel." },
         { prop: "shortcuts", type: "TimeRangeShortcut[]", defaultValue: "[]", description: zh ? "快捷时间范围。" : "Shortcut ranges." },
-        { prop: "onValueChange", type: "(range) => void", defaultValue: "-", description: zh ? "范围变化回调。" : "Range change callback." }
+        { prop: "onValueChange", type: "(range) => void", defaultValue: "-", description: zh ? "范围变化回调。" : "Range change callback." },
+        { prop: "formatPinepostTimeRange", type: "helper", defaultValue: "-", description: zh ? "格式化时间范围。" : "Formats a time range." }
       ]
     },
     {
@@ -2562,7 +2604,7 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs</span><Tag variant="parcel">Beta</Tag><span>Table, Form, Upload, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "视图配方、格式化助手、视觉回归" : "View recipes, format helpers, visual checks"}</span></div>,
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs</span><Tag variant="parcel">Beta</Tag><span>Table, Form, Cascader, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "持久化配方、更多格式预设、视觉回归" : "Persisted recipes, more format presets, visual checks"}</span></div>,
       code: code(["Stable: production-ready basics", "Beta: deep interaction surfaces", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },

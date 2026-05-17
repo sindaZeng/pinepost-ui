@@ -85,6 +85,9 @@ columns, DateRangePickerPanel, and TimeRangePickerPanel.
 The v0.9 expansion adds Table column resize and visibility controls, async Form
 validation state, and lazy TreeSelect loading for larger product workflows.
 
+The v0.10 expansion adds Cascader lazy loading, Table view presets, and
+Pinepost date/time formatting helpers.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, and API table.
 

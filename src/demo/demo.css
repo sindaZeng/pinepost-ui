@@ -283,6 +283,7 @@ body {
 .docs-example__preview {
   display: grid;
   gap: 14px;
+  min-width: 0;
   padding: 20px 24px 24px;
 }
 
@@ -309,6 +310,8 @@ body {
   border: 1px dashed color-mix(in srgb, var(--pinepost-border) 74%, transparent);
   border-radius: var(--pinepost-radius-md);
   min-height: 112px;
+  min-width: 0;
+  overflow: auto;
   padding: 20px;
 }
 
