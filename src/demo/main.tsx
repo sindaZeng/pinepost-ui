@@ -58,6 +58,9 @@ import {
   Empty,
   Form,
   FormField,
+  createPinepostDatePresets,
+  createPinepostDateRangePresets,
+  createPinepostTimeRangePresets,
   formatPinepostDateRange,
   formatPinepostTimeRange,
   Header,
@@ -157,6 +160,7 @@ import {
   type PinepostThemeTokenName,
   type PinepostThemeTokens,
   type PinepostThemeValidationIssue,
+  type CascaderMultipleValue,
   type TableColumnSettingsValue
 } from "../index";
 import "../styles.css";
@@ -963,6 +967,9 @@ function RecipeCard({
 
 function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh: boolean }) {
   const [category, setCategory] = React.useState<RecipeCategory>("all");
+  const recipeLocale = zh ? "zh-CN" : "en";
+  const launchDateRangePresets = React.useMemo(() => createPinepostDateRangePresets({ locale: recipeLocale, referenceDate: new Date(2026, 4, 18) }), [recipeLocale]);
+  const launchTimeRangePresets = React.useMemo(() => createPinepostTimeRangePresets({ locale: recipeLocale }), [recipeLocale]);
   const categoryOptions: Array<{ label: string; value: RecipeCategory }> = [
     { value: "all", label: zh ? "全部" : "All" },
     { value: "data", label: zh ? "数据" : "Data" },
@@ -1151,9 +1158,9 @@ function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh
       category: "commerce",
       title: zh ? "活动发布页" : "Campaign launch",
       description: zh ? "发布前校验、倒计时和成功反馈放在同一流程里。" : "Pre-launch checks, timing, and success feedback in one flow.",
-      components: ["Card", "Switch", "Timeline", "Message"],
+      components: ["Card", "Switch", "Timeline", "DateRangePickerPanel", "TimeRangePickerPanel"],
       states: [
-        { value: "ready", label: zh ? "待发布" : "Ready", preview: <Card><CardHeader><CardTitle>{zh ? "春日活动" : "Spring campaign"}</CardTitle><CardDescription>{zh ? "确认库存、封面和投放时间。" : "Confirm stock, artwork, and launch time."}</CardDescription></CardHeader><CardContent><Switch label={zh ? "开启提醒" : "Enable reminder"} defaultChecked /><Timeline items={[{ title: zh ? "素材确认" : "Artwork checked" }, { title: zh ? "库存锁定" : "Stock locked" }]} /></CardContent></Card>, code: code(["<Card><Switch label=\"开启提醒\" /><Timeline items={items} /></Card>"]) },
+        { value: "ready", label: zh ? "待发布" : "Ready", preview: <Card><CardHeader><CardTitle>{zh ? "春日活动" : "Spring campaign"}</CardTitle><CardDescription>{zh ? "确认库存、封面和投放时间。" : "Confirm stock, artwork, and launch time."}</CardDescription></CardHeader><CardContent><Switch label={zh ? "开启提醒" : "Enable reminder"} defaultChecked /><Timeline items={[{ title: zh ? "素材确认" : "Artwork checked" }, { title: zh ? "库存锁定" : "Stock locked" }]} /><Space direction="vertical"><DateRangePickerPanel defaultValue={[new Date(2026, 4, 18), new Date(2026, 4, 24)]} shortcuts={launchDateRangePresets} /><TimeRangePickerPanel defaultValue={["09:00", "18:00"]} shortcuts={launchTimeRangePresets} /></Space></CardContent></Card>, code: code(["const dateShortcuts = createPinepostDateRangePresets();", "const timeShortcuts = createPinepostTimeRangePresets();", "<Card><DateRangePickerPanel shortcuts={dateShortcuts} /><TimeRangePickerPanel shortcuts={timeShortcuts} /></Card>"]) },
         { value: "disabled", label: zh ? "缺配置" : "Blocked", preview: <Message title={zh ? "缺少封面图" : "Cover image missing"} description={zh ? "补齐素材后才能发布。" : "Add artwork before launch."} variant="warning" />, code: code(['<Message variant="warning" title="缺少封面图" />']) },
         { value: "success", label: zh ? "已发布" : "Live", preview: <Result status="success" title={zh ? "活动已发布" : "Campaign is live"} description={zh ? "入口已经同步到集市页。" : "Entry is now visible on the shop page."} />, code: code(['<Result status="success" title="活动已发布" />']) }
       ]
@@ -1206,6 +1213,7 @@ function App() {
   const [radioValue, setRadioValue] = React.useState("standard");
   const [rateValue, setRateValue] = React.useState(4);
   const [cascaderValue, setCascaderValue] = React.useState(["north", "cedar"]);
+  const [cascaderMultiValue, setCascaderMultiValue] = React.useState<CascaderMultipleValue>([["north", "cedar"]]);
   const [transferValue, setTransferValue] = React.useState(["stamp"]);
   const [treeSelectValue, setTreeSelectValue] = React.useState<string | string[]>("moss");
   const [virtualSelectValue, setVirtualSelectValue] = React.useState("route-12");
@@ -1228,6 +1236,10 @@ function App() {
   });
   const labels = copy[locale] as (typeof copy)["zh-CN"];
   const zh = locale === "zh-CN";
+  const scheduleReferenceDate = React.useMemo(() => new Date(2026, 4, 18), []);
+  const datePresets = React.useMemo(() => createPinepostDatePresets({ locale, referenceDate: scheduleReferenceDate }), [locale, scheduleReferenceDate]);
+  const dateRangePresets = React.useMemo(() => createPinepostDateRangePresets({ locale, referenceDate: scheduleReferenceDate }), [locale, scheduleReferenceDate]);
+  const timeRangePresets = React.useMemo(() => createPinepostTimeRangePresets({ locale }), [locale]);
   const tablePresetExportText = React.useMemo(
     () =>
       stringifyTableViewPresetExport(
@@ -1716,6 +1728,7 @@ function App() {
       group: labels.groups.form,
       title: zh ? "Cascader 级联选择" : "Cascader",
       description: zh ? "多层路线选择器，支持筛选、清空、懒加载、自定义节点、键盘导航、展开事件和方法调用。" : "Layered route selection with filtering, clear action, lazy loading, custom nodes, keyboard navigation, expand events, and methods.",
+      searchText: "multi cascader multiple 多选 多路线 selection route",
       preview: (
         <Cascader
           clearable
@@ -1725,7 +1738,7 @@ function App() {
             { value: "archive-a", label: zh ? "归档 A" : "Archive A", isLeaf: true },
             { value: "archive-b", label: zh ? "归档 B" : "Archive B", isLeaf: true }
           ]}
-          onValueChange={(value) => setCascaderValue(value)}
+          onValueChange={(value) => setCascaderValue(value as string[])}
           options={[...routeOptions, { value: "archive", label: zh ? "归档路线" : "Archive routes" }]}
           renderOption={(option) => <span>{option.label}</span>}
           value={cascaderValue}
@@ -1767,6 +1780,35 @@ function App() {
             "  onValueChange={setStationPath}",
             "/>"
           ])
+        },
+        {
+          title: zh ? "多路线选择" : "Multi route selection",
+          description: zh ? "多选模式返回完整路径数组，适合一个任务绑定多条配送路线。" : "Multiple mode returns full path arrays for tasks that target several delivery routes.",
+          preview: (
+            <Cascader
+              multiple
+              clearable
+              filterable
+              options={routeOptions}
+              placeholder={zh ? "选择多条路线" : "Choose routes"}
+              value={cascaderMultiValue}
+              onValueChange={(value) => setCascaderMultiValue(value as CascaderMultipleValue)}
+            />
+          ),
+          code: code([
+            'import { Cascader, type CascaderMultipleValue } from "pinepost-ui";',
+            "",
+            "const [routes, setRoutes] = React.useState<CascaderMultipleValue>([]);",
+            "",
+            "<Cascader",
+            "  multiple",
+            "  clearable",
+            "  filterable",
+            "  options={routeOptions}",
+            "  value={routes}",
+            "  onValueChange={(value) => setRoutes(value as CascaderMultipleValue)}",
+            "/>"
+          ])
         }
       ],
       api: [],
@@ -1775,7 +1817,8 @@ function App() {
           title: labels.attributes,
           rows: [
             { prop: "options", type: "CascaderOption[]", defaultValue: "[]", description: zh ? "级联节点。" : "Cascading nodes." },
-            { prop: "value", type: "string[]", defaultValue: "-", description: zh ? "受控路径值。" : "Controlled path value." },
+            { prop: "value", type: "string[] | string[][]", defaultValue: "-", description: zh ? "受控路径值；多选时为路径数组。" : "Controlled path value; multiple mode uses an array of paths." },
+            { prop: "multiple", type: "boolean", defaultValue: "false", description: zh ? "启用多选叶子路径。" : "Enables multiple leaf path selection." },
             { prop: "filterable", type: "boolean", defaultValue: "false", description: zh ? "启用筛选输入。" : "Enables option filtering." },
             { prop: "showAllLevels", type: "boolean", defaultValue: "true", description: zh ? "显示完整路径或只显示末级。" : "Shows full path or only the leaf label." },
             { prop: "lazy", type: "boolean", defaultValue: "false", description: zh ? "展开无子节点的分支时懒加载。" : "Loads branch children when an empty branch opens." },
@@ -1787,13 +1830,15 @@ function App() {
           title: labels.options,
           rows: [
             { prop: "CascaderOption", type: "{ value; label; children?; disabled?; isLeaf? }", defaultValue: "-", description: zh ? "节点数据结构。" : "Node data shape." },
+            { prop: "CascaderValue", type: "string[]", defaultValue: "-", description: zh ? "单选路径值。" : "Single selected path." },
+            { prop: "CascaderMultipleValue", type: "string[][]", defaultValue: "-", description: zh ? "多选完整路径列表。" : "Multiple selected paths." },
             { prop: "renderOption state", type: "{ active; leaf; level; loading; path }", defaultValue: "-", description: zh ? "渲染函数状态参数。" : "Render callback state." }
           ]
         },
         {
           title: labels.events,
           rows: [
-            { prop: "onValueChange / onChange", type: "(value, selectedOptions) => void", defaultValue: "-", description: zh ? "选择完成时触发。" : "Fires when a path is selected." },
+            { prop: "onValueChange / onChange", type: "(value, selectedOptions) => void", defaultValue: "-", description: zh ? "选择变化时触发；多选时返回 string[][] 和 CascaderOption[][]。" : "Fires when selection changes; multiple mode returns string[][] and CascaderOption[][]." },
             { prop: "onExpandChange", type: "(value: string[]) => void", defaultValue: "-", description: zh ? "展开层级变化。" : "Expanded path changes." },
             { prop: "onVisibleChange", type: "(open: boolean) => void", defaultValue: "-", description: zh ? "面板显示状态变化。" : "Panel visibility changes." }
           ]
@@ -3298,8 +3343,8 @@ function App() {
       group: labels.groups.form,
       title: zh ? "DatePickerPanel 日期面板" : "DatePickerPanel",
       description: zh ? "可嵌入的日期面板，支持快捷日期和禁用日期。" : "Embeddable date panel with shortcuts and disabled dates.",
-      preview: <DatePickerPanel value={new Date(2026, 4, 17)} shortcuts={[{ label: zh ? "明天" : "Tomorrow", value: () => new Date(2026, 4, 18) }]} />,
-      code: code(['import { DatePickerPanel } from "pinepost-ui";', "", '<DatePickerPanel shortcuts={[{ label: "明天", value: () => new Date() }]} />']),
+      preview: <DatePickerPanel value={new Date(2026, 4, 17)} shortcuts={datePresets} />,
+      code: code(['import { DatePickerPanel, createPinepostDatePresets } from "pinepost-ui";', "", "const shortcuts = createPinepostDatePresets({ locale: 'zh-CN' });", "<DatePickerPanel shortcuts={shortcuts} />"]),
       recipes: [
         {
           title: zh ? "活动日期快捷项" : "Campaign date shortcuts",
@@ -3318,7 +3363,8 @@ function App() {
       api: [
         { prop: "shortcuts", type: "DatePickerShortcut[]", defaultValue: "[]", description: zh ? "快捷日期。" : "Shortcut dates." },
         { prop: "disabledDate", type: "(date: Date) => boolean", defaultValue: "-", description: zh ? "禁用日期判断。" : "Disabled date predicate." },
-        { prop: "onValueChange", type: "(date: Date) => void", defaultValue: "-", description: zh ? "日期变化回调。" : "Date change callback." }
+        { prop: "onValueChange", type: "(date: Date) => void", defaultValue: "-", description: zh ? "日期变化回调。" : "Date change callback." },
+        { prop: "createPinepostDatePresets", type: "(options?) => DatePickerShortcut[]", defaultValue: "-", description: zh ? "生成今天、明天等单日快捷项。" : "Creates single-date shortcuts such as today and tomorrow." }
       ]
     },
     {
@@ -3326,6 +3372,7 @@ function App() {
       group: labels.groups.form,
       title: zh ? "DateRangePickerPanel 日期范围面板" : "DateRangePickerPanel",
       description: zh ? "选择开始和结束日期，适合排班、活动和报表范围。" : "Selects start and end dates for schedules, campaigns, and report ranges.",
+      searchText: "preset scheduling 排期 快捷预设 date range shortcuts",
       preview: (
         <Space direction="vertical">
           <DateRangePickerPanel
@@ -3366,6 +3413,22 @@ function App() {
             "/>",
             "const label = formatPinepostDateRange(range, { locale: 'zh-CN' });"
           ])
+        },
+        {
+          title: zh ? "运营排期快捷预设" : "Scheduling presets",
+          description: zh ? "内置 helper 可以生成最近 7 天、本周等常用范围。" : "Built-in helpers create common ranges such as last 7 days and this week.",
+          preview: (
+            <Space direction="vertical">
+              <DateRangePickerPanel value={dateRangeValue} onValueChange={setDateRangeValue} shortcuts={dateRangePresets} />
+              <Tag>{formatPinepostDateRange(dateRangeValue, { locale })}</Tag>
+            </Space>
+          ),
+          code: code([
+            'import { DateRangePickerPanel, createPinepostDateRangePresets } from "pinepost-ui";',
+            "",
+            "const shortcuts = createPinepostDateRangePresets({ locale: 'zh-CN' });",
+            "<DateRangePickerPanel shortcuts={shortcuts} value={range} onValueChange={setRange} />"
+          ])
         }
       ],
       api: [
@@ -3373,7 +3436,8 @@ function App() {
         { prop: "shortcuts", type: "DateRangeShortcut[]", defaultValue: "[]", description: zh ? "快捷日期范围。" : "Shortcut ranges." },
         { prop: "disabledDate", type: "(date: Date) => boolean", defaultValue: "-", description: zh ? "禁用日期判断。" : "Disabled date predicate." },
         { prop: "onValueChange", type: "(range) => void", defaultValue: "-", description: zh ? "范围变化回调。" : "Range change callback." },
-        { prop: "formatPinepostDate / formatPinepostDateRange", type: "helpers", defaultValue: "-", description: zh ? "格式化日期或日期范围。" : "Formats a date or date range." }
+        { prop: "formatPinepostDate / formatPinepostDateRange", type: "helpers", defaultValue: "-", description: zh ? "格式化日期或日期范围。" : "Formats a date or date range." },
+        { prop: "createPinepostDateRangePresets", type: "(options?) => DateRangeShortcut[]", defaultValue: "-", description: zh ? "生成最近 7 天、本周等快捷范围。" : "Creates shortcuts such as last 7 days and this week." }
       ]
     },
     {
@@ -3409,6 +3473,7 @@ function App() {
       group: labels.groups.form,
       title: zh ? "TimeRangePickerPanel 时间范围面板" : "TimeRangePickerPanel",
       description: zh ? "并排选择开始和结束时间，适合配送窗口和预约时段。" : "Paired start and end time panels for delivery windows and appointments.",
+      searchText: "preset scheduling 排期 快捷预设 time range shortcuts",
       preview: (
         <Space direction="vertical">
           <TimeRangePickerPanel
@@ -3458,6 +3523,22 @@ function App() {
             "  shortcuts={[{ label: '午前', value: () => ['10:00', '11:30'] }]}",
             "/>"
           ])
+        },
+        {
+          title: zh ? "运营排期快捷预设" : "Scheduling presets",
+          description: zh ? "时间范围 helper 提供上午、下午、全天等常用窗口。" : "Time range helpers provide morning, afternoon, and full-day windows.",
+          preview: (
+            <Space direction="vertical">
+              <TimeRangePickerPanel value={timeRangeValue} onValueChange={setTimeRangeValue} shortcuts={timeRangePresets} />
+              <Tag>{formatPinepostTimeRange(timeRangeValue, { locale })}</Tag>
+            </Space>
+          ),
+          code: code([
+            'import { TimeRangePickerPanel, createPinepostTimeRangePresets } from "pinepost-ui";',
+            "",
+            "const shortcuts = createPinepostTimeRangePresets({ locale: 'zh-CN' });",
+            "<TimeRangePickerPanel shortcuts={shortcuts} value={timeRange} onValueChange={setTimeRange} />"
+          ])
         }
       ],
       api: [
@@ -3466,7 +3547,8 @@ function App() {
         { prop: "startLabel / endLabel", type: "string", defaultValue: "Start time / End time", description: zh ? "两个面板的可访问名称。" : "Accessible names for each panel." },
         { prop: "shortcuts", type: "TimeRangeShortcut[]", defaultValue: "[]", description: zh ? "快捷时间范围。" : "Shortcut ranges." },
         { prop: "onValueChange", type: "(range) => void", defaultValue: "-", description: zh ? "范围变化回调。" : "Range change callback." },
-        { prop: "formatPinepostTimeRange", type: "helper", defaultValue: "-", description: zh ? "格式化时间范围。" : "Formats a time range." }
+        { prop: "formatPinepostTimeRange", type: "helper", defaultValue: "-", description: zh ? "格式化时间范围。" : "Formats a time range." },
+        { prop: "createPinepostTimeRangePresets", type: "(options?) => TimeRangeShortcut[]", defaultValue: "-", description: zh ? "生成上午、下午、全天快捷范围。" : "Creates morning, afternoon, and full-day shortcuts." }
       ]
     },
     {
@@ -3787,8 +3869,8 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme collections, Recipe Gallery state recipes</span><Tag variant="parcel">Beta</Tag><span>Table presets, TableColumnSettings, Form, Cascader, TreeSelect, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "日期时间预设、级联多选、发布检查自动化" : "Date/time presets, Cascader multi-select, release checklist automation"}</span></div>,
-      code: code(["Stable: production-ready basics, theme collections, and stateful recipes", "Beta: table presets, deep interaction surfaces, and visual checks", "Planned: future refinements"]),
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme collections, Recipe Gallery state recipes</span><Tag variant="parcel">Beta</Tag><span>Table presets, Cascader multi-select, Date/time presets, Form, TreeSelect, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "组合配方包、深层选择无障碍、发布检查自动化" : "Recipe bundles, deep selection accessibility, release checklist automation"}</span></div>,
+      code: code(["Stable: production-ready basics, theme collections, and stateful recipes", "Beta: table presets, multi-route selection, scheduling presets, and visual checks", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },
         { prop: "Beta", type: "status", defaultValue: "-", description: zh ? "API 已可用，继续打磨边界。" : "Usable API with active refinement." },
@@ -3824,7 +3906,7 @@ function App() {
         {
           id: "recipes",
           label: zh ? "业务模板" : "Recipe Gallery",
-          searchText: "业务模板 Recipe Gallery loading 上传 dashboard commerce upload form data learning 商业 学习"
+          searchText: "业务模板 Recipe Gallery loading 上传 dashboard commerce upload form data learning preset 排期 scheduling 商业 学习"
         },
         ...visibleDocs(labels.groups.guide)
       ]

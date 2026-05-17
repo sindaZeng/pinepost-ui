@@ -15,23 +15,31 @@ export interface CascaderRef {
   focus: () => void;
 }
 
+export type CascaderValue = string[];
+export type CascaderMultipleValue = string[][];
+export type CascaderSelectedOptions = CascaderOption[];
+export type CascaderMultipleSelectedOptions = CascaderOption[][];
+export type CascaderChangeValue = CascaderValue | CascaderMultipleValue;
+export type CascaderChangeOptions = CascaderSelectedOptions | CascaderMultipleSelectedOptions;
+
 export interface CascaderProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "defaultValue" | "onChange"> {
   clearable?: boolean;
-  defaultValue?: string[];
+  defaultValue?: CascaderChangeValue;
   disabled?: boolean;
   filterable?: boolean;
   lazy?: boolean;
   loadData?: (option: CascaderOption, path: CascaderOption[]) => Promise<CascaderOption[]>;
   loadingText?: React.ReactNode;
-  onChange?: (value: string[], selectedOptions: CascaderOption[]) => void;
+  multiple?: boolean;
+  onChange?: (value: CascaderChangeValue, selectedOptions: CascaderChangeOptions) => void;
   onExpandChange?: (value: string[]) => void;
-  onValueChange?: (value: string[], selectedOptions: CascaderOption[]) => void;
+  onValueChange?: (value: CascaderChangeValue, selectedOptions: CascaderChangeOptions) => void;
   onVisibleChange?: (open: boolean) => void;
   options: CascaderOption[];
   placeholder?: React.ReactNode;
   renderOption?: (option: CascaderOption, state: { active: boolean; leaf: boolean; level: number; loading: boolean; path: CascaderOption[] }) => React.ReactNode;
   showAllLevels?: boolean;
-  value?: string[];
+  value?: CascaderChangeValue;
 }
 
 function findPath(options: CascaderOption[], values: string[]) {
@@ -73,6 +81,19 @@ function optionText(option: CascaderOption) {
   return typeof option.label === "string" ? option.label : option.value;
 }
 
+function isMultipleCascaderValue(value: CascaderChangeValue | undefined): value is CascaderMultipleValue {
+  return Array.isArray(value) && Array.isArray(value[0]);
+}
+
+function sameCascaderPath(left: string[], right: string[]) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function cascaderPathText(path: CascaderOption[], showAllLevels: boolean) {
+  if (!path.length) return "";
+  return showAllLevels ? path.map(optionText).join(" / ") : optionText(path[path.length - 1]);
+}
+
 function applyCascaderChildren(options: CascaderOption[], value: string, children: CascaderOption[]): CascaderOption[] {
   return options.map((option) => {
     if (option.value === value) return { ...option, children };
@@ -92,6 +113,7 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
       lazy,
       loadData,
       loadingText = "...",
+      multiple,
       onChange,
       onExpandChange,
       onValueChange,
@@ -110,34 +132,47 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
     const [open, setOpen] = React.useState(false);
     const [query, setQuery] = React.useState("");
     const [treeOptions, setTreeOptions] = React.useState(options);
-    const [activePath, setActivePath] = React.useState(defaultValue);
+    const [activePath, setActivePath] = React.useState<CascaderValue>(() => (isMultipleCascaderValue(defaultValue) ? [] : defaultValue ?? []));
     const [loadingKeys, setLoadingKeys] = React.useState(() => new Set<string>());
-    const [internalValue, setInternalValue] = React.useState(defaultValue);
+    const [internalValue, setInternalValue] = React.useState<CascaderChangeValue>(() => defaultValue ?? (multiple ? [] : []));
     const currentValue = value ?? internalValue;
-    const selectedOptions = findPath(treeOptions, currentValue);
+    const multipleValue = multiple ? (isMultipleCascaderValue(currentValue) ? currentValue : []) : [];
+    const singleValue = multiple || isMultipleCascaderValue(currentValue) ? [] : currentValue;
+    const selectedOptions = findPath(treeOptions, singleValue);
+    const selectedOptionPaths = multipleValue.map((path) => findPath(treeOptions, path)).filter((path) => path.length > 0);
     const panelPath = activePath.length ? activePath : selectedOptions.map((item) => item.value);
     const levels = getLevels(treeOptions, panelPath);
     const flattened = React.useMemo(() => flattenOptions(treeOptions), [treeOptions]);
     const matches = query
       ? flattened.filter((path) => path.map(optionText).join(" / ").toLowerCase().includes(query.toLowerCase()))
       : [];
-    const displayValue = selectedOptions.length
-      ? showAllLevels
-        ? selectedOptions.map(optionText).join(" / ")
-        : optionText(selectedOptions[selectedOptions.length - 1])
-      : "";
+    const firstSelectedPathText = cascaderPathText(selectedOptionPaths[0] ?? [], showAllLevels);
+    const displayValue = multiple
+      ? multipleValue.length
+        ? `${multipleValue.length} selected${firstSelectedPathText ? ` · ${firstSelectedPathText}${multipleValue.length > 1 ? " +" : ""}` : ""}`
+        : ""
+      : cascaderPathText(selectedOptions, showAllLevels);
 
     function setOpenState(nextOpen: boolean) {
-      if (nextOpen) setActivePath(currentValue);
+      if (nextOpen) setActivePath(multiple ? multipleValue[0] ?? [] : singleValue);
       setOpen(nextOpen);
       onVisibleChange?.(nextOpen);
     }
 
-    function commit(nextValue: string[], path: CascaderOption[]) {
+    function commit(nextValue: CascaderChangeValue, path: CascaderChangeOptions) {
       if (value === undefined) setInternalValue(nextValue);
-      setActivePath(nextValue);
+      if (!isMultipleCascaderValue(nextValue)) setActivePath(nextValue);
       onValueChange?.(nextValue, path);
       onChange?.(nextValue, path);
+    }
+
+    function toggleMultiplePath(nextValue: string[], pathOptions: CascaderOption[]) {
+      const selected = multipleValue.some((path) => sameCascaderPath(path, nextValue));
+      const next = selected
+        ? multipleValue.filter((path) => !sameCascaderPath(path, nextValue))
+        : [...multipleValue, nextValue];
+      const selectedPaths = next.map((path) => findPath(treeOptions, path)).filter((path) => path.length > 0);
+      commit(next, selectedPaths);
     }
 
     function loadChildren(option: CascaderOption, path: CascaderOption[]) {
@@ -162,7 +197,7 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
 
     React.useImperativeHandle(ref, () => ({
       blur: () => triggerRef.current?.blur(),
-      clear: () => commit([], []),
+      clear: () => commit(multiple ? [] as CascaderMultipleValue : [], multiple ? [] as CascaderMultipleSelectedOptions : []),
       focus: () => triggerRef.current?.focus()
     }));
 
@@ -239,11 +274,16 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
                     disabled={path[path.length - 1].disabled}
                     onClick={() => {
                       const nextValue = path.map((item) => item.value);
-                      commit(nextValue, path);
-                      setOpenState(false);
+                      if (multiple) {
+                        toggleMultiplePath(nextValue, path);
+                      } else {
+                        commit(nextValue, path);
+                        setOpenState(false);
+                      }
                     }}
                     type="button"
                   >
+                    {multiple && <input readOnly checked={multipleValue.some((value) => sameCascaderPath(value, path.map((item) => item.value)))} tabIndex={-1} type="checkbox" />}
                     {path.map(optionText).join(" / ")}
                   </button>
                 ))}
@@ -259,10 +299,13 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
                       const loading = loadingKeys.has(option.value);
                       const expandable = Boolean(option.children?.length) || Boolean(lazy && !option.isLeaf);
                       const isLeaf = !expandable;
+                      const checked = multipleValue.some((path) => sameCascaderPath(path, nextPath));
                       const activate = () => {
                         setActivePath(nextPath);
                         onExpandChange?.(nextPath);
-                        if (isLeaf) {
+                        if (multiple && isLeaf) {
+                          toggleMultiplePath(nextPath, pathOptions);
+                        } else if (isLeaf) {
                           commit(nextPath, pathOptions);
                           setOpenState(false);
                         } else {
@@ -300,6 +343,7 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
                           }}
                           type="button"
                         >
+                          {multiple && isLeaf && <input readOnly checked={checked} tabIndex={-1} type="checkbox" />}
                           <span>{renderOption ? renderOption(option, { active: selected, leaf: isLeaf, level: levelIndex, loading, path: pathOptions }) : option.label}</span>
                           {loading ? <span aria-hidden="true">{loadingText}</span> : expandable && <span aria-hidden="true">›</span>}
                         </button>

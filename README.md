@@ -111,6 +111,9 @@ The v0.16 expansion adds portable theme collections, serializable table view
 preset helpers, Theme Studio collection workflows, and release notes draft
 automation.
 
+The v0.17 expansion adds Cascader multiple path selection and scheduling preset
+helpers for date, date range, and time range workflows.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, copyable recipes, and API table.
 

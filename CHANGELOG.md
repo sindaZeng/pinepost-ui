@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.0
+
+- Added multiple path selection for Cascader while preserving the existing single path workflow.
+- Added Pinepost date, date range, and time range preset helpers for scheduling screens.
+- Expanded Cascader, DateRangePickerPanel, TimeRangePickerPanel, and Recipe Gallery docs with selection and scheduling recipes.
+- Added v0.17 unit and docs smoke coverage for multi-route selection and preset discovery.
+
 ## 0.16.0
 
 - Added portable theme collections for saving, importing, and exporting multiple Pinepost token sets.

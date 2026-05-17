@@ -4,13 +4,12 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 
 ## Near Term
 
-- Add richer formatting presets for date and time panels.
-- Add Cascader multi-select exploration and more screen reader affordances.
 - Expand visual baseline review with more component detail pages.
+- Add saved recipe bundles that combine Theme Studio collections, Table presets, and scheduling presets.
+- Add more screen reader affordances for deep selection workflows.
 
 ## Mid Term
 
-- Add saved recipe bundles that combine Theme Studio collections and Table presets.
 - Add package release checklist automation around GitHub release creation.
 - Add more copyable recipes for commerce launches and learning-app flows.
 

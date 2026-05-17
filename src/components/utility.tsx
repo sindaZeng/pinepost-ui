@@ -474,6 +474,58 @@ export const TimeRangePickerPanel = React.forwardRef<HTMLDivElement, TimeRangePi
 
 TimeRangePickerPanel.displayName = "TimeRangePickerPanel";
 
+export type PinepostPresetLocale = "en" | "zh-CN";
+
+export interface PinepostDatePresetOptions {
+  locale?: PinepostPresetLocale;
+  referenceDate?: Date;
+}
+
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(date: Date, days: number) {
+  const next = startOfDay(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function startOfWeek(date: Date) {
+  const current = startOfDay(date);
+  const offset = (current.getDay() + 6) % 7;
+  current.setDate(current.getDate() - offset);
+  return current;
+}
+
+export function createPinepostDatePresets(options: PinepostDatePresetOptions = {}): DatePickerShortcut[] {
+  const { locale = "en", referenceDate = new Date() } = options;
+  const today = startOfDay(referenceDate);
+  return [
+    { label: locale === "zh-CN" ? "今天" : "Today", value: today },
+    { label: locale === "zh-CN" ? "明天" : "Tomorrow", value: addDays(today, 1) }
+  ];
+}
+
+export function createPinepostDateRangePresets(options: PinepostDatePresetOptions = {}): DateRangeShortcut[] {
+  const { locale = "en", referenceDate = new Date() } = options;
+  const today = startOfDay(referenceDate);
+  const weekStart = startOfWeek(today);
+  return [
+    { label: locale === "zh-CN" ? "最近 7 天" : "Last 7 days", value: [addDays(today, -6), today] },
+    { label: locale === "zh-CN" ? "本周" : "This week", value: [weekStart, addDays(weekStart, 6)] }
+  ];
+}
+
+export function createPinepostTimeRangePresets(options: Pick<PinepostDatePresetOptions, "locale"> = {}): TimeRangeShortcut[] {
+  const { locale = "en" } = options;
+  return [
+    { label: locale === "zh-CN" ? "上午" : "Morning", value: ["09:00", "12:00"] },
+    { label: locale === "zh-CN" ? "下午" : "Afternoon", value: ["13:00", "18:00"] },
+    { label: locale === "zh-CN" ? "全天" : "Full day", value: ["09:00", "18:00"] }
+  ];
+}
+
 export type PinepostDateFormatStyle = "date" | "datetime" | "time";
 
 export interface PinepostDateFormatOptions {

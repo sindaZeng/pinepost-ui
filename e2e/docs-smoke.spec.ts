@@ -51,6 +51,27 @@ test.describe("Pinepost docs smoke", () => {
     }
   });
 
+  test("supports selection and scheduling workflow docs", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Cascader 级联选择" }).click();
+    await expect(page.getByText("多路线选择").first()).toBeVisible();
+    await expect(page.getByText("CascaderMultipleValue").first()).toBeVisible();
+    await page.getByRole("button", { name: /1 selected/ }).click();
+    await expect(page.getByRole("button", { name: /苔藓桌|Moss desk/ }).first()).toBeVisible();
+    await expectNoPageOverflow(page);
+
+    await page.getByRole("button", { name: "DateRangePickerPanel 日期范围面板" }).click();
+    await expect(page.getByText("运营排期快捷预设").first()).toBeVisible();
+    await expect(page.getByText("createPinepostDateRangePresets").first()).toBeVisible();
+    await expectNoPageOverflow(page);
+
+    await page.getByRole("button", { name: "TimeRangePickerPanel 时间范围面板" }).click();
+    await expect(page.getByText("运营排期快捷预设").first()).toBeVisible();
+    await expect(page.getByText("createPinepostTimeRangePresets").first()).toBeVisible();
+    await expectNoPageOverflow(page);
+  });
+
   test("keeps Theme Studio editable, copyable, and visually capturable", async ({ page }, testInfo) => {
     await page.goto("/");
     await page.getByRole("button", { name: /主题工作台|Theme Studio/ }).click();
@@ -112,6 +133,10 @@ test.describe("Pinepost docs smoke", () => {
     const campaignRecipe = page.locator(".docs-recipe-card").filter({ hasText: "活动商品卡" });
     await campaignRecipe.getByRole("button", { name: "售罄" }).click();
     await expect(campaignRecipe.locator(".docs-preview-surface").getByText("本轮已经售罄")).toBeVisible();
+    await page.getByRole("button", { name: "商业", exact: true }).click();
+    const launchRecipe = page.locator(".docs-recipe-card").filter({ hasText: "活动发布页" });
+    await expect(launchRecipe.locator(".docs-recipe-card__components").getByText("DateRangePickerPanel")).toBeVisible();
+    await expect(launchRecipe.locator(".docs-recipe-card__components").getByText("TimeRangePickerPanel")).toBeVisible();
 
     const copyButton = page.getByRole("button", { name: "复制" }).first();
     await copyButton.click();
@@ -137,6 +162,17 @@ test.describe("Pinepost docs smoke", () => {
     for (const term of ["table preset", "视图预设", "release notes"]) {
       await page.getByLabel("搜索组件").fill(term);
       await expect(page.getByRole("button", { name: "Table 表格" })).toBeVisible();
+    }
+
+    for (const term of ["multi cascader", "多选"]) {
+      await page.getByLabel("搜索组件").fill(term);
+      await expect(page.getByRole("button", { name: "Cascader 级联选择" })).toBeVisible();
+    }
+
+    for (const term of ["preset", "排期"]) {
+      await page.getByLabel("搜索组件").fill(term);
+      await expect(page.getByRole("button", { name: "DateRangePickerPanel 日期范围面板" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "TimeRangePickerPanel 时间范围面板" })).toBeVisible();
     }
   });
 });

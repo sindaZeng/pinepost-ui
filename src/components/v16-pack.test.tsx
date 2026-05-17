@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import packageJson from "../../package.json";
 import { describe, expect, it } from "vitest";
 import {
   createPinepostThemeCollectionExport,
@@ -144,9 +145,9 @@ describe("Pinepost UI v0.16 pack", () => {
   it("prints release notes for the current package version", () => {
     const output = execFileSync("node", ["scripts/draft-release-notes.mjs"], { encoding: "utf8" });
 
-    expect(output).toContain("# Pinepost UI v0.16.0");
+    expect(output).toContain(`# Pinepost UI v${packageJson.version}`);
     expect(output).toContain("## Changes");
-    expect(output).toContain("theme collections");
+    expect(output).toContain("- Added");
     expect(output).toContain("corepack pnpm check");
   });
 });
