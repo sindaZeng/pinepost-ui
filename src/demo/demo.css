@@ -52,12 +52,19 @@ body {
 
 .docs-brand {
   align-items: center;
+  background: transparent;
   border-bottom: 1px dashed color-mix(in srgb, var(--pinepost-border) 74%, transparent);
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
   color: var(--pinepost-ink);
+  cursor: pointer;
   display: flex;
   gap: 10px;
+  font-family: var(--pinepost-font);
   padding: 18px 18px 16px;
   position: relative;
+  text-align: left;
   text-decoration: none;
   z-index: 1;
 }
@@ -118,19 +125,31 @@ body {
   padding: 0 10px;
 }
 
-.docs-nav a {
+.docs-nav button {
+  background: transparent;
+  border: 2px solid transparent;
   border-radius: var(--pinepost-radius-md);
   color: var(--pinepost-ink);
+  cursor: pointer;
+  font-family: var(--pinepost-font);
   font-size: 0.9rem;
   font-weight: 900;
   padding: 10px 12px;
+  text-align: left;
   text-decoration: none;
 }
 
-.docs-nav a:hover,
-.docs-nav a:focus-visible {
+.docs-nav button:hover,
+.docs-nav button:focus-visible,
+.docs-nav button[data-active="true"] {
   background: color-mix(in srgb, var(--pinepost-moss) 52%, var(--pinepost-paper-raised));
+  border-color: color-mix(in srgb, var(--pinepost-border) 82%, transparent);
   outline: none;
+}
+
+.docs-nav button[data-active="true"] {
+  box-shadow: 0 3px 0 var(--pinepost-border);
+  color: var(--pinepost-leaf-dark);
 }
 
 .docs-main {

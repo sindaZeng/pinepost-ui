@@ -118,6 +118,8 @@ type NavGroup = {
   title: string;
 };
 
+type GuidePanelId = "install" | "theme";
+
 const themeOrder: PinepostTheme[] = ["calm", "play", "shop"];
 const localeOrder: PinepostLocale[] = ["zh-CN", "en"];
 
@@ -237,7 +239,7 @@ function ApiTable({ item, labels }: { item: DocItem; labels: (typeof copy)["zh-C
 
 function DocSection({ item, labels }: { item: DocItem; labels: (typeof copy)["zh-CN"] }) {
   return (
-    <section className="docs-section" id={item.id}>
+    <section className="docs-section">
       <div className="docs-section__head">
         <span>{item.group}</span>
         <h2>{item.title}</h2>
@@ -260,9 +262,67 @@ function DocSection({ item, labels }: { item: DocItem; labels: (typeof copy)["zh
   );
 }
 
+function InstallPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh: boolean }) {
+  return (
+    <section className="docs-section docs-section--guide">
+      <div className="docs-section__head">
+        <span>{labels.groups.guide}</span>
+        <h2>{labels.install}</h2>
+        <p>{zh ? "安装包、引入样式，然后用 PinepostProvider 包住应用。" : "Install the package, import styles, and wrap your app with PinepostProvider."}</p>
+      </div>
+      <div className="docs-guide-grid">
+        <div className="docs-note">
+          <strong>{labels.install}</strong>
+          <code>{labels.installCode}</code>
+        </div>
+        <div className="docs-note">
+          <strong>{labels.importStyle}</strong>
+          <code>import "pinepost-ui/styles.css";</code>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ThemePanel({ labels, locale, theme, zh }: { labels: (typeof copy)["zh-CN"]; locale: PinepostLocale; theme: PinepostTheme; zh: boolean }) {
+  return (
+    <section className="docs-section docs-section--guide">
+      <div className="docs-section__head">
+        <span>{labels.groups.guide}</span>
+        <h2>{zh ? "Theme 与 Locale" : "Theme and Locale"}</h2>
+        <p>{zh ? "Provider 同时管理主题、语言和根节点 token，适合文档站与业务应用共用。" : "The provider controls theme, locale, and root tokens for docs and product apps."}</p>
+      </div>
+      <div className="docs-example">
+        <div className="docs-example__preview">
+          <div className="docs-example__label">{labels.preview}</div>
+          <Space>
+            <Tag>{labels.themes[theme]}</Tag>
+            <Badge variant="sky">{locale}</Badge>
+          </Space>
+        </div>
+        <div className="docs-code">
+          <div className="docs-code__label">{labels.usage}</div>
+          <pre>
+            <code>
+              {code([
+                'import { PinepostProvider } from "pinepost-ui";',
+                "",
+                "<PinepostProvider theme=\"calm\" locale=\"zh-CN\">",
+                "  <App />",
+                "</PinepostProvider>"
+              ])}
+            </code>
+          </pre>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function App() {
   const [locale, setLocale] = React.useState<PinepostLocale>("zh-CN");
   const [theme, setTheme] = React.useState<PinepostTheme>("calm");
+  const [selectedId, setSelectedId] = React.useState("button");
   const [menuValue, setMenuValue] = React.useState("routes");
   const [page, setPage] = React.useState(2);
   const [segment, setSegment] = React.useState("calm");
@@ -793,38 +853,67 @@ function App() {
       ]
     }
   ];
-  const [firstDoc, ...restDocs] = docs;
+  const selectedDoc = docs.find((item) => item.id === selectedId);
+  const selectedPanelTitle =
+    selectedDoc?.title ?? (selectedId === "install" ? labels.install : zh ? "Theme 与 Locale" : "Theme and Locale");
+  const selectedPanelDescription =
+    selectedDoc?.description ??
+    (selectedId === "install"
+      ? zh
+        ? "安装包、引入样式，然后用 PinepostProvider 包住应用。"
+        : "Install the package, import styles, and wrap your app with PinepostProvider."
+      : zh
+        ? "Provider 同时管理主题、语言和根节点 token，适合文档站与业务应用共用。"
+        : "The provider controls theme, locale, and root tokens for docs and product apps.");
+
+  function renderSelectedPanel() {
+    if (selectedDoc) {
+      return <DocSection item={selectedDoc} labels={labels} />;
+    }
+
+    if ((selectedId as GuidePanelId) === "install") {
+      return <InstallPanel labels={labels} zh={zh} />;
+    }
+
+    return <ThemePanel labels={labels} locale={locale} theme={theme} zh={zh} />;
+  }
 
   return (
     <PinepostProvider theme={theme} locale={locale} className="docs-app">
       <ToastProvider swipeDirection="right">
         <aside className="docs-sidebar">
-          <a className="docs-brand" href="#top" aria-label="Pinepost UI">
+          <button className="docs-brand" type="button" onClick={() => setSelectedId("button")} aria-label="Pinepost UI">
             <PinepostMark />
             <span>
               <strong>{labels.brand}</strong>
               <small>{labels.tagline}</small>
             </span>
-          </a>
+          </button>
           <nav className="docs-nav" aria-label="Component navigation">
             {navGroups.map((group) => (
               <div className="docs-nav__group" key={group.title}>
                 <span>{group.title}</span>
                 {group.items.map((item) => (
-                  <a href={`#${item.id}`} key={item.id}>
+                  <button
+                    key={item.id}
+                    type="button"
+                    data-active={selectedId === item.id}
+                    aria-current={selectedId === item.id ? "page" : undefined}
+                    onClick={() => setSelectedId(item.id)}
+                  >
                     {item.label}
-                  </a>
+                  </button>
                 ))}
               </div>
             ))}
           </nav>
         </aside>
 
-        <main className="docs-main" id="top">
+        <main className="docs-main">
           <div className="docs-topbar">
             <div>
-              <h1>{labels.introTitle}</h1>
-              <p>{labels.intro}</p>
+              <h1>{selectedPanelTitle}</h1>
+              <p>{selectedPanelDescription}</p>
             </div>
             <div className="docs-toolbar" aria-label="Documentation controls">
               <span>{labels.language}</span>
@@ -842,60 +931,7 @@ function App() {
             </div>
           </div>
 
-          <DocSection item={firstDoc} labels={labels} />
-
-          <section className="docs-section docs-section--guide" id="install">
-            <div className="docs-section__head">
-              <span>{labels.groups.guide}</span>
-              <h2>{labels.install}</h2>
-              <p>{zh ? "安装包、引入样式，然后用 PinepostProvider 包住应用。" : "Install the package, import styles, and wrap your app with PinepostProvider."}</p>
-            </div>
-            <div className="docs-guide-grid">
-              <div className="docs-note">
-                <strong>{labels.install}</strong>
-                <code>{labels.installCode}</code>
-              </div>
-              <div className="docs-note">
-                <strong>{labels.importStyle}</strong>
-                <code>import "pinepost-ui/styles.css";</code>
-              </div>
-            </div>
-          </section>
-
-          <section className="docs-section docs-section--guide" id="theme">
-            <div className="docs-section__head">
-              <span>{labels.groups.guide}</span>
-              <h2>{zh ? "Theme 与 Locale" : "Theme and Locale"}</h2>
-              <p>{zh ? "Provider 同时管理主题、语言和根节点 token，适合文档站与业务应用共用。" : "The provider controls theme, locale, and root tokens for docs and product apps."}</p>
-            </div>
-            <div className="docs-example">
-              <div className="docs-example__preview">
-                <div className="docs-example__label">{labels.preview}</div>
-                <Space>
-                  <Tag>{labels.themes[theme]}</Tag>
-                  <Badge variant="sky">{locale}</Badge>
-                </Space>
-              </div>
-              <div className="docs-code">
-                <div className="docs-code__label">{labels.usage}</div>
-                <pre>
-                  <code>
-                    {code([
-                      'import { PinepostProvider } from "pinepost-ui";',
-                      "",
-                      "<PinepostProvider theme=\"calm\" locale=\"zh-CN\">",
-                      "  <App />",
-                      "</PinepostProvider>"
-                    ])}
-                  </code>
-                </pre>
-              </div>
-            </div>
-          </section>
-
-          {restDocs.map((item) => (
-            <DocSection key={item.id} item={item} labels={labels} />
-          ))}
+          {renderSelectedPanel()}
         </main>
 
         <Toast open={toastOpen} onOpenChange={setToastOpen}>
