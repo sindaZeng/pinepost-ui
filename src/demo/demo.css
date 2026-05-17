@@ -545,7 +545,29 @@ body {
 
 @media (max-width: 620px) {
   .docs-nav {
+    display: grid;
+    gap: 10px;
+    max-height: 42vh;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: 10px;
+  }
+
+  .docs-nav__group {
+    align-items: stretch;
+    display: grid;
+    flex: initial;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .docs-nav__group > span {
+    grid-column: 1 / -1;
+  }
+
+  .docs-nav__group > span,
+  .docs-nav button {
+    min-width: 0;
+    white-space: normal;
   }
 
   .docs-topbar {

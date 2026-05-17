@@ -106,6 +106,7 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
     ref
   ) => {
     const triggerRef = React.useRef<HTMLButtonElement>(null);
+    const rootRef = React.useRef<HTMLDivElement>(null);
     const [open, setOpen] = React.useState(false);
     const [query, setQuery] = React.useState("");
     const [treeOptions, setTreeOptions] = React.useState(options);
@@ -165,14 +166,40 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
       focus: () => triggerRef.current?.focus()
     }));
 
+    function focusMenuButton(menu: Element | null | undefined, index: number) {
+      const buttons = Array.from(menu?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+      buttons[index]?.focus();
+    }
+
+    function moveMenuFocus(event: React.KeyboardEvent<HTMLButtonElement>, direction: number) {
+      const menu = event.currentTarget.closest(".pinepost-cascader__menu, .pinepost-cascader__matches");
+      const buttons = Array.from(menu?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+      const index = buttons.indexOf(event.currentTarget);
+      if (index < 0 || buttons.length === 0) return;
+      event.preventDefault();
+      buttons[(index + direction + buttons.length) % buttons.length].focus();
+    }
+
+    function focusSiblingMenu(levelIndex: number, offset: number) {
+      const menus = Array.from(rootRef.current?.querySelectorAll(".pinepost-cascader__menu") ?? []);
+      window.setTimeout(() => focusMenuButton(menus[levelIndex + offset], offset > 0 ? 0 : Math.max(0, (menus[levelIndex + offset]?.querySelectorAll("button:not(:disabled)").length ?? 1) - 1)), 0);
+    }
+
     return (
-      <div className={cn("pinepost-cascader", className)} data-open={open} {...props}>
+      <div ref={rootRef} className={cn("pinepost-cascader", className)} data-open={open} {...props}>
         <button
           ref={triggerRef}
           aria-expanded={open}
           className="pinepost-picker-trigger"
           disabled={disabled}
           onClick={() => setOpenState(!open)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setOpenState(true);
+              window.setTimeout(() => focusMenuButton(rootRef.current?.querySelector(".pinepost-cascader__menu"), 0), 0);
+            }
+          }}
           type="button"
         >
           <span data-placeholder={!displayValue}>{displayValue || placeholder}</span>
@@ -232,20 +259,43 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
                       const loading = loadingKeys.has(option.value);
                       const expandable = Boolean(option.children?.length) || Boolean(lazy && !option.isLeaf);
                       const isLeaf = !expandable;
+                      const activate = () => {
+                        setActivePath(nextPath);
+                        onExpandChange?.(nextPath);
+                        if (isLeaf) {
+                          commit(nextPath, pathOptions);
+                          setOpenState(false);
+                        } else {
+                          loadChildren(option, pathOptions);
+                        }
+                      };
 
                       return (
                         <button
                           key={option.value}
                           disabled={option.disabled}
                           data-active={selected}
-                          onClick={() => {
-                            setActivePath(nextPath);
-                            onExpandChange?.(nextPath);
-                            if (isLeaf) {
-                              commit(nextPath, pathOptions);
+                          onClick={activate}
+                          onKeyDown={(event) => {
+                            if (event.key === "ArrowDown") moveMenuFocus(event, 1);
+                            if (event.key === "ArrowUp") moveMenuFocus(event, -1);
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              activate();
+                            }
+                            if (event.key === "ArrowRight" && !isLeaf) {
+                              event.preventDefault();
+                              activate();
+                              focusSiblingMenu(levelIndex, 1);
+                            }
+                            if (event.key === "ArrowLeft") {
+                              event.preventDefault();
+                              focusSiblingMenu(levelIndex, -1);
+                            }
+                            if (event.key === "Escape") {
+                              event.preventDefault();
                               setOpenState(false);
-                            } else {
-                              loadChildren(option, pathOptions);
+                              triggerRef.current?.focus();
                             }
                           }}
                           type="button"

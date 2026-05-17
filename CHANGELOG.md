@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.0
+
+- Added Table density modes, filter tag actions, and local view preset persistence.
+- Added Form validation triggers, async submit state, submit errors, and related ref methods.
+- Added Cascader keyboard navigation for menu movement, expansion, selection, and escape.
+- Expanded docs and tests for product-style Table, Form, and Cascader workflows.
+
 ## 0.10.0
 
 - Added Cascader lazy loading and custom option rendering for async route trees.

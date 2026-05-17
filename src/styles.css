@@ -1573,6 +1573,26 @@
   border-color: var(--pinepost-stamp);
 }
 
+.pinepost-form__status,
+.pinepost-form__submit-error {
+  border-radius: var(--pinepost-radius-sm);
+  font-size: 0.86rem;
+  font-weight: 900;
+  line-height: 1.4;
+  margin: 0;
+  padding: 9px 11px;
+}
+
+.pinepost-form__status {
+  background: color-mix(in srgb, var(--pinepost-moss) 58%, var(--pinepost-paper-raised));
+  color: var(--pinepost-leaf-dark);
+}
+
+.pinepost-form__submit-error {
+  background: color-mix(in srgb, var(--pinepost-stamp) 16%, var(--pinepost-paper-raised));
+  color: var(--pinepost-stamp-dark);
+}
+
 .pinepost-input-number {
   align-items: stretch;
   display: inline-grid;
@@ -1816,6 +1836,7 @@
   overflow: auto;
 }
 
+.pinepost-table__filterbar,
 .pinepost-table__viewbar {
   align-items: center;
   background: color-mix(in srgb, var(--pinepost-moss) 44%, var(--pinepost-paper-raised));
@@ -1826,12 +1847,30 @@
   padding: 10px 12px;
 }
 
+.pinepost-table__filterbar {
+  background: color-mix(in srgb, var(--pinepost-sky) 16%, var(--pinepost-paper-raised));
+}
+
+.pinepost-table__filterbar span,
 .pinepost-table__viewbar span {
   color: var(--pinepost-muted);
   font-size: 0.78rem;
   font-weight: 900;
 }
 
+.pinepost-table__filter-tag {
+  align-items: center;
+  background: var(--pinepost-paper-raised);
+  border: 1px solid var(--pinepost-border);
+  border-radius: var(--pinepost-radius-sm);
+  display: inline-flex;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 8px;
+}
+
+.pinepost-table__filter-tag button,
+.pinepost-table__filter-clear,
 .pinepost-table__viewbar button {
   background: var(--pinepost-paper-raised);
   border: 1px solid var(--pinepost-border);
@@ -1842,6 +1881,14 @@
   font-weight: 900;
   min-height: 28px;
   padding: 0 10px;
+}
+
+.pinepost-table__filter-tag button {
+  border-radius: 999px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0;
+  width: 20px;
 }
 
 .pinepost-table__viewbar button[aria-pressed="true"] {
@@ -1862,6 +1909,16 @@
   border-bottom: 1px dashed color-mix(in srgb, var(--pinepost-border) 78%, transparent);
   padding: 12px 14px;
   text-align: left;
+}
+
+.pinepost-table-wrap[data-density="compact"] .pinepost-table th,
+.pinepost-table-wrap[data-density="compact"] .pinepost-table td {
+  padding: 8px 10px;
+}
+
+.pinepost-table-wrap[data-density="spacious"] .pinepost-table th,
+.pinepost-table-wrap[data-density="spacious"] .pinepost-table td {
+  padding: 16px 18px;
 }
 
 .pinepost-table th {

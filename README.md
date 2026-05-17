@@ -88,6 +88,9 @@ validation state, and lazy TreeSelect loading for larger product workflows.
 The v0.10 expansion adds Cascader lazy loading, Table view presets, and
 Pinepost date/time formatting helpers.
 
+The v0.11 expansion adds Table density and persisted view workflows, Form
+validation triggers and submit state, and Cascader keyboard navigation.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, and API table.
 

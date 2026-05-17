@@ -8,26 +8,38 @@ export type FormRule = {
   validator?: (value: unknown, model: Record<string, unknown>) => boolean | string | React.ReactNode | Promise<boolean | string | React.ReactNode>;
 };
 
+export type FormValidateTrigger = "blur" | "change" | "submit";
+
 export interface FormRef {
   clearValidate: (names?: string | string[]) => void;
   getFieldError: (name: string) => React.ReactNode | undefined;
+  getSubmitError: () => React.ReactNode | undefined;
   isFieldValidating: (name: string) => boolean;
+  isSubmitting: () => boolean;
   resetFields: (names?: string | string[]) => void;
   scrollToField: (name: string) => void;
   validate: () => Promise<boolean>;
   validateField: (name: string) => Promise<boolean>;
 }
 
-export interface FormProps extends React.FormHTMLAttributes<HTMLFormElement> {
+export interface FormProps extends Omit<React.FormHTMLAttributes<HTMLFormElement>, "onSubmit"> {
   layout?: "vertical" | "horizontal" | "inline";
   model?: Record<string, unknown>;
+  onFinish?: (model: Record<string, unknown>) => void | Promise<void>;
+  onFinishFailed?: (model: Record<string, unknown>) => void;
+  onSubmit?: React.FormEventHandler<HTMLFormElement>;
   rules?: Record<string, FormRule[]>;
+  submitErrorMessage?: React.ReactNode;
+  submittingMessage?: React.ReactNode;
+  validateTrigger?: FormValidateTrigger | FormValidateTrigger[];
 }
 
 type FormContextValue = {
   clearValidate: (names?: string | string[]) => void;
   errors: Record<string, React.ReactNode>;
   registerField: (name: string, element: HTMLElement | null) => () => void;
+  validateField: (name: string) => Promise<boolean>;
+  validateTrigger: FormValidateTrigger | FormValidateTrigger[];
   validating: Record<string, boolean>;
 };
 
@@ -42,11 +54,41 @@ function isEmptyValue(value: unknown) {
   return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 }
 
+function hasValidateTrigger(trigger: FormValidateTrigger | FormValidateTrigger[] | undefined, expected: FormValidateTrigger) {
+  const normalized = trigger ?? "submit";
+  return Array.isArray(normalized) ? normalized.includes(expected) : normalized === expected;
+}
+
+function composeEventHandlers<E>(first: ((event: E) => void) | undefined, second: (event: E) => void) {
+  return (event: E) => {
+    first?.(event);
+    second(event);
+  };
+}
+
 export const Form = React.forwardRef<FormRef, FormProps>(
-  ({ children, className, layout = "vertical", model = {}, rules = {}, ...props }, ref) => {
+  (
+    {
+      children,
+      className,
+      layout = "vertical",
+      model = {},
+      onFinish,
+      onFinishFailed,
+      onSubmit,
+      rules = {},
+      submitErrorMessage,
+      submittingMessage,
+      validateTrigger = "submit",
+      ...props
+    },
+    ref
+  ) => {
     const nativeRef = React.useRef<HTMLFormElement>(null);
     const fieldsRef = React.useRef(new Map<string, HTMLElement>());
     const [errors, setErrors] = React.useState<Record<string, React.ReactNode>>({});
+    const [submitError, setSubmitError] = React.useState<React.ReactNode>();
+    const [submitting, setSubmitting] = React.useState(false);
     const [validating, setValidating] = React.useState<Record<string, boolean>>({});
     const initialModelRef = React.useRef({ ...model });
 
@@ -126,7 +168,9 @@ export const Form = React.forwardRef<FormRef, FormProps>(
     React.useImperativeHandle(ref, () => ({
       clearValidate,
       getFieldError: (name) => errors[name],
+      getSubmitError: () => submitError,
       isFieldValidating: (name) => Boolean(validating[name]),
+      isSubmitting: () => submitting,
       resetFields: (names) => {
         clearValidate(names);
         const selectedNames = normalizeNames(names, Object.keys(initialModelRef.current));
@@ -139,7 +183,28 @@ export const Form = React.forwardRef<FormRef, FormProps>(
       scrollToField: (name) => fieldsRef.current.get(name)?.scrollIntoView({ block: "center", behavior: "smooth" }),
       validate,
       validateField
-    }), [clearValidate, errors, model, validate, validateField, validating]);
+    }), [clearValidate, errors, model, submitError, submitting, validate, validateField, validating]);
+
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+      onSubmit?.(event);
+      if (event.defaultPrevented || !onFinish) return;
+      event.preventDefault();
+      setSubmitError(undefined);
+      const valid = await validate();
+      if (!valid) {
+        onFinishFailed?.(model);
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        await onFinish(model);
+      } catch (error) {
+        setSubmitError(submitErrorMessage ?? (error instanceof Error ? error.message : "Submit failed"));
+      } finally {
+        setSubmitting(false);
+      }
+    }
 
     const context = React.useMemo<FormContextValue>(
       () => ({
@@ -149,15 +214,34 @@ export const Form = React.forwardRef<FormRef, FormProps>(
           if (element) fieldsRef.current.set(name, element);
           return () => fieldsRef.current.delete(name);
         },
+        validateField,
+        validateTrigger,
         validating
       }),
-      [clearValidate, errors, validating]
+      [clearValidate, errors, validateField, validateTrigger, validating]
     );
 
     return (
       <FormContext.Provider value={context}>
-        <form ref={nativeRef} className={cn("pinepost-form", `pinepost-form--${layout}`, className)} {...props}>
+        <form
+          ref={nativeRef}
+          className={cn("pinepost-form", `pinepost-form--${layout}`, className)}
+          data-submit-error={Boolean(submitError) || undefined}
+          data-submitting={submitting || undefined}
+          onSubmit={handleSubmit}
+          {...props}
+        >
           {children}
+          {submitting && submittingMessage && (
+            <p className="pinepost-form__status" role="status">
+              {submittingMessage}
+            </p>
+          )}
+          {submitError && (
+            <p className="pinepost-form__submit-error" role="alert">
+              {submitError}
+            </p>
+          )}
         </form>
       </FormContext.Provider>
     );
@@ -174,14 +258,16 @@ export interface FormFieldProps extends React.HTMLAttributes<HTMLDivElement> {
   name?: string;
   required?: boolean;
   validatingMessage?: React.ReactNode;
+  validateTrigger?: FormValidateTrigger | FormValidateTrigger[];
 }
 
 export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
-  ({ children, className, description, error, htmlFor, label, name, required, validatingMessage, ...props }, ref) => {
+  ({ children, className, description, error, htmlFor, label, name, required, validatingMessage, validateTrigger, ...props }, ref) => {
     const context = React.useContext(FormContext);
     const localRef = React.useRef<HTMLDivElement>(null);
     const fieldError = (name ? context?.errors[name] : undefined) ?? error;
     const fieldValidating = Boolean(name ? context?.validating[name] : false);
+    const activeTrigger = validateTrigger ?? context?.validateTrigger;
 
     React.useImperativeHandle(ref, () => localRef.current as HTMLDivElement);
 
@@ -189,6 +275,17 @@ export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
       if (!name || !context) return undefined;
       return context.registerField(name, localRef.current);
     }, [context, name]);
+
+    const control = React.isValidElement(children)
+      ? React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
+          onBlur: composeEventHandlers((children.props as { onBlur?: (event: React.FocusEvent) => void }).onBlur, () => {
+            if (name && context && hasValidateTrigger(activeTrigger, "blur")) void context.validateField(name);
+          }),
+          onChange: composeEventHandlers((children.props as { onChange?: (event: React.ChangeEvent) => void }).onChange, () => {
+            if (name && context && hasValidateTrigger(activeTrigger, "change")) void context.validateField(name);
+          })
+        })
+      : children;
 
     return (
       <div
@@ -202,7 +299,7 @@ export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
           {label}
           {required && <span aria-hidden="true">*</span>}
         </label>
-        <div className="pinepost-form-field__control">{children}</div>
+        <div className="pinepost-form-field__control">{control}</div>
         {description && !fieldError && !fieldValidating && <p className="pinepost-form-field__description">{description}</p>}
         {fieldValidating && validatingMessage && (
           <p className="pinepost-form-field__description" role="status">

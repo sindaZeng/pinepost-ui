@@ -633,21 +633,28 @@ function App() {
       id: "form",
       group: labels.groups.form,
       title: zh ? "Form 表单" : "Form",
-      description: zh ? "Form 与 FormField 提供标签、说明、校验错误和布局外壳。" : "Form and FormField provide labels, hints, errors, and layout shells.",
+      description: zh ? "Form 与 FormField 提供标签、说明、校验错误、触发时机和异步提交状态。" : "Form and FormField provide labels, hints, errors, validation triggers, and async submit state.",
       preview: (
-        <Form>
+        <Form
+          model={{ desk: "cedar" }}
+          onFinish={async () => showToast()}
+          rules={{ desk: [{ required: true, message: zh ? "请填写收件处。" : "Recipient is required." }] }}
+          submittingMessage={zh ? "正在提交路线..." : "Submitting route..."}
+          validateTrigger="blur"
+        >
           <FormField label={zh ? "收件处" : "Recipient"} htmlFor="demo-recipient" required description={zh ? "用于路线分配。" : "Used for route assignment."}>
             <Input id="demo-recipient" placeholder={zh ? "苔藓桌" : "Moss desk"} />
           </FormField>
           <FormField label={zh ? "校验提示" : "Validation"} error={zh ? "请填写路线。" : "Route is required."}>
             <Input placeholder={zh ? "路线编号" : "Route code"} />
           </FormField>
+          <Button size="sm" type="submit">{zh ? "提交路线" : "Submit route"}</Button>
         </Form>
       ),
       code: code([
         'import { Form, FormField, Input } from "pinepost-ui";',
         "",
-        "<Form model={model} rules={rules}>",
+        '<Form model={model} rules={rules} validateTrigger="blur" onFinish={saveRoute}>',
         '  <FormField name="desk" label="收件处" required validatingMessage="检查桌台中...">',
         '    <Input placeholder="苔藓桌" />',
         "  </FormField>",
@@ -657,10 +664,14 @@ function App() {
         { prop: "layout", type: '"vertical" | "horizontal" | "inline"', defaultValue: "vertical", description: zh ? "表单布局。" : "Form layout." },
         { prop: "model", type: "Record<string, unknown>", defaultValue: "{}", description: zh ? "字段数据模型。" : "Field data model." },
         { prop: "rules", type: "Record<string, FormRule[]>", defaultValue: "{}", description: zh ? "同步或异步校验规则。" : "Sync or async validation rules." },
+        { prop: "validateTrigger", type: '"submit" | "blur" | "change" | string[]', defaultValue: "submit", description: zh ? "表单或字段校验触发时机。" : "Form or field validation trigger." },
         { prop: "description", type: "ReactNode", defaultValue: "-", description: zh ? "字段说明。" : "Field hint." },
         { prop: "error", type: "ReactNode", defaultValue: "-", description: zh ? "字段错误提示。" : "Field error." },
         { prop: "validatingMessage", type: "ReactNode", defaultValue: "-", description: zh ? "异步校验中提示。" : "Message shown while async validation is running." },
-        { prop: "validate / validateField / isFieldValidating", type: "FormRef methods", defaultValue: "-", description: zh ? "命令式校验和校验中状态读取。" : "Imperative validation and validating-state lookup." }
+        { prop: "onFinish / onFinishFailed", type: "(model) => void | Promise<void>", defaultValue: "-", description: zh ? "校验通过或失败后的提交回调。" : "Submit callbacks after validation." },
+        { prop: "submittingMessage / submitErrorMessage", type: "ReactNode", defaultValue: "-", description: zh ? "提交中和提交错误提示。" : "Submitting and submit error messages." },
+        { prop: "validate / validateField / isFieldValidating", type: "FormRef methods", defaultValue: "-", description: zh ? "命令式校验和校验中状态读取。" : "Imperative validation and validating-state lookup." },
+        { prop: "isSubmitting / getSubmitError", type: "FormRef methods", defaultValue: "-", description: zh ? "读取提交状态和提交错误。" : "Reads submit state and submit error." }
       ]
     },
     {
@@ -764,7 +775,7 @@ function App() {
       id: "cascader",
       group: labels.groups.form,
       title: zh ? "Cascader 级联选择" : "Cascader",
-      description: zh ? "多层路线选择器，支持筛选、清空、懒加载、自定义节点、展开事件和方法调用。" : "Layered route selection with filtering, clear action, lazy loading, custom nodes, expand events, and methods.",
+      description: zh ? "多层路线选择器，支持筛选、清空、懒加载、自定义节点、键盘导航、展开事件和方法调用。" : "Layered route selection with filtering, clear action, lazy loading, custom nodes, keyboard navigation, expand events, and methods.",
       preview: (
         <Cascader
           clearable
@@ -827,6 +838,15 @@ function App() {
           title: labels.methods,
           rows: [
             { prop: "focus / blur / clear", type: "CascaderRef", defaultValue: "-", description: zh ? "聚焦、失焦和清空。" : "Focus, blur, and clear." }
+          ]
+        },
+        {
+          title: labels.shortcuts,
+          rows: [
+            { prop: "ArrowUp / ArrowDown", type: "keyboard", defaultValue: "-", description: zh ? "在当前菜单内移动焦点。" : "Moves focus inside the current menu." },
+            { prop: "ArrowRight / ArrowLeft", type: "keyboard", defaultValue: "-", description: zh ? "进入或返回相邻层级。" : "Moves into or back from adjacent levels." },
+            { prop: "Enter", type: "keyboard", defaultValue: "-", description: zh ? "展开分支或选择叶子节点。" : "Expands a branch or selects a leaf." },
+            { prop: "Escape", type: "keyboard", defaultValue: "-", description: zh ? "关闭面板并回到触发器。" : "Closes the panel and returns to the trigger." }
           ]
         }
       ]
@@ -1169,8 +1189,12 @@ function App() {
           rowKey="id"
           selectable
           editable
+          density="compact"
+          filterTags={[{ key: "status", label: zh ? "状态：就绪" : "Status: Ready" }]}
+          onFilterClear={showToast}
           resizableColumns
           defaultViewPreset="full"
+          viewStorageKey="pinepost-demo-table-view"
           viewPresetLabel={zh ? "视图" : "View"}
           viewPresets={[
             { key: "full", label: zh ? "完整" : "Full", columnWidths: { route: 140, count: 90 }, hiddenColumns: [] },
@@ -1204,6 +1228,9 @@ function App() {
         '  rowKey="id"',
         "  selectable",
         "  editable",
+        '  density="compact"',
+        '  filterTags={[{ key: "status", label: "状态：就绪" }]}',
+        '  viewStorageKey="route-table-view"',
         "  resizableColumns",
         '  defaultViewPreset="full"',
         "  viewPresets={[",
@@ -1234,6 +1261,8 @@ function App() {
             { prop: "rowKey", type: "keyof T | function", defaultValue: "index", description: zh ? "行 key。" : "Row key." },
             { prop: "selectable", type: "boolean", defaultValue: "false", description: zh ? "显示行选择列。" : "Shows row selection." },
             { prop: "editable", type: "boolean", defaultValue: "false", description: zh ? "允许可编辑列双击编辑。" : "Allows double-click editing on editable columns." },
+            { prop: "density", type: '"compact" | "comfortable" | "spacious"', defaultValue: "comfortable", description: zh ? "表格行距密度。" : "Table spacing density." },
+            { prop: "filterTags", type: "TableFilterTag[]", defaultValue: "[]", description: zh ? "当前筛选条件标签。" : "Current filter chips." },
             { prop: "expandedRowKeys / defaultExpandedRowKeys", type: "React.Key[]", defaultValue: "[]", description: zh ? "受控或默认展开行。" : "Controlled or default expanded rows." },
             { prop: "summary", type: "Record | (rows) => Record", defaultValue: "-", description: zh ? "汇总行内容。" : "Summary row content." },
             { prop: "resizableColumns", type: "boolean", defaultValue: "false", description: zh ? "显示列宽调整控件。" : "Shows column resize controls." },
@@ -1241,7 +1270,8 @@ function App() {
             { prop: "hiddenColumns / defaultHiddenColumns", type: "string[]", defaultValue: "[]", description: zh ? "受控或默认隐藏列 key。" : "Controlled or default hidden column keys." },
             { prop: "viewPresets", type: "TableViewPreset<T>[]", defaultValue: "[]", description: zh ? "预设列宽、隐藏列和排序视图。" : "Preset widths, hidden columns, and sort views." },
             { prop: "viewPreset / defaultViewPreset", type: "string", defaultValue: "-", description: zh ? "受控或默认视图 key。" : "Controlled or default view key." },
-            { prop: "viewPresetLabel", type: "ReactNode", defaultValue: "View", description: zh ? "视图切换组标签。" : "View switcher label." }
+            { prop: "viewPresetLabel", type: "ReactNode", defaultValue: "View", description: zh ? "视图切换组标签。" : "View switcher label." },
+            { prop: "viewStorageKey", type: "string", defaultValue: "-", description: zh ? "将视图 key 保存到 localStorage。" : "Persists the view key in localStorage." }
           ]
         },
         {
@@ -1265,6 +1295,7 @@ function App() {
             { prop: "onCurrentChange", type: "(row?) => void", defaultValue: "-", description: zh ? "当前行变化。" : "Current row changes." },
             { prop: "onCellEdit", type: "(row, key, value) => void", defaultValue: "-", description: zh ? "单元格提交编辑。" : "Cell edit is committed." },
             { prop: "onExpandChange", type: "(keys) => void", defaultValue: "-", description: zh ? "展开行变化。" : "Expanded rows change." },
+            { prop: "onFilterClear", type: "(key?) => void", defaultValue: "-", description: zh ? "清除单个或全部筛选标签。" : "Clears one or all filter chips." },
             { prop: "onColumnResize", type: "(key, width, widths) => void", defaultValue: "-", description: zh ? "列宽变化。" : "Column width changes." },
             { prop: "onColumnVisibilityChange", type: "(keys) => void", defaultValue: "-", description: zh ? "隐藏列变化。" : "Hidden columns change." },
             { prop: "onViewPresetChange", type: "(key, preset) => void", defaultValue: "-", description: zh ? "视图预设变化。" : "View preset changes." }
@@ -2604,7 +2635,7 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs</span><Tag variant="parcel">Beta</Tag><span>Table, Form, Cascader, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "持久化配方、更多格式预设、视觉回归" : "Persisted recipes, more format presets, visual checks"}</span></div>,
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs</span><Tag variant="parcel">Beta</Tag><span>Table, Form, Cascader, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "列设置面板、更多格式预设、视觉回归" : "Column settings, more format presets, visual checks"}</span></div>,
       code: code(["Stable: production-ready basics", "Beta: deep interaction surfaces", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },

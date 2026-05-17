@@ -32,6 +32,13 @@ export interface TableViewPreset<T> {
   sortState?: TableSortState<T>;
 }
 
+export interface TableFilterTag {
+  key: string;
+  label: React.ReactNode;
+}
+
+export type TableDensity = "compact" | "comfortable" | "spacious";
+
 export interface TableRef<T> {
   clearExpansion: () => void;
   clearSelection: () => void;
@@ -58,8 +65,10 @@ export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
   defaultExpandedRowKeys?: React.Key[];
   defaultHiddenColumns?: Array<keyof T | string>;
   defaultViewPreset?: string;
+  density?: TableDensity;
   editable?: boolean;
   emptyText?: React.ReactNode;
+  filterTags?: TableFilterTag[];
   expandedRowKeys?: React.Key[];
   filters?: Partial<Record<string, (row: T) => boolean>>;
   hiddenColumns?: Array<keyof T | string>;
@@ -71,6 +80,7 @@ export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
   onColumnVisibilityChange?: (hiddenColumns: string[]) => void;
   onCurrentChange?: (row?: T) => void;
   onExpandChange?: (expandedKeys: React.Key[]) => void;
+  onFilterClear?: (key?: string) => void;
   onRowClick?: (row: T, index: number) => void;
   onSelectionChange?: (rows: T[]) => void;
   onSortChange?: (state?: TableSortState<T>) => void;
@@ -84,6 +94,7 @@ export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
   viewPreset?: string;
   viewPresetLabel?: React.ReactNode;
   viewPresets?: Array<TableViewPreset<T>>;
+  viewStorageKey?: string;
 }
 
 function getCellValue<T extends object>(row: T, key: keyof T | string) {
@@ -123,6 +134,24 @@ function findTablePreset<T>(presets: Array<TableViewPreset<T>>, key?: string) {
 
 function normalizeHiddenColumns(columns: Array<unknown> = []) {
   return columns.map(String);
+}
+
+function readStoredViewPreset(key: string | undefined) {
+  if (!key || typeof window === "undefined") return undefined;
+  try {
+    return window.localStorage.getItem(key) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeStoredViewPreset(key: string | undefined, value: string) {
+  if (!key || typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Ignore unavailable storage; the live table state still updates.
+  }
 }
 
 function getColumnWidth<T>(column: TableColumn<T>, widths: TableColumnWidthMap) {
@@ -172,9 +201,11 @@ function TableInner<T extends object>({
   defaultExpandedRowKeys = [],
   defaultHiddenColumns = [],
   defaultViewPreset,
+  density = "comfortable",
   editable,
   emptyText = "No data",
   expandedRowKeys,
+  filterTags = [],
   filters,
   hiddenColumns,
   loading,
@@ -185,6 +216,7 @@ function TableInner<T extends object>({
   onColumnVisibilityChange,
   onCurrentChange,
   onExpandChange,
+  onFilterClear,
   onRowClick,
   onSelectionChange,
   onSortChange,
@@ -198,9 +230,10 @@ function TableInner<T extends object>({
   viewPreset,
   viewPresetLabel = "View",
   viewPresets = [],
+  viewStorageKey,
   ...props
 }: TableProps<T>, ref: React.ForwardedRef<TableRef<T>>) {
-  const initialPresetKey = viewPreset ?? defaultViewPreset;
+  const initialPresetKey = viewPreset ?? readStoredViewPreset(viewStorageKey) ?? defaultViewPreset;
   const initialPreset = findTablePreset(viewPresets, initialPresetKey);
   const [selectedKeys, setSelectedKeys] = React.useState<React.Key[]>([]);
   const [currentRowKey, setCurrentRowKey] = React.useState<React.Key | undefined>();
@@ -308,6 +341,7 @@ function TableInner<T extends object>({
     const preset = applyViewPreset(key);
     if (!preset) return;
     if (viewPreset === undefined) setInternalViewPreset(key);
+    writeStoredViewPreset(viewStorageKey, key);
     onViewPresetChange?.(key, preset);
   }
 
@@ -395,7 +429,23 @@ function TableInner<T extends object>({
   }
 
   return (
-    <div className={cn("pinepost-table-wrap", className)} {...props}>
+    <div className={cn("pinepost-table-wrap", className)} data-density={density} {...props}>
+      {filterTags.length > 0 && (
+        <div aria-label="Table filters" className="pinepost-table__filterbar" role="group">
+          <span>Filters</span>
+          {filterTags.map((tag) => (
+            <span key={tag.key} className="pinepost-table__filter-tag">
+              {tag.label}
+              <button aria-label={`Clear ${String(tag.label)}`} onClick={() => onFilterClear?.(tag.key)} type="button">
+                x
+              </button>
+            </span>
+          ))}
+          <button className="pinepost-table__filter-clear" onClick={() => onFilterClear?.()} type="button">
+            Clear all
+          </button>
+        </div>
+      )}
       {viewPresets.length > 0 && (
         <div aria-label="Table view presets" className="pinepost-table__viewbar" role="group">
           <span>{viewPresetLabel}</span>
