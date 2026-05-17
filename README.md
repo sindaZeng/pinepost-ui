@@ -91,8 +91,12 @@ Pinepost date/time formatting helpers.
 The v0.11 expansion adds Table density and persisted view workflows, Form
 validation triggers and submit state, and Cascader keyboard navigation.
 
+The v0.12 expansion adds TableColumnSettings, Table column ordering, richer
+Upload file actions, copyable product recipes, and browser smoke checks for the
+documentation catalog.
+
 The demo site is also the component catalog: each documented component includes
-a live preview, usage example, and API table.
+a live preview, usage example, copyable recipes, and API table.
 
 ## Originality
 
@@ -106,6 +110,7 @@ come from sources with clear commercial-use terms.
 corepack pnpm install
 corepack pnpm dev
 corepack pnpm test
+corepack pnpm test:e2e
 corepack pnpm build
 corepack pnpm build:demo
 ```

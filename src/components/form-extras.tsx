@@ -458,7 +458,15 @@ export interface UploadRef {
   abort: () => void;
   clearFiles: () => void;
   getFiles: () => UploadFile[];
+  retryFile: (uid: string) => UploadFile | undefined;
+  setFiles: (fileList: UploadFile[]) => void;
   submit: () => Promise<void>;
+}
+
+export interface UploadFileActions {
+  preview: () => void;
+  remove: () => void;
+  retry: () => UploadFile | undefined;
 }
 
 export interface UploadProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "children" | "type" | "onAbort" | "onChange" | "onDrop" | "onError" | "onProgress" | "value" | "defaultValue"> {
@@ -478,7 +486,10 @@ export interface UploadProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
   onPreview?: (file: UploadFile) => void;
   onProgress?: (percent: number, file: UploadFile, fileList: UploadFile[]) => void;
   onRemove?: (file: UploadFile, fileList: UploadFile[]) => void;
+  onRetry?: (file: UploadFile, fileList: UploadFile[]) => void;
   onSuccess?: (response: unknown, file: UploadFile, fileList: UploadFile[]) => void;
+  renderFile?: (file: UploadFile, actions: UploadFileActions, fileList: UploadFile[]) => React.ReactNode;
+  showFileList?: boolean;
 }
 
 function fileToUploadFile(file: File): UploadFile {
@@ -515,7 +526,10 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
       onPreview,
       onProgress,
       onRemove,
+      onRetry,
       onSuccess,
+      renderFile,
+      showFileList = true,
       ...props
     },
     ref
@@ -593,17 +607,36 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
       }
     }
 
+    function retryFile(uid: string) {
+      const file = currentFileList.find((item) => item.uid === uid);
+      if (!file) return undefined;
+      const retried: UploadFile = { ...file, error: undefined, percent: 0, response: undefined, status: "ready" };
+      const nextList = replaceFile(retried);
+      onRetry?.(retried, nextList);
+      return retried;
+    }
+
     React.useImperativeHandle(ref, () => ({
       abort: () => abortRef.current?.abort(),
       clearFiles: () => setFiles([]),
       getFiles: () => currentFileList,
+      retryFile,
+      setFiles,
       submit
-    }), [currentFileList, submit]);
+    }), [currentFileList, retryFile, submit]);
 
     function removeFile(file: UploadFile) {
       const nextList = currentFileList.filter((item) => item.uid !== file.uid);
       setFiles(nextList);
       onRemove?.(file, nextList);
+    }
+
+    function fileActions(file: UploadFile): UploadFileActions {
+      return {
+        preview: () => onPreview?.(file),
+        remove: () => removeFile(file),
+        retry: () => retryFile(file.uid)
+      };
     }
 
     return (
@@ -636,17 +669,31 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
           type="file"
           {...props}
         />
-        {currentFileList.length > 0 && (
+        {showFileList && currentFileList.length > 0 && (
           <ul className="pinepost-upload__list">
             {currentFileList.map((file) => (
               <li key={file.uid} data-status={file.status}>
-                <button type="button" onClick={() => onPreview?.(file)}>
-                  {file.name}
-                </button>
-                <span>{file.status}</span>
-                <button aria-label={`Remove ${file.name}`} type="button" onClick={() => removeFile(file)}>
-                  x
-                </button>
+                {renderFile ? (
+                  renderFile(file, fileActions(file), currentFileList)
+                ) : (
+                  <>
+                    <button type="button" onClick={() => onPreview?.(file)}>
+                      {file.name}
+                    </button>
+                    <span>
+                      {file.status}
+                      {file.status === "uploading" ? ` ${file.percent}%` : ""}
+                    </span>
+                    {file.status === "error" && (
+                      <button type="button" onClick={() => retryFile(file.uid)}>
+                        Retry
+                      </button>
+                    )}
+                    <button aria-label={`Remove ${file.name}`} type="button" onClick={() => removeFile(file)}>
+                      x
+                    </button>
+                  </>
+                )}
               </li>
             ))}
           </ul>

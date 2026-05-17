@@ -4,17 +4,17 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 
 ## Near Term
 
-- Harden current v0.11 components with more keyboard, focus, and edge-case tests.
-- Expand the docs with per-component disabled states, edge cases, and copyable recipes.
-- Publish the demo to GitHub Pages from `main`.
+- Harden current v0.12 recipes with more disabled, loading, and failure states.
+- Expand browser smoke coverage into screenshot comparison for the docs catalog.
+- Add more copyable recipes for dashboard, commerce, and learning-app flows.
 
 ## Mid Term
 
-- Add richer Table column-setting panels and reorder examples.
+- Add saved Table recipe presets that combine filters, settings, and density.
 - Add richer formatting presets for date and time panels.
 - Add Cascader multi-select exploration and more screen reader affordances.
 - Add more theme token customization examples.
-- Add visual regression checks for the demo catalog.
+- Add package release notes automation for npm publishing.
 
 ## Release Policy
 

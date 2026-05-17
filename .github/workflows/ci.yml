@@ -34,6 +34,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Verify public text
         run: pnpm verify:public-text
 
@@ -54,6 +57,9 @@ jobs:
 
       - name: Verify demo build
         run: pnpm verify:demo
+
+      - name: Smoke test docs
+        run: pnpm test:e2e
 
       - name: Verify package contents
         run: pnpm pack --dry-run

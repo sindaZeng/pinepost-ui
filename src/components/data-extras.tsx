@@ -26,6 +26,7 @@ export type TableColumnWidthMap = Partial<Record<string, TableColumnWidth>>;
 
 export interface TableViewPreset<T> {
   columnWidths?: TableColumnWidthMap;
+  columnOrder?: Array<keyof T | string>;
   hiddenColumns?: Array<keyof T | string>;
   key: string;
   label: React.ReactNode;
@@ -44,12 +45,15 @@ export interface TableRef<T> {
   clearSelection: () => void;
   clearSort: () => void;
   getExpandedRows: () => T[];
+  getColumnOrder: () => string[];
   getSelectionRows: () => T[];
   getSortState: () => TableSortState<T> | undefined;
   getViewPreset: () => string | undefined;
   getVisibleColumns: () => Array<TableColumn<T>>;
+  resetColumnOrder: () => void;
   setCurrentRow: (row?: T) => void;
   setColumnHidden: (key: keyof T | string, hidden?: boolean) => void;
+  setColumnOrder: (order: Array<keyof T | string>) => void;
   setColumnWidth: (key: keyof T | string, width: TableColumnWidth) => void;
   setViewPreset: (key: string) => void;
   sort: (key: keyof T | string, order?: TableSortOrder) => void;
@@ -58,9 +62,11 @@ export interface TableRef<T> {
 }
 
 export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
+  columnOrder?: Array<keyof T | string>;
   columnWidths?: TableColumnWidthMap;
   columns: Array<TableColumn<T>>;
   data: T[];
+  defaultColumnOrder?: Array<keyof T | string>;
   defaultColumnWidths?: TableColumnWidthMap;
   defaultExpandedRowKeys?: React.Key[];
   defaultHiddenColumns?: Array<keyof T | string>;
@@ -76,6 +82,7 @@ export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
   loadingText?: React.ReactNode;
   onCellClick?: (row: T, column: TableColumn<T>, rowIndex: number) => void;
   onCellEdit?: (row: T, key: keyof T | string, value: string) => void;
+  onColumnOrderChange?: (columnOrder: string[]) => void;
   onColumnResize?: (key: keyof T | string, width: TableColumnWidth, widths: TableColumnWidthMap) => void;
   onColumnVisibilityChange?: (hiddenColumns: string[]) => void;
   onCurrentChange?: (row?: T) => void;
@@ -136,6 +143,33 @@ function normalizeHiddenColumns(columns: Array<unknown> = []) {
   return columns.map(String);
 }
 
+function topColumnKeys<T>(columns: Array<TableColumn<T>>) {
+  return columns.map((column) => String(column.key));
+}
+
+function normalizeColumnOrder<T>(columns: Array<TableColumn<T>>, order?: Array<unknown>) {
+  const baseOrder = topColumnKeys(columns);
+  const knownKeys = new Set(baseOrder);
+  const next: string[] = [];
+
+  for (const key of order ?? []) {
+    const normalized = String(key);
+    if (knownKeys.has(normalized) && !next.includes(normalized)) next.push(normalized);
+  }
+
+  return [...next, ...baseOrder.filter((key) => !next.includes(key))];
+}
+
+function orderColumnTree<T>(columns: Array<TableColumn<T>>, order: string[]) {
+  const rank = new Map(order.map((key, index) => [key, index]));
+  return [...columns].sort((left, right) => {
+    const leftRank = rank.get(String(left.key)) ?? Number.MAX_SAFE_INTEGER;
+    const rightRank = rank.get(String(right.key)) ?? Number.MAX_SAFE_INTEGER;
+    if (leftRank !== rightRank) return leftRank - rightRank;
+    return columns.indexOf(left) - columns.indexOf(right);
+  });
+}
+
 function readStoredViewPreset(key: string | undefined) {
   if (!key || typeof window === "undefined") return undefined;
   try {
@@ -151,6 +185,25 @@ function writeStoredViewPreset(key: string | undefined, value: string) {
     window.localStorage.setItem(key, value);
   } catch {
     // Ignore unavailable storage; the live table state still updates.
+  }
+}
+
+function readStoredTableSettings(key: string | undefined) {
+  if (!key || typeof window === "undefined") return undefined;
+  try {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) as Partial<TableColumnSettingsValue> : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeStoredTableSettings(key: string | undefined, value: TableColumnSettingsValue) {
+  if (!key || typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Ignore unavailable storage; callers still receive the live value.
   }
 }
 
@@ -194,9 +247,11 @@ function columnStyle<T>(column: TableColumn<T>, columnIndex: number, leafColumns
 
 function TableInner<T extends object>({
   className,
+  columnOrder,
   columnWidths,
   columns,
   data,
+  defaultColumnOrder,
   defaultColumnWidths = {},
   defaultExpandedRowKeys = [],
   defaultHiddenColumns = [],
@@ -212,6 +267,7 @@ function TableInner<T extends object>({
   loadingText = "Loading",
   onCellClick,
   onCellEdit,
+  onColumnOrderChange,
   onColumnResize,
   onColumnVisibilityChange,
   onCurrentChange,
@@ -239,6 +295,7 @@ function TableInner<T extends object>({
   const [currentRowKey, setCurrentRowKey] = React.useState<React.Key | undefined>();
   const [editingCell, setEditingCell] = React.useState<{ key: keyof T | string; rowKey: React.Key } | null>(null);
   const [editDraft, setEditDraft] = React.useState("");
+  const [internalColumnOrder, setInternalColumnOrder] = React.useState<string[]>(() => normalizeColumnOrder(columns, initialPreset?.columnOrder ?? defaultColumnOrder));
   const [internalColumnWidths, setInternalColumnWidths] = React.useState<TableColumnWidthMap>(() => ({ ...defaultColumnWidths, ...(initialPreset?.columnWidths ?? {}) }));
   const [internalExpandedKeys, setInternalExpandedKeys] = React.useState<React.Key[]>(defaultExpandedRowKeys);
   const [internalHiddenColumns, setInternalHiddenColumns] = React.useState<string[]>(() => normalizeHiddenColumns(initialPreset?.hiddenColumns ?? defaultHiddenColumns));
@@ -248,10 +305,12 @@ function TableInner<T extends object>({
   const activeSort = sortState ?? internalSortState;
   const activeExpandedKeys = expandedRowKeys ?? internalExpandedKeys;
   const activeColumnWidths = columnWidths ?? internalColumnWidths;
+  const activeColumnOrder = normalizeColumnOrder(columns, columnOrder ?? internalColumnOrder);
   const activeHiddenColumns = hiddenColumns?.map(String) ?? internalHiddenColumns;
   const activeViewPresetKey = viewPreset ?? internalViewPreset;
   const hiddenColumnSet = React.useMemo(() => new Set(activeHiddenColumns), [activeHiddenColumns]);
-  const visibleColumnTree = React.useMemo(() => filterVisibleColumns(columns, hiddenColumnSet), [columns, hiddenColumnSet]);
+  const orderedColumnTree = React.useMemo(() => orderColumnTree(columns, activeColumnOrder), [columns, activeColumnOrder]);
+  const visibleColumnTree = React.useMemo(() => filterVisibleColumns(orderedColumnTree, hiddenColumnSet), [orderedColumnTree, hiddenColumnSet]);
   const leafColumns = React.useMemo(() => flattenColumns(visibleColumnTree), [visibleColumnTree]);
   const hasColumnGroups = visibleColumnTree.some((column) => Boolean(column.children?.length));
 
@@ -314,6 +373,16 @@ function TableInner<T extends object>({
     commitColumnWidths({ ...activeColumnWidths, [String(key)]: width }, key, width);
   }
 
+  function commitColumnOrder(nextOrder: Array<keyof T | string>) {
+    const normalized = normalizeColumnOrder(columns, nextOrder);
+    if (columnOrder === undefined) setInternalColumnOrder(normalized);
+    onColumnOrderChange?.(normalized);
+  }
+
+  function resetColumnOrder() {
+    commitColumnOrder(topColumnKeys(columns));
+  }
+
   function resizeColumn(column: TableColumn<T>, delta: number) {
     const currentWidth = numericWidth(getColumnWidth(column, activeColumnWidths)) || 120;
     setColumnWidth(column.key, Math.max(48, currentWidth + delta));
@@ -331,6 +400,7 @@ function TableInner<T extends object>({
   function applyViewPreset(key: string) {
     const preset = findTablePreset(viewPresets, key);
     if (!preset) return undefined;
+    if (columnOrder === undefined && preset.columnOrder) setInternalColumnOrder(normalizeColumnOrder(columns, preset.columnOrder));
     if (columnWidths === undefined) setInternalColumnWidths({ ...defaultColumnWidths, ...(preset.columnWidths ?? {}) });
     if (hiddenColumns === undefined) setInternalHiddenColumns(normalizeHiddenColumns(preset.hiddenColumns ?? defaultHiddenColumns));
     if (sortState === undefined) setInternalSortState(preset.sortState);
@@ -357,10 +427,12 @@ function TableInner<T extends object>({
     clearSelection: () => commitSelection([]),
     clearSort: () => setSort(undefined),
     getExpandedRows: () => data.filter((row, index) => activeExpandedKeys.includes(getRowKey(row, index))),
+    getColumnOrder: () => activeColumnOrder,
     getSelectionRows: () => data.filter((row, index) => selectedKeys.includes(getRowKey(row, index))),
     getSortState: () => activeSort,
     getViewPreset: () => activeViewPresetKey,
     getVisibleColumns: () => leafColumns,
+    resetColumnOrder,
     setCurrentRow: (row) => {
       const rowIndex = row ? data.indexOf(row) : -1;
       const nextKey = row ? getRowKey(row, rowIndex) : undefined;
@@ -368,6 +440,7 @@ function TableInner<T extends object>({
       onCurrentChange?.(row);
     },
     setColumnHidden,
+    setColumnOrder: commitColumnOrder,
     setColumnWidth,
     setViewPreset: commitViewPreset,
     sort: (key, order = "asc") => setSort({ key, order }),
@@ -378,7 +451,7 @@ function TableInner<T extends object>({
       const nextSelected = selected ?? !selectedKeys.includes(key);
       commitSelection(nextSelected ? Array.from(new Set([...selectedKeys, key])) : selectedKeys.filter((item) => item !== key));
     }
-  }), [activeColumnWidths, activeExpandedKeys, activeHiddenColumns, activeSort, activeViewPresetKey, data, leafColumns, onCurrentChange, selectedKeys, viewPresets]);
+  }), [activeColumnOrder, activeColumnWidths, activeExpandedKeys, activeHiddenColumns, activeSort, activeViewPresetKey, columnOrder, columns, data, leafColumns, onColumnOrderChange, onCurrentChange, selectedKeys, viewPresets]);
 
   React.useEffect(() => {
     if (viewPreset === undefined || controlledViewPresetRef.current === viewPreset) return;
@@ -613,6 +686,155 @@ function TableInner<T extends object>({
 
 export const Table = React.forwardRef(TableInner) as <T extends object>(
   props: TableProps<T> & React.RefAttributes<TableRef<T>>
+) => React.ReactElement;
+
+export interface TableColumnSettingsValue {
+  columnOrder: string[];
+  density: TableDensity;
+  hiddenColumns: string[];
+}
+
+export interface TableColumnSettingsLabels {
+  comfortable?: React.ReactNode;
+  compact?: React.ReactNode;
+  density?: React.ReactNode;
+  moveDown?: (title: React.ReactNode) => string;
+  moveUp?: (title: React.ReactNode) => string;
+  showColumn?: (title: React.ReactNode) => string;
+  spacious?: React.ReactNode;
+  title?: React.ReactNode;
+  visibility?: React.ReactNode;
+}
+
+export interface TableColumnSettingsProps<T> extends Omit<React.HTMLAttributes<HTMLDivElement>, "defaultValue" | "onChange"> {
+  columns: Array<TableColumn<T>>;
+  defaultValue?: Partial<TableColumnSettingsValue>;
+  labels?: TableColumnSettingsLabels;
+  onValueChange?: (value: TableColumnSettingsValue) => void;
+  storageKey?: string;
+  value?: TableColumnSettingsValue;
+}
+
+function columnTitleText(title: React.ReactNode) {
+  if (typeof title === "string" || typeof title === "number") return String(title);
+  return "Column";
+}
+
+function normalizeTableSettings<T>(columns: Array<TableColumn<T>>, value?: Partial<TableColumnSettingsValue>): TableColumnSettingsValue {
+  return {
+    columnOrder: normalizeColumnOrder(columns, value?.columnOrder),
+    density: value?.density ?? "comfortable",
+    hiddenColumns: normalizeHiddenColumns(value?.hiddenColumns)
+  };
+}
+
+function TableColumnSettingsInner<T>({
+  className,
+  columns,
+  defaultValue,
+  labels,
+  onValueChange,
+  storageKey,
+  value,
+  ...props
+}: TableColumnSettingsProps<T>, ref: React.ForwardedRef<HTMLDivElement>) {
+  const storedValue = React.useMemo(() => readStoredTableSettings(storageKey), [storageKey]);
+  const [internalValue, setInternalValue] = React.useState<TableColumnSettingsValue>(() => normalizeTableSettings(columns, storedValue ?? defaultValue));
+  const activeValue = value ?? internalValue;
+  const orderedColumns = React.useMemo(() => orderColumnTree(columns, activeValue.columnOrder), [columns, activeValue.columnOrder]);
+  const hiddenSet = React.useMemo(() => new Set(activeValue.hiddenColumns), [activeValue.hiddenColumns]);
+  const labelText = {
+    comfortable: labels?.comfortable ?? "Comfortable",
+    compact: labels?.compact ?? "Compact",
+    density: labels?.density ?? "Density",
+    spacious: labels?.spacious ?? "Spacious",
+    title: labels?.title ?? "Column settings",
+    visibility: labels?.visibility ?? "Visibility"
+  };
+
+  function commit(next: Partial<TableColumnSettingsValue>) {
+    const normalized = normalizeTableSettings(columns, { ...activeValue, ...next });
+    if (value === undefined) setInternalValue(normalized);
+    writeStoredTableSettings(storageKey, normalized);
+    onValueChange?.(normalized);
+  }
+
+  function moveColumn(key: string, offset: number) {
+    const current = activeValue.columnOrder;
+    const index = current.indexOf(key);
+    const targetIndex = index + offset;
+    if (index < 0 || targetIndex < 0 || targetIndex >= current.length) return;
+    const next = [...current];
+    const [item] = next.splice(index, 1);
+    next.splice(targetIndex, 0, item);
+    commit({ columnOrder: next });
+  }
+
+  function toggleColumn(key: string, visible: boolean) {
+    const nextHidden = visible
+      ? activeValue.hiddenColumns.filter((item) => item !== key)
+      : Array.from(new Set([...activeValue.hiddenColumns, key]));
+    commit({ hiddenColumns: nextHidden });
+  }
+
+  return (
+    <div ref={ref} className={cn("pinepost-table-settings", className)} {...props}>
+      <div className="pinepost-table-settings__header">
+        <strong>{labelText.title}</strong>
+      </div>
+      <div className="pinepost-table-settings__density" role="group" aria-label={String(labelText.density)}>
+        <span>{labelText.density}</span>
+        {([
+          ["compact", labelText.compact],
+          ["comfortable", labelText.comfortable],
+          ["spacious", labelText.spacious]
+        ] as const).map(([densityKey, densityLabel]) => (
+          <button
+            key={densityKey}
+            aria-pressed={activeValue.density === densityKey}
+            onClick={() => commit({ density: densityKey })}
+            type="button"
+          >
+            {densityLabel}
+          </button>
+        ))}
+      </div>
+      <div className="pinepost-table-settings__columns" role="group" aria-label={String(labelText.visibility)}>
+        <span>{labelText.visibility}</span>
+        {orderedColumns.map((column, index) => {
+          const key = String(column.key);
+          const title = columnTitleText(column.title);
+          const showLabel = labels?.showColumn?.(column.title) ?? `Show ${title}`;
+          const moveUpLabel = labels?.moveUp?.(column.title) ?? `Move ${title} up`;
+          const moveDownLabel = labels?.moveDown?.(column.title) ?? `Move ${title} down`;
+
+          return (
+            <div key={key} className="pinepost-table-settings__row" data-testid="pinepost-table-column-setting">
+              <label>
+                <input
+                  checked={!hiddenSet.has(key)}
+                  onChange={(event) => toggleColumn(key, event.currentTarget.checked)}
+                  type="checkbox"
+                />
+                <span>{showLabel}</span>
+              </label>
+              <strong>{column.title}</strong>
+              <button aria-label={moveUpLabel} disabled={index === 0} onClick={() => moveColumn(key, -1)} type="button">
+                ↑
+              </button>
+              <button aria-label={moveDownLabel} disabled={index === orderedColumns.length - 1} onClick={() => moveColumn(key, 1)} type="button">
+                ↓
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export const TableColumnSettings = React.forwardRef(TableColumnSettingsInner) as <T>(
+  props: TableColumnSettingsProps<T> & React.RefAttributes<HTMLDivElement>
 ) => React.ReactElement;
 
 export interface CalendarProps extends React.HTMLAttributes<HTMLDivElement> {

@@ -106,6 +106,7 @@ import {
   Steps,
   Switch,
   Table,
+  TableColumnSettings,
   Tabs,
   TabsContent,
   TabsList,
@@ -138,7 +139,8 @@ import {
   VirtualizedTree,
   Watermark,
   type PinepostLocale,
-  type PinepostTheme
+  type PinepostTheme,
+  type TableColumnSettingsValue
 } from "../index";
 import "../styles.css";
 import "./demo.css";
@@ -155,6 +157,13 @@ type ApiSection = {
   title: string;
 };
 
+type DocRecipe = {
+  code: string;
+  description?: string;
+  preview?: React.ReactNode;
+  title: string;
+};
+
 type DocItem = {
   api: ApiRow[];
   apiSections?: ApiSection[];
@@ -163,6 +172,7 @@ type DocItem = {
   group: string;
   id: string;
   preview: React.ReactNode;
+  recipes?: DocRecipe[];
   title: string;
 };
 
@@ -190,6 +200,9 @@ const copy = {
     language: "语言",
     preview: "预览",
     usage: "使用示例",
+    recipes: "业务配方",
+    copy: "复制",
+    copied: "已复制",
     api: "API",
     attributes: "属性",
     events: "事件",
@@ -227,6 +240,9 @@ const copy = {
     language: "Language",
     preview: "Preview",
     usage: "Usage",
+    recipes: "Recipes",
+    copy: "Copy",
+    copied: "Copied",
     api: "API",
     attributes: "Attributes",
     events: "Events",
@@ -269,6 +285,34 @@ function PinepostMark() {
 
 function code(lines: string[]) {
   return lines.join("\n");
+}
+
+function CodeBlock({ codeText, label, labels }: { codeText: string; label: string; labels: (typeof copy)["zh-CN"] }) {
+  const [copied, setCopied] = React.useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard?.writeText(codeText);
+    } catch {
+      // The visual copied state still confirms the requested code block.
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1400);
+  }
+
+  return (
+    <div className="docs-code">
+      <div className="docs-code__label">
+        <span>{label}</span>
+        <button type="button" onClick={handleCopy}>
+          {copied ? labels.copied : labels.copy}
+        </button>
+      </div>
+      <pre>
+        <code>{codeText}</code>
+      </pre>
+    </div>
+  );
 }
 
 function ApiTable({ item, labels }: { item: DocItem; labels: (typeof copy)["zh-CN"] }) {
@@ -320,13 +364,23 @@ function DocSection({ item, labels }: { item: DocItem; labels: (typeof copy)["zh
           <div className="docs-example__label">{labels.preview}</div>
           <div className="docs-preview-surface">{item.preview}</div>
         </div>
-        <div className="docs-code">
-          <div className="docs-code__label">{labels.usage}</div>
-          <pre>
-            <code>{item.code}</code>
-          </pre>
-        </div>
+        <CodeBlock codeText={item.code} label={labels.usage} labels={labels} />
       </div>
+      {item.recipes && item.recipes.length > 0 && (
+        <div className="docs-recipes" aria-label={`${item.title} ${labels.recipes}`}>
+          <h3>{labels.recipes}</h3>
+          {item.recipes.map((recipe) => (
+            <div className="docs-recipe" key={recipe.title}>
+              <div className="docs-recipe__head">
+                <strong>{recipe.title}</strong>
+                {recipe.description && <p>{recipe.description}</p>}
+              </div>
+              {recipe.preview && <div className="docs-preview-surface">{recipe.preview}</div>}
+              <CodeBlock codeText={recipe.code} label={recipe.title} labels={labels} />
+            </div>
+          ))}
+        </div>
+      )}
       <ApiTable item={item} labels={labels} />
     </section>
   );
@@ -415,6 +469,11 @@ function App() {
   const [virtualTreeSelected, setVirtualTreeSelected] = React.useState("north-3");
   const [messageBoxOpen, setMessageBoxOpen] = React.useState(false);
   const [toastOpen, setToastOpen] = React.useState(false);
+  const [tableSettings, setTableSettings] = React.useState<TableColumnSettingsValue>({
+    columnOrder: ["route", "count", "status"],
+    density: "compact",
+    hiddenColumns: []
+  });
   const labels = copy[locale] as (typeof copy)["zh-CN"];
   const zh = locale === "zh-CN";
 
@@ -577,6 +636,32 @@ function App() {
         "  ]}",
         "/>"
       ]),
+      recipes: [
+        {
+          title: zh ? "远程筛选选择" : "Remote filtered select",
+          description: zh ? "filterable 和 clearable 组合适合状态、负责人、网点等业务枚举。" : "filterable and clearable fit status, owner, and station fields.",
+          preview: (
+            <Select
+              clearable
+              filterable
+              placeholder={zh ? "筛选路线" : "Filter route"}
+              options={[
+                { value: "north", label: zh ? "北线" : "North line", group: zh ? "日常" : "Daily" },
+                { value: "market", label: zh ? "集市线" : "Market line", group: zh ? "活动" : "Campaign" }
+              ]}
+            />
+          ),
+          code: code([
+            "<Select",
+            "  clearable",
+            "  filterable",
+            "  options={remoteOptions}",
+            "  remoteMethod={fetchRouteOptions}",
+            "  onClear={() => setRoute(undefined)}",
+            "/>"
+          ])
+        }
+      ],
       api: [
         { prop: "options", type: "SelectOption[]", defaultValue: "[]", description: zh ? "下拉选项。" : "Dropdown options." },
         { prop: "value", type: "string", defaultValue: "-", description: zh ? "受控值。" : "Controlled value." },
@@ -660,6 +745,37 @@ function App() {
         "  </FormField>",
         "</Form>"
       ]),
+      recipes: [
+        {
+          title: zh ? "异步提交与错误聚焦" : "Async submit with error focus",
+          description: zh ? "blur 校验用于输入时反馈，提交失败后可滚动到第一个错误字段。" : "Blur validation gives early feedback; failed submit can scroll to the first invalid field.",
+          preview: (
+            <Form
+              model={{ route: "" }}
+              rules={{ route: [{ required: true, message: zh ? "路线必填。" : "Route is required." }] }}
+              validateTrigger="blur"
+              submitErrorMessage={zh ? "请检查表单后再提交。" : "Check the form before submitting."}
+            >
+              <FormField name="route" label={zh ? "路线" : "Route"} required>
+                <Input placeholder="A7" />
+              </FormField>
+              <Button size="sm" type="submit">{zh ? "保存配置" : "Save config"}</Button>
+            </Form>
+          ),
+          code: code([
+            "const formRef = React.useRef<FormRef>(null);",
+            "",
+            "<Form",
+            "  ref={formRef}",
+            "  model={model}",
+            "  rules={rules}",
+            '  validateTrigger="blur"',
+            "  onFinish={saveConfig}",
+            "  onFinishFailed={() => formRef.current?.scrollToField('route')}",
+            "/>"
+          ])
+        }
+      ],
       api: [
         { prop: "layout", type: '"vertical" | "horizontal" | "inline"', defaultValue: "vertical", description: zh ? "表单布局。" : "Form layout." },
         { prop: "model", type: "Record<string, unknown>", defaultValue: "{}", description: zh ? "字段数据模型。" : "Field data model." },
@@ -738,6 +854,48 @@ function App() {
         "  }}",
         "/>"
       ]),
+      recipes: [
+        {
+          title: zh ? "图片墙与失败重试" : "Image wall with retry",
+          description: zh ? "用 renderFile 接管列表项，失败文件可以直接回到 ready 队列。" : "Use renderFile to own list rows and move failed files back to the ready queue.",
+          preview: (
+            <Upload
+              label={zh ? "活动素材" : "Campaign assets"}
+              defaultFileList={[
+                { uid: "hero", name: "hero-card.png", percent: 100, status: "success" },
+                { uid: "stamp", name: "stamp-sheet.png", percent: 36, status: "error" }
+              ]}
+              renderFile={(file, actions) => (
+                <div className="docs-upload-card">
+                  <strong>{file.name}</strong>
+                  <span>{file.status === "error" ? (zh ? "需要重试" : "Needs retry") : `${file.percent}%`}</span>
+                  {file.status === "error" && (
+                    <Button size="sm" variant="soft" onClick={actions.retry}>
+                      {zh ? "重试" : "Retry"}
+                    </Button>
+                  )}
+                </div>
+              )}
+            />
+          ),
+          code: code([
+            'import { Upload } from "pinepost-ui";',
+            "",
+            "<Upload",
+            "  defaultFileList={files}",
+            "  onRetry={(file) => enqueueAgain(file)}",
+            "  renderFile={(file, actions) => (",
+            "    <AssetRow",
+            "      file={file}",
+            "      onPreview={actions.preview}",
+            "      onRetry={actions.retry}",
+            "      onRemove={actions.remove}",
+            "    />",
+            "  )}",
+            "/>"
+          ])
+        }
+      ],
       api: [],
       apiSections: [
         {
@@ -746,6 +904,8 @@ function App() {
             { prop: "drag", type: "boolean", defaultValue: "false", description: zh ? "启用拖拽投放。" : "Enables drag and drop." },
             { prop: "fileList / defaultFileList", type: "UploadFile[]", defaultValue: "[]", description: zh ? "受控或非受控文件队列。" : "Controlled or uncontrolled file queue." },
             { prop: "limit", type: "number", defaultValue: "-", description: zh ? "最大接收数量。" : "Maximum accepted file count." },
+            { prop: "showFileList", type: "boolean", defaultValue: "true", description: zh ? "是否显示内置文件队列。" : "Whether the built-in file queue is shown." },
+            { prop: "renderFile", type: "(file, actions, fileList) => ReactNode", defaultValue: "-", description: zh ? "自定义队列文件项。" : "Custom file queue item." },
             { prop: "beforeUpload", type: "(file, files) => boolean | Promise<boolean>", defaultValue: "-", description: zh ? "加入队列前校验。" : "Checks before queuing." },
             { prop: "customRequest", type: "(options) => void | Promise<void>", defaultValue: "-", description: zh ? "自定义上传请求。" : "Custom upload request." }
           ]
@@ -756,6 +916,7 @@ function App() {
             { prop: "onDrop", type: "(files: File[]) => void", defaultValue: "-", description: zh ? "拖拽投放后触发。" : "Fires after a drop." },
             { prop: "onChange", type: "(file, fileList) => void", defaultValue: "-", description: zh ? "文件加入队列。" : "File enters the queue." },
             { prop: "onRemove / onPreview", type: "(file, fileList?) => void", defaultValue: "-", description: zh ? "移除或预览文件。" : "Remove or preview a file." },
+            { prop: "onRetry", type: "(file, fileList) => void", defaultValue: "-", description: zh ? "文件被重置为 ready 后触发。" : "Fires after a file is reset to ready." },
             { prop: "onExceed", type: "(files, fileList) => void", defaultValue: "-", description: zh ? "超过限制时触发。" : "Fires when the limit is exceeded." },
             { prop: "onProgress / onSuccess / onError", type: "upload lifecycle callbacks", defaultValue: "-", description: zh ? "上传生命周期回调。" : "Upload lifecycle callbacks." }
           ]
@@ -766,7 +927,8 @@ function App() {
             { prop: "submit", type: "() => Promise<void>", defaultValue: "-", description: zh ? "手动开始上传 ready 文件。" : "Starts uploading ready files." },
             { prop: "abort", type: "() => void", defaultValue: "-", description: zh ? "中止当前请求。" : "Aborts the active request." },
             { prop: "clearFiles", type: "() => void", defaultValue: "-", description: zh ? "清空队列。" : "Clears the queue." },
-            { prop: "getFiles", type: "() => UploadFile[]", defaultValue: "-", description: zh ? "读取当前队列。" : "Reads the current queue." }
+            { prop: "getFiles", type: "() => UploadFile[]", defaultValue: "-", description: zh ? "读取当前队列。" : "Reads the current queue." },
+            { prop: "setFiles / retryFile", type: "ref methods", defaultValue: "-", description: zh ? "替换队列或重试指定文件。" : "Replaces the queue or retries a file." }
           ]
         }
       ]
@@ -805,6 +967,30 @@ function App() {
         "  onValueChange={setValue}",
         "/>"
       ]),
+      recipes: [
+        {
+          title: zh ? "远程路线分层" : "Remote route levels",
+          description: zh ? "懒加载只在展开分支时请求下一级，适合大规模网点树。" : "Lazy loading fetches the next level only when a branch opens.",
+          preview: (
+            <Cascader
+              lazy
+              options={[{ value: "region", label: zh ? "片区" : "Region" }]}
+              loadData={async () => [{ value: "cedar", label: zh ? "雪松站" : "Cedar station", isLeaf: true }]}
+              placeholder={zh ? "选择网点" : "Choose station"}
+            />
+          ),
+          code: code([
+            "<Cascader",
+            "  lazy",
+            "  filterable",
+            "  options={regions}",
+            "  loadData={(option, path) => fetchStations(option.value)}",
+            "  onExpandChange={setActiveRoutePath}",
+            "  onValueChange={setStationPath}",
+            "/>"
+          ])
+        }
+      ],
       api: [],
       apiSections: [
         {
@@ -886,6 +1072,30 @@ function App() {
         "  onValueChange={setValue}",
         "/>"
       ]),
+      recipes: [
+        {
+          title: zh ? "部门权限树" : "Permission tree picker",
+          description: zh ? "多选、筛选和懒加载组合适合组织、仓位和权限范围。" : "Multiple selection, filtering, and lazy loading fit organization or scope pickers.",
+          preview: (
+            <TreeSelect
+              multiple
+              filterable
+              data={[{ value: "north", label: zh ? "北线团队" : "North team", children: [{ value: "dispatch", label: zh ? "调度" : "Dispatch" }] }]}
+              placeholder={zh ? "选择可见范围" : "Choose visibility scope"}
+            />
+          ),
+          code: code([
+            "<TreeSelect",
+            "  multiple",
+            "  filterable",
+            "  data={departmentTree}",
+            "  defaultExpanded={['north']}",
+            "  onNodeClick={trackNode}",
+            "  onValueChange={setScopes}",
+            "/>"
+          ])
+        }
+      ],
       api: [],
       apiSections: [
         {
@@ -1251,6 +1461,64 @@ function App() {
         '  data={[{ id: "a7", desk: "雪松", route: "A7", count: 8, status: "就绪" }]}',
         "/>"
       ]),
+      recipes: [
+        {
+          title: zh ? "业务表格配置台" : "Product table settings",
+          description: zh ? "列顺序、隐藏列和密度可以交给 TableColumnSettings 管理并持久化。" : "Column order, visibility, and density can be managed and persisted with TableColumnSettings.",
+          preview: (
+            <div className="docs-field-grid">
+              <TableColumnSettings
+                columns={[
+                  { key: "route", title: zh ? "路线" : "Route" },
+                  { key: "count", title: zh ? "数量" : "Count" },
+                  { key: "status", title: zh ? "状态" : "Status" }
+                ]}
+                value={tableSettings}
+                onValueChange={setTableSettings}
+                storageKey="pinepost-demo-table-settings"
+              />
+              <Table
+                rowKey="route"
+                density={tableSettings.density}
+                hiddenColumns={tableSettings.hiddenColumns}
+                columnOrder={tableSettings.columnOrder}
+                columns={[
+                  { key: "route", title: zh ? "路线" : "Route" },
+                  { key: "count", title: zh ? "数量" : "Count", align: "right" },
+                  { key: "status", title: zh ? "状态" : "Status" }
+                ]}
+                data={[
+                  { route: "A7", count: 8, status: zh ? "就绪" : "Ready" },
+                  { route: "B2", count: 3, status: zh ? "复核" : "Review" }
+                ]}
+              />
+            </div>
+          ),
+          code: code([
+            'import { Table, TableColumnSettings } from "pinepost-ui";',
+            "",
+            "const [settings, setSettings] = React.useState({",
+            "  hiddenColumns: [],",
+            "  columnOrder: ['route', 'count', 'status'],",
+            "  density: 'compact'",
+            "});",
+            "",
+            "<TableColumnSettings",
+            "  columns={columns}",
+            "  value={settings}",
+            "  onValueChange={setSettings}",
+            "  storageKey=\"route-table-settings\"",
+            "/>",
+            "<Table",
+            "  columns={columns}",
+            "  data={rows}",
+            "  columnOrder={settings.columnOrder}",
+            "  hiddenColumns={settings.hiddenColumns}",
+            "  density={settings.density}",
+            "/>"
+          ])
+        }
+      ],
       api: [],
       apiSections: [
         {
@@ -1266,6 +1534,7 @@ function App() {
             { prop: "expandedRowKeys / defaultExpandedRowKeys", type: "React.Key[]", defaultValue: "[]", description: zh ? "受控或默认展开行。" : "Controlled or default expanded rows." },
             { prop: "summary", type: "Record | (rows) => Record", defaultValue: "-", description: zh ? "汇总行内容。" : "Summary row content." },
             { prop: "resizableColumns", type: "boolean", defaultValue: "false", description: zh ? "显示列宽调整控件。" : "Shows column resize controls." },
+            { prop: "columnOrder / defaultColumnOrder", type: "string[]", defaultValue: "columns order", description: zh ? "受控或默认顶层列顺序。" : "Controlled or default top-level column order." },
             { prop: "columnWidths / defaultColumnWidths", type: "Record<string, number | string>", defaultValue: "{}", description: zh ? "受控或默认列宽映射。" : "Controlled or default column width map." },
             { prop: "hiddenColumns / defaultHiddenColumns", type: "string[]", defaultValue: "[]", description: zh ? "受控或默认隐藏列 key。" : "Controlled or default hidden column keys." },
             { prop: "viewPresets", type: "TableViewPreset<T>[]", defaultValue: "[]", description: zh ? "预设列宽、隐藏列和排序视图。" : "Preset widths, hidden columns, and sort views." },
@@ -1277,7 +1546,8 @@ function App() {
         {
           title: labels.options,
           rows: [
-            { prop: "TableViewPreset", type: "{ key; label; columnWidths?; hiddenColumns?; sortState? }", defaultValue: "-", description: zh ? "表格视图配方。" : "Table view recipe." },
+            { prop: "TableColumnSettings", type: "{ columns; value?; defaultValue?; storageKey? }", defaultValue: "-", description: zh ? "列显示、顺序和密度设置面板。" : "Column visibility, order, and density settings panel." },
+            { prop: "TableViewPreset", type: "{ key; label; columnWidths?; columnOrder?; hiddenColumns?; sortState? }", defaultValue: "-", description: zh ? "表格视图配方。" : "Table view recipe." },
             { prop: "TableColumn.sortable", type: "boolean | compareFn", defaultValue: "false", description: zh ? "启用列排序。" : "Enables column sorting." },
             { prop: "TableColumn.filter", type: "(row) => boolean", defaultValue: "-", description: zh ? "列过滤函数。" : "Column filter predicate." },
             { prop: "TableColumn.render", type: "(row, index) => ReactNode", defaultValue: "-", description: zh ? "自定义单元格。" : "Custom cell rendering." },
@@ -1297,6 +1567,7 @@ function App() {
             { prop: "onExpandChange", type: "(keys) => void", defaultValue: "-", description: zh ? "展开行变化。" : "Expanded rows change." },
             { prop: "onFilterClear", type: "(key?) => void", defaultValue: "-", description: zh ? "清除单个或全部筛选标签。" : "Clears one or all filter chips." },
             { prop: "onColumnResize", type: "(key, width, widths) => void", defaultValue: "-", description: zh ? "列宽变化。" : "Column width changes." },
+            { prop: "onColumnOrderChange", type: "(keys) => void", defaultValue: "-", description: zh ? "顶层列顺序变化。" : "Top-level column order changes." },
             { prop: "onColumnVisibilityChange", type: "(keys) => void", defaultValue: "-", description: zh ? "隐藏列变化。" : "Hidden columns change." },
             { prop: "onViewPresetChange", type: "(key, preset) => void", defaultValue: "-", description: zh ? "视图预设变化。" : "View preset changes." }
           ]
@@ -1308,6 +1579,7 @@ function App() {
             { prop: "sort / clearSort", type: "ref methods", defaultValue: "-", description: zh ? "控制排序。" : "Controls sorting." },
             { prop: "toggleRowExpansion / clearExpansion", type: "ref methods", defaultValue: "-", description: zh ? "控制展开行。" : "Controls expanded rows." },
             { prop: "getSelectionRows / getExpandedRows", type: "ref methods", defaultValue: "-", description: zh ? "读取当前状态行。" : "Reads stateful rows." },
+            { prop: "setColumnOrder / getColumnOrder / resetColumnOrder", type: "ref methods", defaultValue: "-", description: zh ? "命令式调整、读取或重置列顺序。" : "Sets, reads, or resets column order." },
             { prop: "setColumnWidth / setColumnHidden", type: "ref methods", defaultValue: "-", description: zh ? "命令式调整列宽和隐藏状态。" : "Imperatively updates column width and visibility." },
             { prop: "getVisibleColumns", type: "ref method", defaultValue: "-", description: zh ? "读取当前可见列。" : "Reads currently visible columns." },
             { prop: "setViewPreset / getViewPreset", type: "ref methods", defaultValue: "-", description: zh ? "命令式切换或读取视图预设。" : "Sets or reads the active view preset." }
@@ -2207,6 +2479,21 @@ function App() {
       description: zh ? "可嵌入的日期面板，支持快捷日期和禁用日期。" : "Embeddable date panel with shortcuts and disabled dates.",
       preview: <DatePickerPanel value={new Date(2026, 4, 17)} shortcuts={[{ label: zh ? "明天" : "Tomorrow", value: () => new Date(2026, 4, 18) }]} />,
       code: code(['import { DatePickerPanel } from "pinepost-ui";', "", '<DatePickerPanel shortcuts={[{ label: "明天", value: () => new Date() }]} />']),
+      recipes: [
+        {
+          title: zh ? "活动日期快捷项" : "Campaign date shortcuts",
+          description: zh ? "快捷项可以封装业务日期，disabledDate 保留不可投递日期。" : "Shortcuts can encode product dates while disabledDate blocks unavailable days.",
+          preview: <DatePickerPanel value={new Date(2026, 4, 18)} disabledDate={(date) => date.getDay() === 0} shortcuts={[{ label: zh ? "下个工作日" : "Next workday", value: () => new Date(2026, 4, 18) }]} />,
+          code: code([
+            "<DatePickerPanel",
+            "  value={shipDate}",
+            "  disabledDate={(date) => date.getDay() === 0}",
+            "  shortcuts={[{ label: '下个工作日', value: nextWorkday }]}",
+            "  onValueChange={setShipDate}",
+            "/>"
+          ])
+        }
+      ],
       api: [
         { prop: "shortcuts", type: "DatePickerShortcut[]", defaultValue: "[]", description: zh ? "快捷日期。" : "Shortcut dates." },
         { prop: "disabledDate", type: "(date: Date) => boolean", defaultValue: "-", description: zh ? "禁用日期判断。" : "Disabled date predicate." },
@@ -2240,6 +2527,26 @@ function App() {
         "",
         "formatPinepostDateRange(range, { locale: 'zh-CN' })"
       ]),
+      recipes: [
+        {
+          title: zh ? "报表范围选择" : "Report range picker",
+          description: zh ? "用格式化 helper 直接输出已选范围，适合报表筛选栏。" : "Use the formatting helper to render the selected range in report filters.",
+          preview: (
+            <Space direction="vertical">
+              <DateRangePickerPanel value={[new Date(2026, 4, 10), new Date(2026, 4, 17)]} shortcuts={[{ label: zh ? "最近 7 天" : "Last 7 days", value: () => [new Date(2026, 4, 10), new Date(2026, 4, 17)] }]} />
+              <Tag>{formatPinepostDateRange([new Date(2026, 4, 10), new Date(2026, 4, 17)], { locale })}</Tag>
+            </Space>
+          ),
+          code: code([
+            "<DateRangePickerPanel",
+            "  value={range}",
+            "  onValueChange={setRange}",
+            "  shortcuts={[{ label: '最近 7 天', value: lastSevenDays }]}",
+            "/>",
+            "const label = formatPinepostDateRange(range, { locale: 'zh-CN' });"
+          ])
+        }
+      ],
       api: [
         { prop: "value / defaultValue", type: "[Date?, Date?]", defaultValue: "-", description: zh ? "受控或默认日期范围。" : "Controlled or default date range." },
         { prop: "shortcuts", type: "DateRangeShortcut[]", defaultValue: "[]", description: zh ? "快捷日期范围。" : "Shortcut ranges." },
@@ -2308,6 +2615,30 @@ function App() {
         "",
         "formatPinepostTimeRange(range, { fallback: '未定', locale: 'zh-CN' })"
       ]),
+      recipes: [
+        {
+          title: zh ? "配送窗口" : "Delivery window",
+          description: zh ? "起止面板并排配置，快捷项保存常用预约时段。" : "Paired panels with shortcuts keep common appointment windows close at hand.",
+          preview: (
+            <TimeRangePickerPanel
+              value={["10:00", "11:30"]}
+              start="09:00"
+              end="13:00"
+              step="00:30"
+              shortcuts={[{ label: zh ? "午前" : "Before noon", value: () => ["10:00", "11:30"] }]}
+            />
+          ),
+          code: code([
+            "<TimeRangePickerPanel",
+            "  value={window}",
+            "  onValueChange={setWindow}",
+            "  start=\"09:00\"",
+            "  end=\"18:00\"",
+            "  shortcuts={[{ label: '午前', value: () => ['10:00', '11:30'] }]}",
+            "/>"
+          ])
+        }
+      ],
       api: [
         { prop: "value / defaultValue", type: "[string?, string?]", defaultValue: "-", description: zh ? "受控或默认时间范围。" : "Controlled or default time range." },
         { prop: "start / end / step", type: "HH:mm", defaultValue: "09:00 / 18:00 / 00:30", description: zh ? "时间范围和步长。" : "Time range and step." },
@@ -2635,8 +2966,8 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs</span><Tag variant="parcel">Beta</Tag><span>Table, Form, Cascader, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "列设置面板、更多格式预设、视觉回归" : "Column settings, more format presets, visual checks"}</span></div>,
-      code: code(["Stable: production-ready basics", "Beta: deep interaction surfaces", "Planned: future refinements"]),
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Upload recipes</span><Tag variant="parcel">Beta</Tag><span>Table, TableColumnSettings, Form, Cascader, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "截图回归、更多行业配方、主题工作台" : "Screenshot checks, more product recipes, theme studio"}</span></div>,
+      code: code(["Stable: production-ready basics and recipes", "Beta: deep interaction surfaces", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },
         { prop: "Beta", type: "status", defaultValue: "-", description: zh ? "API 已可用，继续打磨边界。" : "Usable API with active refinement." },

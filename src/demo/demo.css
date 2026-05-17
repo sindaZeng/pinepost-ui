@@ -326,7 +326,22 @@ body {
 .docs-code__label {
   background: color-mix(in srgb, var(--pinepost-stamp) 46%, #261e18);
   color: #fff8ea;
+  gap: 10px;
+  justify-content: space-between;
   margin: 14px 14px 0;
+}
+
+.docs-code__label button {
+  background: color-mix(in srgb, var(--pinepost-paper) 16%, #261e18);
+  border: 1px solid color-mix(in srgb, var(--pinepost-paper) 34%, transparent);
+  border-radius: var(--pinepost-radius-sm);
+  color: #fff8ea;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 900;
+  min-height: 26px;
+  padding: 0 8px;
 }
 
 .docs-code pre {
@@ -337,6 +352,44 @@ body {
   min-width: 0;
   overflow: auto;
   padding: 16px 22px 24px;
+}
+
+.docs-recipes {
+  display: grid;
+  gap: 16px;
+}
+
+.docs-recipes h3 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.docs-recipe {
+  border: 2px solid var(--pinepost-border);
+  border-radius: var(--pinepost-radius-md);
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.docs-recipe__head {
+  display: grid;
+  gap: 4px;
+}
+
+.docs-recipe__head p {
+  color: var(--pinepost-muted);
+  margin: 0;
+}
+
+.docs-upload-card {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  width: 100%;
 }
 
 .docs-api-wrap {

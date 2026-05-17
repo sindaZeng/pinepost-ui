@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.0
+
+- Added Table column ordering, column order ref methods, and the TableColumnSettings panel.
+- Added Upload custom file rendering, retry actions, hidden file list mode, and queue ref methods.
+- Added copyable docs recipes for high-frequency form, data, and date/time workflows.
+- Added Playwright docs smoke tests for desktop and mobile layout checks.
+
 ## 0.11.0
 
 - Added Table density modes, filter tag actions, and local view preset persistence.
