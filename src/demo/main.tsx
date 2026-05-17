@@ -79,9 +79,13 @@ import {
   Pagination,
   PageHeader,
   PinepostProvider,
+  createPinepostThemeClassName,
   createPinepostThemeCss,
+  createPinepostThemeExport,
   mergePinepostThemeTokens,
+  parsePinepostThemeExport,
   pinepostThemePresets,
+  stringifyPinepostThemeExport,
   Popconfirm,
   PopconfirmAction,
   PopconfirmCancel,
@@ -141,10 +145,12 @@ import {
   VirtualizedTable,
   VirtualizedTree,
   Watermark,
+  validatePinepostThemeTokens,
   type PinepostLocale,
   type PinepostTheme,
   type PinepostThemeTokenName,
   type PinepostThemeTokens,
+  type PinepostThemeValidationIssue,
   type TableColumnSettingsValue
 } from "../index";
 import "../styles.css";
@@ -186,7 +192,7 @@ type NavGroup = {
   title: string;
 };
 
-type GuidePanelId = "install" | "theme" | "theme-studio";
+type GuidePanelId = "install" | "recipes" | "theme" | "theme-studio";
 
 const themeOrder: PinepostTheme[] = ["calm", "play", "shop"];
 const localeOrder: PinepostLocale[] = ["zh-CN", "en"];
@@ -213,6 +219,29 @@ const themePreviewRows = [
 
 function themeTokensToStyle(tokens: PinepostThemeTokens) {
   return tokens as React.CSSProperties;
+}
+
+function describeThemeIssue(issue: PinepostThemeValidationIssue, zh: boolean) {
+  const tokenPrefix = issue.token ? `${issue.token}: ` : "";
+  const messages: Record<PinepostThemeValidationIssue["code"], { en: string; zh: string }> = {
+    "invalid-color": { zh: "需要 6 位十六进制颜色。", en: "Expected a six-digit hex color." },
+    "invalid-json": { zh: "需要有效的 JSON。", en: "Expected valid JSON." },
+    "invalid-radius": { zh: "圆角需要是 0px 到 32px 之间的 px 值。", en: "Expected a px radius between 0px and 32px." },
+    "invalid-theme": { zh: "基础主题不存在，已使用默认主题。", en: "Base theme was unknown, so the default theme was used." },
+    "unknown-token": { zh: "不是 Pinepost 主题 token。", en: "This is not a Pinepost theme token." }
+  };
+
+  return `${tokenPrefix}${zh ? messages[issue.code].zh : messages[issue.code].en}`;
+}
+
+function downloadTextFile(filename: string, text: string) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 const copy = {
@@ -484,12 +513,20 @@ function radiusInputValue(value: string) {
 function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"]; theme: PinepostTheme; zh: boolean }) {
   const [preset, setPreset] = React.useState<PinepostTheme>(theme);
   const [overrides, setOverrides] = React.useState<Partial<PinepostThemeTokens>>({});
+  const [themeName, setThemeName] = React.useState("Pinepost workspace");
+  const [importText, setImportText] = React.useState("");
+  const [importMessage, setImportMessage] = React.useState("");
   const tokens = React.useMemo(() => mergePinepostThemeTokens(preset, overrides), [overrides, preset]);
+  const tokenIssues = React.useMemo(() => validatePinepostThemeTokens(tokens), [tokens]);
+  const themeExport = React.useMemo(() => createPinepostThemeExport({ baseTheme: preset, name: themeName, tokens }), [preset, themeName, tokens]);
+  const jsonText = React.useMemo(() => stringifyPinepostThemeExport(themeExport), [themeExport]);
+  const themeClassName = React.useMemo(() => createPinepostThemeClassName(themeName), [themeName]);
   const cssText = React.useMemo(() => createPinepostThemeCss({ selector: ".pinepost-workspace", tokens }), [tokens]);
 
   React.useEffect(() => {
     setPreset(theme);
     setOverrides({});
+    setImportMessage("");
   }, [theme]);
 
   function setToken(name: PinepostThemeTokenName, value: string) {
@@ -499,6 +536,30 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
   function selectPreset(value: string) {
     setPreset(value as PinepostTheme);
     setOverrides({});
+  }
+
+  function importTheme() {
+    if (!importText.trim()) {
+      setImportMessage(zh ? "请先粘贴主题 JSON。" : "Paste theme JSON first.");
+      return;
+    }
+
+    const result = parsePinepostThemeExport(importText, preset);
+    if (!result.value) {
+      setImportMessage(result.issues.map((issue) => describeThemeIssue(issue, zh)).join(" "));
+      return;
+    }
+
+    setPreset(result.value.baseTheme);
+    setOverrides(result.value.tokens);
+    setThemeName(result.value.name ?? "Imported Pinepost theme");
+    setImportMessage(
+      result.issues.length > 0
+        ? result.issues.map((issue) => describeThemeIssue(issue, zh)).join(" ")
+        : zh
+          ? "主题已导入。"
+          : "Theme imported."
+    );
   }
 
   return (
@@ -517,6 +578,10 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
         <div className="docs-theme-studio__controls">
           <div className="docs-theme-studio__preset">
             <span>{zh ? "起始预设" : "Preset"}</span>
+            <label className="docs-theme-studio__name">
+              <span>{zh ? "主题名称" : "Theme name"}</span>
+              <Input value={themeName} onChange={(event) => setThemeName(event.target.value)} />
+            </label>
             <Segmented
               value={preset}
               onValueChange={selectPreset}
@@ -525,6 +590,19 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
             <Button size="sm" variant="soft" onClick={() => setOverrides({})}>
               {zh ? "还原预设" : "Reset preset"}
             </Button>
+            <div className="docs-theme-studio__actions">
+              <Button size="sm" variant="parcel" onClick={() => downloadTextFile(`${themeClassName}.css`, cssText)}>
+                {zh ? "下载 CSS" : "Download CSS"}
+              </Button>
+              <Button size="sm" variant="soft" onClick={() => downloadTextFile(`${themeClassName}.json`, jsonText)}>
+                {zh ? "下载 JSON" : "Download JSON"}
+              </Button>
+            </div>
+            {tokenIssues.length > 0 && (
+              <div className="docs-theme-studio__message" role="status">
+                {tokenIssues.map((issue) => describeThemeIssue(issue, zh)).join(" ")}
+              </div>
+            )}
           </div>
 
           <div className="docs-theme-studio__tokens" aria-label={zh ? "主题 token 编辑" : "Theme token editor"}>
@@ -562,7 +640,7 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
           </div>
         </div>
 
-        <div className="docs-theme-studio__preview" style={themeTokensToStyle(tokens)}>
+        <div className={`docs-theme-studio__preview ${themeClassName}`} style={themeTokensToStyle(tokens)}>
           <div className="docs-theme-studio__hero">
             <Tag>{labels.themes[preset]}</Tag>
             <h3>{zh ? "松木柜台" : "Pine counter"}</h3>
@@ -610,6 +688,25 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
       </div>
 
       <CodeBlock codeText={cssText} label={zh ? "CSS 变量" : "CSS variables"} labels={labels} />
+      <CodeBlock codeText={jsonText} label={zh ? "主题 JSON" : "Theme JSON"} labels={labels} />
+
+      <div className="docs-theme-studio__import">
+        <div>
+          <strong>{zh ? "导入主题" : "Import theme"}</strong>
+          <p>{zh ? "粘贴导出的 JSON，可以恢复主题名称、基础预设和已修改 token。" : "Paste exported JSON to restore the theme name, base preset, and changed tokens."}</p>
+        </div>
+        <Textarea
+          aria-label={zh ? "主题 JSON 输入" : "Theme JSON input"}
+          value={importText}
+          onChange={(event) => setImportText(event.target.value)}
+          placeholder={zh ? "粘贴主题 JSON" : "Paste theme JSON"}
+        />
+        <div className="docs-theme-studio__actions">
+          <Button size="sm" onClick={importTheme}>{zh ? "导入 JSON" : "Import JSON"}</Button>
+          <Button size="sm" variant="soft" onClick={() => setImportText(jsonText)}>{zh ? "填入当前主题" : "Use current JSON"}</Button>
+        </div>
+        {importMessage && <div className="docs-theme-studio__message" role="status">{importMessage}</div>}
+      </div>
 
       <div className="docs-api-wrap" aria-label={zh ? "Theme Studio token 表" : "Theme Studio token table"}>
         <strong className="docs-api-title">{zh ? "可编辑 token" : "Editable tokens"}</strong>
@@ -640,10 +737,191 @@ function ThemeStudioPanel({ labels, theme, zh }: { labels: (typeof copy)["zh-CN"
   );
 }
 
+function RecipeGalleryPanel({ labels, zh }: { labels: (typeof copy)["zh-CN"]; zh: boolean }) {
+  const recipes = [
+    {
+      title: zh ? "后台表格台" : "Operations table",
+      description: zh ? "带密度、列设置和状态标签的日常运营表格。" : "A daily operations table with density, column settings, and status tags.",
+      components: ["Table", "TableColumnSettings", "Tag", "Button"],
+      preview: (
+        <div className="docs-recipe-preview">
+          <TableColumnSettings
+            columns={[
+              { key: "route", title: zh ? "路线" : "Route" },
+              { key: "count", title: zh ? "数量" : "Count" },
+              { key: "status", title: zh ? "状态" : "Status" }
+            ]}
+            defaultValue={{ columnOrder: ["route", "count", "status"], density: "compact", hiddenColumns: [] }}
+          />
+          <Table
+            columns={[
+              { key: "route", title: zh ? "路线" : "Route" },
+              { key: "count", title: zh ? "数量" : "Count" },
+              { key: "status", title: zh ? "状态" : "Status", render: (row) => <Tag>{String(row.status)}</Tag> }
+            ]}
+            data={[
+              { route: zh ? "北门" : "North gate", count: 12, status: zh ? "待发" : "Ready" },
+              { route: zh ? "松木桌" : "Pine desk", count: 6, status: zh ? "复核" : "Review" }
+            ]}
+            density="compact"
+            rowKey="route"
+          />
+        </div>
+      ),
+      code: code([
+        'import { Table, TableColumnSettings, Tag } from "pinepost-ui";',
+        "",
+        "<TableColumnSettings columns={columns} defaultValue={settings} />",
+        "<Table columns={columns} data={rows} density=\"compact\" rowKey=\"route\" />"
+      ])
+    },
+    {
+      title: zh ? "审批表单页" : "Approval form",
+      description: zh ? "适合工单、申请和配置保存的紧凑表单。" : "A compact form for tickets, requests, and configuration saves.",
+      components: ["Form", "FormField", "Input", "Select", "Button"],
+      preview: (
+        <Form className="docs-recipe-form">
+          <FormField label={zh ? "收件处" : "Desk"}>
+            <Input placeholder={zh ? "苔藓桌" : "Moss desk"} />
+          </FormField>
+          <FormField label={zh ? "优先级" : "Priority"}>
+            <Select
+              defaultValue="normal"
+              options={[
+                { value: "normal", label: zh ? "普通" : "Normal" },
+                { value: "high", label: zh ? "加急" : "High" }
+              ]}
+            />
+          </FormField>
+          <Button>{zh ? "提交审批" : "Submit"}</Button>
+        </Form>
+      ),
+      code: code([
+        'import { Button, Form, FormField, Input, Select } from "pinepost-ui";',
+        "",
+        "<Form>",
+        "  <FormField label=\"收件处\"><Input /></FormField>",
+        "  <FormField label=\"优先级\"><Select options={options} /></FormField>",
+        "  <Button>提交审批</Button>",
+        "</Form>"
+      ])
+    },
+    {
+      title: zh ? "素材上传墙" : "Asset upload wall",
+      description: zh ? "展示自定义文件项、失败状态和手动重试入口。" : "Shows custom file items, failure states, and retry entry points.",
+      components: ["Upload", "Progress", "Button", "Badge"],
+      preview: (
+        <Upload
+          label={zh ? "上传素材" : "Upload assets"}
+          defaultFileList={[
+            { name: "parcel-cover.png", percent: 68, status: "uploading", uid: "asset-1" },
+            { error: new Error("Upload failed"), name: "stamp-set.zip", percent: 30, status: "error", uid: "asset-2" }
+          ]}
+          renderFile={(file, actions) => (
+            <div className="docs-upload-card">
+              <span>{file.name}</span>
+              <Badge variant={file.status === "error" ? "stamp" : "sky"}>{file.status}</Badge>
+              <Button size="sm" variant="soft" onClick={file.status === "error" ? actions.retry : actions.remove}>
+                {file.status === "error" ? (zh ? "重试" : "Retry") : (zh ? "移除" : "Remove")}
+              </Button>
+            </div>
+          )}
+        />
+      ),
+      code: code([
+        'import { Badge, Button, Upload } from "pinepost-ui";',
+        "",
+        "<Upload",
+        "  defaultFileList={files}",
+        "  renderFile={(file, actions) => <CustomFile file={file} actions={actions} />}",
+        "/>"
+      ])
+    },
+    {
+      title: zh ? "活动商品卡" : "Campaign card",
+      description: zh ? "适合活动页、套餐卡和小型电商模块。" : "A card pattern for campaigns, bundles, and small commerce modules.",
+      components: ["Card", "Badge", "Statistic", "Button"],
+      preview: (
+        <Card className="docs-campaign-card">
+          <CardHeader>
+            <Badge variant="parcel">{zh ? "今日特选" : "Today"}</Badge>
+            <CardTitle>{zh ? "松果礼盒" : "Pinecone bundle"}</CardTitle>
+            <CardDescription>{zh ? "含三张便签与一枚邮戳。" : "Three notes and one stamp."}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Statistic label={zh ? "库存" : "Stock"} value={18} suffix={zh ? "份" : " packs"} />
+          </CardContent>
+          <CardFooter>
+            <Button variant="parcel">{zh ? "加入清单" : "Add to list"}</Button>
+          </CardFooter>
+        </Card>
+      ),
+      code: code([
+        'import { Badge, Button, Card, Statistic } from "pinepost-ui";',
+        "",
+        "<Card>",
+        "  <Badge variant=\"parcel\">今日特选</Badge>",
+        "  <Statistic label=\"库存\" value={18} />",
+        "  <Button variant=\"parcel\">加入清单</Button>",
+        "</Card>"
+      ])
+    },
+    {
+      title: zh ? "学习任务页" : "Learning task",
+      description: zh ? "把步骤、进度和反馈组合成轻学习流程。" : "Combines steps, progress, and feedback for learning flows.",
+      components: ["Steps", "Progress", "Rate", "Result"],
+      preview: (
+        <div className="docs-recipe-preview">
+          <Steps active={2} items={[{ title: zh ? "阅读" : "Read" }, { title: zh ? "练习" : "Practice" }, { title: zh ? "提交" : "Submit" }]} />
+          <Progress value={72} />
+          <Rate value={4} disabled />
+        </div>
+      ),
+      code: code([
+        'import { Progress, Rate, Steps } from "pinepost-ui";',
+        "",
+        "<Steps active={2} items={items} />",
+        "<Progress value={72} />",
+        "<Rate value={4} disabled />"
+      ])
+    }
+  ];
+
+  return (
+    <section className="docs-section docs-section--guide docs-recipe-gallery">
+      <div className="docs-section__head">
+        <span>{labels.groups.guide}</span>
+        <h2>{zh ? "Recipe Gallery 业务模板" : "Recipe Gallery"}</h2>
+        <p>{zh ? "把常见业务界面拆成可复制的 Pinepost 组合，方便直接拿去改。" : "Copyable Pinepost compositions for common product screens."}</p>
+      </div>
+
+      <div className="docs-recipe-gallery__grid">
+        {recipes.map((recipe) => (
+          <article className="docs-recipe-card" key={recipe.title}>
+            <div className="docs-recipe-card__head">
+              <div>
+                <h3>{recipe.title}</h3>
+                <p>{recipe.description}</p>
+              </div>
+              <div className="docs-recipe-card__components" aria-label={zh ? "组件清单" : "Component list"}>
+                <strong>{zh ? "组件清单" : "Component list"}</strong>
+                <span>{recipe.components.join(" / ")}</span>
+              </div>
+            </div>
+            <div className="docs-preview-surface">{recipe.preview}</div>
+            <CodeBlock codeText={recipe.code} label={recipe.title} labels={labels} />
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function App() {
   const [locale, setLocale] = React.useState<PinepostLocale>("zh-CN");
   const [theme, setTheme] = React.useState<PinepostTheme>("calm");
   const [selectedId, setSelectedId] = React.useState("button");
+  const [navFilter, setNavFilter] = React.useState("");
   const [menuValue, setMenuValue] = React.useState("routes");
   const [page, setPage] = React.useState(2);
   const [segment, setSegment] = React.useState("calm");
@@ -3163,7 +3441,7 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme Studio, Upload recipes</span><Tag variant="parcel">Beta</Tag><span>Table, TableColumnSettings, Form, Cascader, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "主题导入导出、更多行业配方、视觉基线审阅" : "Theme import/export, more product recipes, visual baseline review"}</span></div>,
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme Studio import/export, Recipe Gallery</span><Tag variant="parcel">Beta</Tag><span>Table, TableColumnSettings, Form, Cascader, TreeSelect, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "更多业务模板、视觉基线审阅、多主题集合" : "More product recipes, visual baseline review, theme collections"}</span></div>,
       code: code(["Stable: production-ready basics, theme editing, and recipes", "Beta: deep interaction surfaces", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },
@@ -3191,10 +3469,20 @@ function App() {
         { id: "install", label: zh ? "安装使用" : "Install" },
         { id: "theme", label: zh ? "主题语言" : "Theme and locale" },
         { id: "theme-studio", label: zh ? "主题工作台" : "Theme Studio" },
+        { id: "recipes", label: zh ? "业务模板" : "Recipe Gallery" },
         ...visibleDocs(labels.groups.guide)
       ]
     }
   ];
+  const normalizedNavFilter = navFilter.trim().toLowerCase();
+  const filteredNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: normalizedNavFilter
+        ? group.items.filter((item) => `${group.title} ${item.label}`.toLowerCase().includes(normalizedNavFilter))
+        : group.items
+    }))
+    .filter((group) => group.items.length > 0);
   const selectedDoc = docs.find((item) => item.id === selectedId);
   const guidePanels: Record<GuidePanelId, { description: string; title: string }> = {
     install: {
@@ -3214,6 +3502,12 @@ function App() {
       description: zh
         ? "微调 Pinepost 主题 token，实时预览组件，并复制可落地的 CSS 变量。"
         : "Tune Pinepost theme tokens, preview real components, and copy production-ready CSS variables."
+    },
+    recipes: {
+      title: zh ? "Recipe Gallery 业务模板" : "Recipe Gallery",
+      description: zh
+        ? "面向真实页面的组合模板，带预览、组件清单和可复制代码。"
+        : "Product-ready compositions with previews, component lists, and copyable code."
     }
   };
   const selectedGuidePanel = selectedId in guidePanels ? guidePanels[selectedId as GuidePanelId] : guidePanels.theme;
@@ -3234,6 +3528,10 @@ function App() {
       return <ThemeStudioPanel labels={labels} theme={theme} zh={zh} />;
     }
 
+    if ((selectedId as GuidePanelId) === "recipes") {
+      return <RecipeGalleryPanel labels={labels} zh={zh} />;
+    }
+
     return <ThemePanel labels={labels} locale={locale} theme={theme} zh={zh} />;
   }
 
@@ -3248,8 +3546,18 @@ function App() {
               <small>{labels.tagline}</small>
             </span>
           </button>
+          <label className="docs-nav-search">
+            <span>{zh ? "搜索组件" : "Search docs"}</span>
+            <Input
+              aria-label={zh ? "搜索组件" : "Search docs"}
+              inputSize="sm"
+              value={navFilter}
+              onChange={(event) => setNavFilter(event.target.value)}
+              placeholder={zh ? "输入组件或模板" : "Component or recipe"}
+            />
+          </label>
           <nav className="docs-nav" aria-label="Component navigation">
-            {navGroups.map((group) => (
+            {filteredNavGroups.map((group) => (
               <div className="docs-nav__group" key={group.title}>
                 <span>{group.title}</span>
                 {group.items.map((item) => (
@@ -3265,6 +3573,7 @@ function App() {
                 ))}
               </div>
             ))}
+            {filteredNavGroups.length === 0 && <p className="docs-nav-empty">{zh ? "没有匹配项" : "No matches"}</p>}
           </nav>
         </aside>
 

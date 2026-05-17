@@ -57,11 +57,15 @@ test.describe("Pinepost docs smoke", () => {
     await expect(page.locator("h1")).toHaveText(/Theme Studio/);
     await expect(page.locator("h1")).toHaveCount(1);
     await page.getByLabel("--pinepost-leaf").fill("#267755");
-    await expect(page.locator(".docs-code code")).toContainText("--pinepost-leaf: #267755;");
+    await expect(page.getByText("--pinepost-leaf: #267755;", { exact: false })).toBeVisible();
 
     const copyButton = page.getByRole("button", { name: "复制" }).first();
     await copyButton.click();
     await expect(copyButton).toHaveText("已复制");
+    await expect(page.getByText('"version": 1')).toBeVisible();
+    await page.getByRole("button", { name: "填入当前主题" }).click();
+    await page.getByRole("button", { name: "导入 JSON" }).click();
+    await expect(page.getByText("主题已导入。")).toBeVisible();
 
     const preview = page.locator(".docs-theme-studio__preview");
     await expect(preview).toBeVisible();
@@ -73,6 +77,23 @@ test.describe("Pinepost docs smoke", () => {
     expect(screenshot.byteLength).toBeGreaterThan(8000);
     await testInfo.attach("theme-studio-preview", { body: screenshot, contentType: "image/png" });
 
+    await expectNoPageOverflow(page);
+  });
+
+  test("supports recipe gallery navigation and docs search", async ({ page }) => {
+    await page.goto("/");
+    await page.getByLabel("搜索组件").fill("业务");
+    await expect(page.getByRole("button", { name: /业务模板|Recipe Gallery/ })).toBeVisible();
+    await page.getByRole("button", { name: /业务模板|Recipe Gallery/ }).click();
+
+    await expect(page.locator("h1")).toHaveText(/业务模板|Recipe Gallery/);
+    await expect(page.getByRole("heading", { name: "后台表格台" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "素材上传墙" })).toBeVisible();
+    await expect(page.locator(".docs-recipe-card__components strong", { hasText: "组件清单" })).toHaveCount(5);
+
+    const copyButton = page.getByRole("button", { name: "复制" }).first();
+    await copyButton.click();
+    await expect(copyButton).toHaveText("已复制");
     await expectNoPageOverflow(page);
   });
 });

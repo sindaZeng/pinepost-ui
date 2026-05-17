@@ -99,6 +99,10 @@ The v0.13 expansion adds editable theme token utilities, a Theme Studio guide
 for previewing and copying CSS variables, and stronger docs smoke coverage for
 the theme editing workflow.
 
+The v0.14 expansion adds theme JSON import/export helpers, class name generation,
+downloadable Theme Studio output, a Recipe Gallery for real product screens, and
+faster docs navigation with search.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, copyable recipes, and API table.
 

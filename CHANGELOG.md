@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.0
+
+- Added theme JSON import/export helpers, token validation, and stable theme class name generation.
+- Expanded Theme Studio with downloadable CSS/JSON, import recovery, and validation messages.
+- Added a Recipe Gallery guide with copyable product screen compositions.
+- Added docs navigation search and smoke coverage for recipes and theme import.
+
 ## 0.13.0
 
 - Added editable Pinepost theme token presets, merge helpers, and CSS variable generation.
