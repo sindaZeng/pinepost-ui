@@ -90,6 +90,7 @@ import {
   type PinepostLocale,
   type PinepostTheme
 } from "../index";
+import "../styles.css";
 import "./demo.css";
 
 const themeOrder: PinepostTheme[] = ["calm", "play", "shop"];

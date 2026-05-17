@@ -49,5 +49,8 @@ jobs:
       - name: Build demo
         run: pnpm build:demo
 
+      - name: Verify demo build
+        run: pnpm verify:demo
+
       - name: Verify package contents
         run: pnpm pack --dry-run
