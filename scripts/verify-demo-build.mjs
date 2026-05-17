@@ -19,8 +19,8 @@ const requiredChecks = [
     pass: indexHtml.includes("/pinepost-ui/assets/")
   },
   {
-    name: "demo shell styles",
-    pass: css.includes(".demo-app")
+    name: "docs shell styles",
+    pass: css.includes(".docs-app")
   },
   {
     name: "component button styles",

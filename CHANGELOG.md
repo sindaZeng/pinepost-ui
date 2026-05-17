@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- Added form controls: Select, RadioGroup, Slider, and Spinner.
+- Rebuilt the demo as a component documentation site with grouped navigation, live previews, usage examples, and API tables.
+- Added tests for the new form controls and jsdom setup shims for Radix pointer and layout APIs.
+- Added new Radix primitives for select, radio group, and slider interactions.
+
 ## 0.2.0
 
 - Added the Pinepost theme system with `calm`, `play`, and `shop` presets.

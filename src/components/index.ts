@@ -4,6 +4,7 @@ export * from "./card";
 export * from "./checkbox";
 export * from "./display";
 export * from "./dialog";
+export * from "./form-controls";
 export * from "./input";
 export * from "./layout";
 export * from "./navigation";

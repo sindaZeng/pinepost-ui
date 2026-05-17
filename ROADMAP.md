@@ -5,8 +5,8 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 ## Near Term
 
 - Harden current v0.2 components with more keyboard, focus, and edge-case tests.
-- Add form-oriented components: Radio, Select, InputNumber, Slider, Rate, FormField, and ValidationMessage.
-- Improve docs with per-component API tables and usage examples.
+- Add form-oriented components: InputNumber, Rate, FormField, and ValidationMessage.
+- Expand the docs with more edge-case examples and copyable recipes.
 - Publish the demo to GitHub Pages from `main`.
 
 ## Mid Term

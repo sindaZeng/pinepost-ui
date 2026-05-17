@@ -4,8 +4,8 @@
 [![Demo](https://github.com/sindaZeng/pinepost-ui/actions/workflows/pages.yml/badge.svg)](https://github.com/sindaZeng/pinepost-ui/actions/workflows/pages.yml)
 
 Pinepost UI is a forest-post themed React component library for warm,
-commercial-friendly product interfaces. It ships a small set of practical
-components, a token-driven theme layer, and three ready-to-use mood presets.
+commercial-friendly product interfaces. It ships practical components, a
+token-driven theme layer, bilingual docs, and three ready-to-use mood presets.
 
 Demo: https://sindazeng.github.io/pinepost-ui/
 
@@ -54,12 +54,15 @@ export function App() {
 ## Components
 
 The core set includes Button, Card, Input, Textarea, Checkbox, Switch,
-Badge, Tabs, Dialog, Tooltip, and Toast.
+Select, RadioGroup, Slider, Spinner, Badge, Tabs, Dialog, Tooltip, and Toast.
 
 The v0.2 expansion adds Link, Text, Space, Divider, Alert, Tag, Avatar,
 Empty, Progress, Skeleton, Descriptions, Statistic, Result, Timeline,
 Watermark, Breadcrumb, Menu, Steps, Pagination, Segmented, Dropdown, Popover,
 Collapse, Popconfirm, and Drawer.
+
+The demo site is also the component catalog: each documented component includes
+a live preview, usage example, and API table.
 
 ## Originality
 
