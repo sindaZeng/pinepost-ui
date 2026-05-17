@@ -8,7 +8,12 @@ import {
   type TableViewPresetExport,
   type TableViewPresetParseResult
 } from "./components/data-extras";
-import type { PinepostPresetLocale } from "./components/utility";
+import type {
+  PinepostDatePresetKey,
+  PinepostDateRangePresetKey,
+  PinepostPresetLocale,
+  PinepostTimeRangePresetKey
+} from "./components/utility";
 
 export type PinepostRecipeBundleValidationCode =
   | "invalid-bundle"
@@ -26,11 +31,11 @@ export interface PinepostRecipeBundleValidationIssue {
 }
 
 export interface PinepostRecipeBundleScheduleConfig {
-  dateKeys?: string[];
-  dateRangeKeys?: string[];
+  dateKeys?: PinepostDatePresetKey[];
+  dateRangeKeys?: PinepostDateRangePresetKey[];
   locale?: PinepostPresetLocale;
   referenceDate?: string;
-  timeRangeKeys?: string[];
+  timeRangeKeys?: PinepostTimeRangePresetKey[];
 }
 
 export interface PinepostRecipeBundleExport {
@@ -52,9 +57,9 @@ export interface PinepostRecipeBundleParseResult {
   value?: PinepostRecipeBundleExport;
 }
 
-const knownDateKeys = new Set(["today", "tomorrow"]);
-const knownDateRangeKeys = new Set(["last-7-days", "this-week"]);
-const knownTimeRangeKeys = new Set(["morning", "afternoon", "full-day"]);
+const knownDateKeys = new Set<PinepostDatePresetKey>(["today", "tomorrow"]);
+const knownDateRangeKeys = new Set<PinepostDateRangePresetKey>(["last-7-days", "this-week"]);
+const knownTimeRangeKeys = new Set<PinepostTimeRangePresetKey>(["morning", "afternoon", "full-day"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -100,12 +105,19 @@ function normalizeReferenceDate(value: unknown) {
   return undefined;
 }
 
-function scheduleKeys(value: unknown, knownKeys: Set<string>) {
+function scheduleKeys<T extends string>(value: unknown, knownKeys: Set<T>) {
   const keys = uniqueTextList(value);
+  const invalidKeys = keys.filter((key) => !knownKeys.has(key as T));
   return {
-    invalid: keys.some((key) => !knownKeys.has(key)),
-    value: keys.filter((key) => knownKeys.has(key))
+    invalid: invalidKeys,
+    value: keys.filter((key): key is T => knownKeys.has(key as T))
   };
+}
+
+function unknownScheduleKeyMessage(keys: string[]) {
+  return keys.length === 1
+    ? `Unknown recipe bundle schedule key: ${keys[0]}.`
+    : `Unknown recipe bundle schedule keys: ${keys.join(", ")}.`;
 }
 
 function normalizeSchedule(
@@ -146,19 +158,20 @@ function normalizeSchedule(
   const dateKeys = scheduleKeys(input.dateKeys, knownDateKeys);
   const dateRangeKeys = scheduleKeys(input.dateRangeKeys, knownDateRangeKeys);
   const timeRangeKeys = scheduleKeys(input.timeRangeKeys, knownTimeRangeKeys);
-  if (dateKeys.invalid) {
+  if (dateKeys.invalid.length) {
     issues?.push({
       code: "invalid-schedule",
       field: "schedule.dateKeys",
-      message: "Schedule contains unknown date preset keys.",
+      message: unknownScheduleKeyMessage(dateKeys.invalid),
       source: "schedule"
     });
   }
-  if (dateRangeKeys.invalid || timeRangeKeys.invalid) {
+  const invalidRangeKeys = [...dateRangeKeys.invalid, ...timeRangeKeys.invalid];
+  if (invalidRangeKeys.length) {
     issues?.push({
       code: "invalid-schedule",
       field: "schedule.rangeKeys",
-      message: "Schedule contains unknown range preset keys.",
+      message: unknownScheduleKeyMessage(invalidRangeKeys),
       source: "schedule"
     });
   }
@@ -212,7 +225,9 @@ export function createPinepostRecipeBundle({
   tableViewPresets?: TableViewPresetExport;
   themeCollection?: PinepostThemeCollectionExport;
 }): PinepostRecipeBundleExport {
-  const normalizedSchedule = normalizeSchedule(schedule);
+  const scheduleIssues: PinepostRecipeBundleValidationIssue[] = [];
+  const normalizedSchedule = normalizeSchedule(schedule, scheduleIssues);
+  if (scheduleIssues.length) throw new TypeError(scheduleIssues[0].message);
   const normalizedDescription = normalizeText(description);
 
   return {
@@ -257,6 +272,15 @@ export function parsePinepostRecipeBundle(input: string): PinepostRecipeBundlePa
       message: "Recipe bundle needs an id and name.",
       source: "bundle"
     });
+  }
+  if (raw.version !== 1) {
+    issues.push({
+      code: "invalid-bundle",
+      field: "version",
+      message: "Recipe bundle version must be 1.",
+      source: "bundle"
+    });
+    return { issues };
   }
 
   const schedule = normalizeSchedule(raw.schedule, issues);

@@ -7,6 +7,7 @@ import {
   createTableViewPresetExport,
   parsePinepostRecipeBundle,
   stringifyPinepostRecipeBundle,
+  type PinepostRecipeBundleScheduleConfig,
   type TableViewPreset
 } from "../index";
 
@@ -58,7 +59,7 @@ describe("Pinepost UI v0.18 pack", () => {
       recipeIds: [" campaign-launch ", "admin-table", "campaign-launch", ""],
       schedule: {
         dateKeys: ["today"],
-        dateRangeKeys: ["last-7-days", "this-week", "bad-range"],
+        dateRangeKeys: ["last-7-days", "this-week"],
         locale: "zh-CN",
         referenceDate: new Date(2026, 4, 18),
         timeRangeKeys: ["morning", "full-day"]
@@ -140,6 +141,40 @@ describe("Pinepost UI v0.18 pack", () => {
     });
   });
 
+  it("does not import unsupported recipe bundle versions", () => {
+    const parsed = parsePinepostRecipeBundle(
+      JSON.stringify({
+        id: "future",
+        name: "Future bundle",
+        recipeIds: ["campaign-launch"],
+        version: 2
+      })
+    );
+
+    expect(parsed.issues).toEqual([
+      {
+        code: "invalid-bundle",
+        field: "version",
+        message: "Recipe bundle version must be 1.",
+        source: "bundle"
+      }
+    ]);
+    expect(parsed.value).toBeUndefined();
+  });
+
+  it("rejects unknown schedule keys when creating recipe bundles", () => {
+    expect(() =>
+      createPinepostRecipeBundle({
+        id: "ops",
+        name: "Ops",
+        recipeIds: ["campaign-launch"],
+        schedule: {
+          dateRangeKeys: ["last7days"] as unknown as PinepostRecipeBundleScheduleConfig["dateRangeKeys"]
+        }
+      })
+    ).toThrow("Unknown recipe bundle schedule key: last7days.");
+  });
+
   it("produces schedule config that can drive date and time preset helpers", () => {
     const parsed = parsePinepostRecipeBundle(
       stringifyPinepostRecipeBundle(
@@ -161,9 +196,9 @@ describe("Pinepost UI v0.18 pack", () => {
     const dateRangeKeys = parsed.value?.schedule?.dateRangeKeys ?? [];
     const timeRangeKeys = parsed.value?.schedule?.timeRangeKeys ?? [];
     const dateRanges = createPinepostDateRangePresets({ locale: parsed.value?.schedule?.locale, referenceDate })
-      .filter((preset) => preset.key ? dateRangeKeys.includes(preset.key) : false);
+      .filter((preset) => preset.key ? (dateRangeKeys as readonly string[]).includes(preset.key) : false);
     const timeRanges = createPinepostTimeRangePresets({ locale: parsed.value?.schedule?.locale })
-      .filter((preset) => preset.key ? timeRangeKeys.includes(preset.key) : false);
+      .filter((preset) => preset.key ? (timeRangeKeys as readonly string[]).includes(preset.key) : false);
 
     expect(dateRanges.map((preset) => preset.label)).toEqual(["Last 7 days"]);
     expect(timeRanges).toEqual([{ key: "afternoon", label: "Afternoon", value: ["13:00", "18:00"] }]);

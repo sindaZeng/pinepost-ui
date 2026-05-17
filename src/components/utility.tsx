@@ -478,6 +478,9 @@ export const TimeRangePickerPanel = React.forwardRef<HTMLDivElement, TimeRangePi
 TimeRangePickerPanel.displayName = "TimeRangePickerPanel";
 
 export type PinepostPresetLocale = "en" | "zh-CN";
+export type PinepostDatePresetKey = "today" | "tomorrow";
+export type PinepostDateRangePresetKey = "last-7-days" | "this-week";
+export type PinepostTimeRangePresetKey = "morning" | "afternoon" | "full-day";
 
 export interface PinepostDatePresetOptions {
   locale?: PinepostPresetLocale;
