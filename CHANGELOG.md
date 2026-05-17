@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0
+
+- Added Table column groups, fixed left/right columns, and width support for dense data views.
+- Added DateRangePickerPanel and TimeRangePickerPanel with shortcut range support.
+- Expanded docs previews and API tables for Table and range panel workflows.
+- Added v0.8 behavior tests for grouped headers, fixed columns, and range selection.
+
 ## 0.7.0
 
 - Added advanced Table row expansion, summary rows, inline editing, and expansion ref methods.

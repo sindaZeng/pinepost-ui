@@ -202,6 +202,117 @@ export const DatePickerPanel = React.forwardRef<HTMLDivElement, DatePickerPanelP
 
 DatePickerPanel.displayName = "DatePickerPanel";
 
+export type DateRangeValue = [Date | undefined, Date | undefined];
+
+export interface DateRangeShortcut {
+  label: React.ReactNode;
+  value: DateRangeValue | (() => DateRangeValue);
+}
+
+export interface DateRangePickerPanelProps
+  extends Omit<DatePickerPanelProps, "defaultValue" | "onValueChange" | "shortcuts" | "value"> {
+  defaultValue?: DateRangeValue;
+  onValueChange?: (value: DateRangeValue) => void;
+  shortcuts?: DateRangeShortcut[];
+  value?: DateRangeValue;
+}
+
+function normalizeDateRange(start: Date, end: Date): DateRangeValue {
+  return start.getTime() <= end.getTime() ? [start, end] : [end, start];
+}
+
+function dateInRange(date: Date, range: DateRangeValue) {
+  const [start, end] = range;
+  if (!start || !end) return false;
+  return date.getTime() > start.getTime() && date.getTime() < end.getTime();
+}
+
+export const DateRangePickerPanel = React.forwardRef<HTMLDivElement, DateRangePickerPanelProps>(
+  (
+    {
+      className,
+      defaultValue = [undefined, undefined],
+      disabledDate,
+      month,
+      onValueChange,
+      renderDay,
+      shortcuts = [],
+      value,
+      weekStartsOn = 1,
+      ...props
+    },
+    ref
+  ) => {
+    const [internalValue, setInternalValue] = React.useState<DateRangeValue>(defaultValue);
+    const currentValue = value ?? internalValue;
+    const activeMonth = month ?? currentValue[0] ?? currentValue[1] ?? new Date();
+    const cells = getMonthCells(activeMonth, weekStartsOn);
+    const weekdays = weekStartsOn === 1 ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    function commit(nextValue: DateRangeValue) {
+      if (value === undefined) setInternalValue(nextValue);
+      onValueChange?.(nextValue);
+    }
+
+    function selectDate(date: Date) {
+      const [start, end] = currentValue;
+      if (!start || end) {
+        commit([date, undefined]);
+        return;
+      }
+
+      commit(normalizeDateRange(start, date));
+    }
+
+    return (
+      <div ref={ref} className={cn("pinepost-date-panel pinepost-date-range-panel", className)} {...props}>
+        <div className="pinepost-date-panel__header">
+          <strong>{activeMonth.toLocaleString(undefined, { month: "long", year: "numeric" })}</strong>
+        </div>
+        {shortcuts.length > 0 && (
+          <div className="pinepost-date-panel__shortcuts">
+            {shortcuts.map((shortcut) => (
+              <button
+                key={String(shortcut.label)}
+                type="button"
+                onClick={() => commit(typeof shortcut.value === "function" ? shortcut.value() : shortcut.value)}
+              >
+                {shortcut.label}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="pinepost-date-panel__grid" role="grid">
+          {weekdays.map((day) => (
+            <span key={day} className="pinepost-date-panel__weekday" role="columnheader">
+              {day}
+            </span>
+          ))}
+          {cells.map((date, index) =>
+            date ? (
+              <button
+                key={date.toISOString()}
+                aria-pressed={sameDate(date, currentValue[0]) || sameDate(date, currentValue[1])}
+                className="pinepost-date-panel__day"
+                data-in-range={dateInRange(date, currentValue) || undefined}
+                disabled={disabledDate?.(date)}
+                onClick={() => selectDate(date)}
+                type="button"
+              >
+                {renderDay ? renderDay(date) : date.getDate()}
+              </button>
+            ) : (
+              <span key={`empty-${index}`} className="pinepost-date-panel__day" data-empty role="gridcell" />
+            )
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+DateRangePickerPanel.displayName = "DateRangePickerPanel";
+
 export interface TimePickerPanelProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "defaultValue" | "onChange"> {
   defaultValue?: string;
   disabledTime?: (time: string) => boolean;
@@ -276,6 +387,92 @@ export const TimePickerPanel = React.forwardRef<HTMLDivElement, TimePickerPanelP
 );
 
 TimePickerPanel.displayName = "TimePickerPanel";
+
+export type TimeRangeValue = [string | undefined, string | undefined];
+
+export interface TimeRangeShortcut {
+  label: React.ReactNode;
+  value: TimeRangeValue | (() => TimeRangeValue);
+}
+
+export interface TimeRangePickerPanelProps extends Omit<TimePickerPanelProps, "defaultValue" | "onValueChange" | "value"> {
+  defaultValue?: TimeRangeValue;
+  endLabel?: string;
+  onValueChange?: (value: TimeRangeValue) => void;
+  shortcuts?: TimeRangeShortcut[];
+  startLabel?: string;
+  value?: TimeRangeValue;
+}
+
+export const TimeRangePickerPanel = React.forwardRef<HTMLDivElement, TimeRangePickerPanelProps>(
+  (
+    {
+      className,
+      defaultValue = [undefined, undefined],
+      disabledTime,
+      end = "18:00",
+      endLabel = "End time",
+      onValueChange,
+      shortcuts = [],
+      start = "09:00",
+      startLabel = "Start time",
+      step = "00:30",
+      value,
+      ...props
+    },
+    ref
+  ) => {
+    const [internalValue, setInternalValue] = React.useState<TimeRangeValue>(defaultValue);
+    const currentValue = value ?? internalValue;
+
+    function commit(nextValue: TimeRangeValue) {
+      if (value === undefined) setInternalValue(nextValue);
+      onValueChange?.(nextValue);
+    }
+
+    return (
+      <div ref={ref} className={cn("pinepost-time-range-panel", className)} {...props}>
+        {shortcuts.length > 0 && (
+          <div className="pinepost-time-range-panel__shortcuts">
+            {shortcuts.map((shortcut) => (
+              <button
+                key={String(shortcut.label)}
+                onClick={() => commit(typeof shortcut.value === "function" ? shortcut.value() : shortcut.value)}
+                type="button"
+              >
+                {shortcut.label}
+              </button>
+            ))}
+          </div>
+        )}
+        <div aria-label={startLabel} className="pinepost-time-range-panel__column" role="group">
+          <strong>{startLabel}</strong>
+          <TimePickerPanel
+            disabledTime={disabledTime}
+            end={end}
+            start={start}
+            step={step}
+            value={currentValue[0] ?? ""}
+            onValueChange={(time) => commit([time, currentValue[1]])}
+          />
+        </div>
+        <div aria-label={endLabel} className="pinepost-time-range-panel__column" role="group">
+          <strong>{endLabel}</strong>
+          <TimePickerPanel
+            disabledTime={disabledTime}
+            end={end}
+            start={start}
+            step={step}
+            value={currentValue[1] ?? ""}
+            onValueChange={(time) => commit([currentValue[0], time])}
+          />
+        </div>
+      </div>
+    );
+  }
+);
+
+TimeRangePickerPanel.displayName = "TimeRangePickerPanel";
 
 export interface DateTimePickerPanelProps
   extends Omit<DatePickerPanelProps, "defaultValue" | "onValueChange" | "shortcuts" | "value"> {

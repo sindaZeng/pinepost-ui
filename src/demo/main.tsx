@@ -31,6 +31,7 @@ import {
   Col,
   Container,
   ColorPickerPanel,
+  DateRangePickerPanel,
   DateTimePickerPanel,
   DatePickerPanel,
   Descriptions,
@@ -112,6 +113,7 @@ import {
   Textarea,
   TimePicker,
   TimePickerPanel,
+  TimeRangePickerPanel,
   TimeSelect,
   Timeline,
   Toast,
@@ -404,7 +406,9 @@ function App() {
   const [mentionValue, setMentionValue] = React.useState("请交给 @cedar ");
   const [timeSelectValue, setTimeSelectValue] = React.useState("09:30");
   const [timePanelValue, setTimePanelValue] = React.useState("09:30");
+  const [dateRangeValue, setDateRangeValue] = React.useState<[Date | undefined, Date | undefined]>([new Date(2026, 4, 17), new Date(2026, 4, 19)]);
   const [dateTimePanelValue, setDateTimePanelValue] = React.useState(new Date(2026, 4, 17, 9, 30));
+  const [timeRangeValue, setTimeRangeValue] = React.useState<[string | undefined, string | undefined]>(["09:00", "11:00"]);
   const [tourOpen, setTourOpen] = React.useState(false);
   const [virtualTreeSelected, setVirtualTreeSelected] = React.useState("north-3");
   const [messageBoxOpen, setMessageBoxOpen] = React.useState(false);
@@ -1120,7 +1124,7 @@ function App() {
       id: "table",
       group: labels.groups.display,
       title: zh ? "Table 表格" : "Table",
-      description: zh ? "数据表格支持排序、筛选、选择、展开行、汇总行和内联编辑。" : "Data table with sorting, filtering, selection, row expansion, summaries, and inline editing.",
+      description: zh ? "数据表格支持列组、固定列、排序、筛选、选择、展开行、汇总行和内联编辑。" : "Data table with column groups, fixed columns, sorting, filtering, selection, row expansion, summaries, and inline editing.",
       preview: (
         <Table
           rowKey="id"
@@ -1130,13 +1134,20 @@ function App() {
           renderExpandedRow={(row) => <Text>{zh ? `${row.route} 今日优先投递。` : `${row.route} ships first today.`}</Text>}
           summary={(rows) => ({ route: zh ? "合计" : "Total", count: rows.reduce((total, row) => total + row.count, 0) })}
           columns={[
-            { key: "route", title: zh ? "路线" : "Route", editable: true, sortable: true },
-            { key: "status", title: zh ? "状态" : "Status" },
-            { key: "count", title: zh ? "数量" : "Count", align: "right", sortable: true }
+            { key: "desk", title: zh ? "桌台" : "Desk", fixed: "left", width: 120 },
+            {
+              key: "delivery",
+              title: zh ? "投递" : "Delivery",
+              children: [
+                { key: "route", title: zh ? "路线" : "Route", editable: true, sortable: true, width: 110 },
+                { key: "count", title: zh ? "数量" : "Count", align: "right", sortable: true, width: 90 }
+              ]
+            },
+            { key: "status", title: zh ? "状态" : "Status", fixed: "right", width: 120 }
           ]}
           data={[
-            { id: "a7", route: "A7", status: zh ? "就绪" : "Ready", count: 8 },
-            { id: "b2", route: "B2", status: zh ? "复核" : "Review", count: 3 }
+            { id: "a7", desk: zh ? "雪松" : "Cedar", route: "A7", status: zh ? "就绪" : "Ready", count: 8 },
+            { id: "b2", desk: zh ? "苔藓" : "Moss", route: "B2", status: zh ? "复核" : "Review", count: 3 }
           ]}
         />
       ),
@@ -1151,10 +1162,14 @@ function App() {
         "  renderExpandedRow={(row) => <p>{row.route} detail</p>}",
         "  summary={(rows) => ({ count: rows.reduce((sum, row) => sum + row.count, 0) })}",
         "  columns={[",
-        '    { key: "route", title: "路线", editable: true, sortable: true },',
-        '    { key: "count", title: "数量", align: "right" }',
+        '    { key: "desk", title: "桌台", fixed: "left", width: 120 },',
+        '    { key: "delivery", title: "投递", children: [',
+        '      { key: "route", title: "路线", editable: true, sortable: true },',
+        '      { key: "count", title: "数量", align: "right" }',
+        "    ]},",
+        '    { key: "status", title: "状态", fixed: "right", width: 120 }',
         "  ]}",
-        '  data={[{ id: "a7", route: "A7", count: 8 }]}',
+        '  data={[{ id: "a7", desk: "雪松", route: "A7", count: 8, status: "就绪" }]}',
         "/>"
       ]),
       api: [],
@@ -1177,7 +1192,10 @@ function App() {
             { prop: "TableColumn.sortable", type: "boolean | compareFn", defaultValue: "false", description: zh ? "启用列排序。" : "Enables column sorting." },
             { prop: "TableColumn.filter", type: "(row) => boolean", defaultValue: "-", description: zh ? "列过滤函数。" : "Column filter predicate." },
             { prop: "TableColumn.render", type: "(row, index) => ReactNode", defaultValue: "-", description: zh ? "自定义单元格。" : "Custom cell rendering." },
-            { prop: "TableColumn.editable", type: "boolean", defaultValue: "false", description: zh ? "列是否可编辑。" : "Whether the column can be edited." }
+            { prop: "TableColumn.editable", type: "boolean", defaultValue: "false", description: zh ? "列是否可编辑。" : "Whether the column can be edited." },
+            { prop: "TableColumn.children", type: "TableColumn<T>[]", defaultValue: "-", description: zh ? "列组子列。" : "Child columns for a grouped header." },
+            { prop: "TableColumn.fixed", type: '"left" | "right"', defaultValue: "-", description: zh ? "固定在表格左侧或右侧。" : "Fixes a column to the left or right edge." },
+            { prop: "TableColumn.width", type: "number | string", defaultValue: "-", description: zh ? "列宽，固定列推荐设置。" : "Column width, recommended for fixed columns." }
           ]
         },
         {
@@ -2100,6 +2118,35 @@ function App() {
       ]
     },
     {
+      id: "date-range-picker-panel",
+      group: labels.groups.form,
+      title: zh ? "DateRangePickerPanel 日期范围面板" : "DateRangePickerPanel",
+      description: zh ? "选择开始和结束日期，适合排班、活动和报表范围。" : "Selects start and end dates for schedules, campaigns, and report ranges.",
+      preview: (
+        <DateRangePickerPanel
+          month={new Date(2026, 4, 1)}
+          value={dateRangeValue}
+          onValueChange={setDateRangeValue}
+          shortcuts={[{ label: zh ? "节庆周" : "Festival week", value: () => [new Date(2026, 4, 18), new Date(2026, 4, 24)] }]}
+        />
+      ),
+      code: code([
+        'import { DateRangePickerPanel } from "pinepost-ui";',
+        "",
+        "<DateRangePickerPanel",
+        "  value={range}",
+        "  onValueChange={setRange}",
+        "  shortcuts={[{ label: '节庆周', value: () => [start, end] }]}",
+        "/>"
+      ]),
+      api: [
+        { prop: "value / defaultValue", type: "[Date?, Date?]", defaultValue: "-", description: zh ? "受控或默认日期范围。" : "Controlled or default date range." },
+        { prop: "shortcuts", type: "DateRangeShortcut[]", defaultValue: "[]", description: zh ? "快捷日期范围。" : "Shortcut ranges." },
+        { prop: "disabledDate", type: "(date: Date) => boolean", defaultValue: "-", description: zh ? "禁用日期判断。" : "Disabled date predicate." },
+        { prop: "onValueChange", type: "(range) => void", defaultValue: "-", description: zh ? "范围变化回调。" : "Range change callback." }
+      ]
+    },
+    {
       id: "time-picker-panel",
       group: labels.groups.form,
       title: zh ? "TimePickerPanel 时间面板" : "TimePickerPanel",
@@ -2125,6 +2172,41 @@ function App() {
         { prop: "step", type: "HH:mm", defaultValue: "00:30", description: zh ? "时间步长。" : "Time step." },
         { prop: "disabledTime", type: "(time: string) => boolean", defaultValue: "-", description: zh ? "禁用时间判断。" : "Disabled time predicate." },
         { prop: "onValueChange", type: "(time: string) => void", defaultValue: "-", description: zh ? "时间变化回调。" : "Time change callback." }
+      ]
+    },
+    {
+      id: "time-range-picker-panel",
+      group: labels.groups.form,
+      title: zh ? "TimeRangePickerPanel 时间范围面板" : "TimeRangePickerPanel",
+      description: zh ? "并排选择开始和结束时间，适合配送窗口和预约时段。" : "Paired start and end time panels for delivery windows and appointments.",
+      preview: (
+        <TimeRangePickerPanel
+          value={timeRangeValue}
+          onValueChange={setTimeRangeValue}
+          start="09:00"
+          end="12:00"
+          step="00:30"
+          startLabel={zh ? "开始时间" : "Start time"}
+          endLabel={zh ? "结束时间" : "End time"}
+        />
+      ),
+      code: code([
+        'import { TimeRangePickerPanel } from "pinepost-ui";',
+        "",
+        "<TimeRangePickerPanel",
+        "  value={range}",
+        "  onValueChange={setRange}",
+        "  start=\"09:00\"",
+        "  end=\"12:00\"",
+        "  step=\"00:30\"",
+        "/>"
+      ]),
+      api: [
+        { prop: "value / defaultValue", type: "[string?, string?]", defaultValue: "-", description: zh ? "受控或默认时间范围。" : "Controlled or default time range." },
+        { prop: "start / end / step", type: "HH:mm", defaultValue: "09:00 / 18:00 / 00:30", description: zh ? "时间范围和步长。" : "Time range and step." },
+        { prop: "startLabel / endLabel", type: "string", defaultValue: "Start time / End time", description: zh ? "两个面板的可访问名称。" : "Accessible names for each panel." },
+        { prop: "shortcuts", type: "TimeRangeShortcut[]", defaultValue: "[]", description: zh ? "快捷时间范围。" : "Shortcut ranges." },
+        { prop: "onValueChange", type: "(range) => void", defaultValue: "-", description: zh ? "范围变化回调。" : "Range change callback." }
       ]
     },
     {
@@ -2445,7 +2527,7 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs</span><Tag variant="parcel">Beta</Tag><span>Table, Upload, Tree, Select, DateTimePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "固定列、范围选择、视觉回归" : "Fixed columns, ranges, visual checks"}</span></div>,
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs</span><Tag variant="parcel">Beta</Tag><span>Table, Upload, Tree, Select, DateRangePickerPanel</span><Tag variant="sky">Planned</Tag><span>{zh ? "列宽拖拽、格式化助手、视觉回归" : "Resizable columns, format helpers, visual checks"}</span></div>,
       code: code(["Stable: production-ready basics", "Beta: deep interaction surfaces", "Planned: future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },

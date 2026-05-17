@@ -79,6 +79,9 @@ The v0.7 expansion deepens high-frequency interaction surfaces with Table row
 expansion, summaries, inline editing, drag Upload, lazy Tree loading,
 TimePickerPanel, and DateTimePickerPanel.
 
+The v0.8 expansion adds dense-data refinements with Table column groups, fixed
+columns, DateRangePickerPanel, and TimeRangePickerPanel.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, usage example, and API table.
 

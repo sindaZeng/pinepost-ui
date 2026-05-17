@@ -3,12 +3,15 @@ import { cn } from "../lib/cn";
 
 export interface TableColumn<T> {
   align?: "left" | "center" | "right";
+  children?: Array<TableColumn<T>>;
   editable?: boolean;
   filter?: (row: T) => boolean;
+  fixed?: "left" | "right";
   key: keyof T | string;
   render?: (row: T, index: number) => React.ReactNode;
   sortable?: boolean | ((left: T, right: T) => number);
   title: React.ReactNode;
+  width?: number | string;
 }
 
 export type TableSortOrder = "asc" | "desc";
@@ -67,6 +70,48 @@ function defaultCompare<T extends object>(left: T, right: T, key: keyof T | stri
   return String(leftValue ?? "").localeCompare(String(rightValue ?? ""));
 }
 
+function flattenColumns<T>(columns: Array<TableColumn<T>>): Array<TableColumn<T>> {
+  return columns.flatMap((column) => column.children?.length ? flattenColumns(column.children) : [column]);
+}
+
+function leafCount<T>(column: TableColumn<T>) {
+  return flattenColumns([column]).length;
+}
+
+function columnWidthValue(width: TableColumn<object>["width"]) {
+  if (typeof width === "number") return `${width}px`;
+  return width;
+}
+
+function numericWidth(width: TableColumn<object>["width"]) {
+  if (typeof width === "number") return width;
+  if (typeof width === "string" && width.endsWith("px")) return Number(width.replace("px", "")) || 0;
+  return 0;
+}
+
+function fixedOffset<T>(columns: Array<TableColumn<T>>, columnIndex: number, fixed: "left" | "right") {
+  if (fixed === "left") {
+    return columns.slice(0, columnIndex).filter((column) => column.fixed === "left").reduce((total, column) => total + numericWidth(column.width), 0);
+  }
+
+  return columns.slice(columnIndex + 1).filter((column) => column.fixed === "right").reduce((total, column) => total + numericWidth(column.width), 0);
+}
+
+function columnStyle<T>(column: TableColumn<T>, columnIndex: number, leafColumns: Array<TableColumn<T>>): React.CSSProperties {
+  const style: React.CSSProperties = {
+    textAlign: column.align,
+    width: columnWidthValue(column.width as TableColumn<object>["width"])
+  };
+
+  if (column.fixed) {
+    style.position = "sticky";
+    style[column.fixed] = fixedOffset(leafColumns, columnIndex, column.fixed);
+    style.zIndex = 2;
+  }
+
+  return style;
+}
+
 function TableInner<T extends object>({
   className,
   columns,
@@ -100,6 +145,8 @@ function TableInner<T extends object>({
   const [internalSortState, setInternalSortState] = React.useState<TableSortState<T> | undefined>();
   const activeSort = sortState ?? internalSortState;
   const activeExpandedKeys = expandedRowKeys ?? internalExpandedKeys;
+  const leafColumns = React.useMemo(() => flattenColumns(columns), [columns]);
+  const hasColumnGroups = columns.some((column) => Boolean(column.children?.length));
 
   function getRowKey(row: T, index: number) {
     if (typeof rowKey === "function") return rowKey(row, index);
@@ -114,7 +161,7 @@ function TableInner<T extends object>({
 
   const visibleData = React.useMemo(() => {
     if (!activeSort) return filteredData;
-    const column = columns.find((item) => String(item.key) === String(activeSort.key));
+    const column = leafColumns.find((item) => String(item.key) === String(activeSort.key));
     if (!column) return filteredData;
     const compare =
       typeof column.sortable === "function"
@@ -122,7 +169,7 @@ function TableInner<T extends object>({
         : (left: T, right: T) => defaultCompare(left, right, activeSort.key);
     const direction = activeSort.order === "asc" ? 1 : -1;
     return [...filteredData].sort((left, right) => compare(left, right) * direction);
-  }, [activeSort, columns, filteredData]);
+  }, [activeSort, filteredData, leafColumns]);
 
   function commitSelection(nextKeys: React.Key[]) {
     setSelectedKeys(nextKeys);
@@ -184,40 +231,72 @@ function TableInner<T extends object>({
   const extraColumnCount = (selectable ? 1 : 0) + (renderExpandedRow ? 1 : 0);
   const summaryValues = typeof summary === "function" ? summary(visibleData) : summary;
 
+  function renderHeaderCell(column: TableColumn<T>, columnIndex: number, spanProps?: { colSpan?: number; rowSpan?: number }) {
+    const fixed = column.fixed;
+
+    return (
+      <th
+        key={String(column.key)}
+        colSpan={spanProps?.colSpan}
+        data-fixed={fixed}
+        data-group={Boolean(column.children?.length) || undefined}
+        rowSpan={spanProps?.rowSpan}
+        style={column.children?.length ? { textAlign: column.align } : columnStyle(column, columnIndex, leafColumns)}
+      >
+        {column.sortable && !column.children?.length ? (
+          <button className="pinepost-table__sort" onClick={() => toggleSort(column)} type="button">
+            {column.title}
+            <span aria-hidden="true">
+              {activeSort?.key === column.key ? (activeSort.order === "asc" ? " ↑" : " ↓") : ""}
+            </span>
+          </button>
+        ) : (
+          column.title
+        )}
+      </th>
+    );
+  }
+
   return (
     <div className={cn("pinepost-table-wrap", className)} {...props}>
       <table className="pinepost-table">
         <thead>
-          <tr>
-            {renderExpandedRow && <th aria-label="Expand rows" />}
-            {selectable && <th aria-label="Selection" />}
-            {columns.map((column) => (
-              <th key={String(column.key)} style={{ textAlign: column.align }}>
-                {column.sortable ? (
-                  <button className="pinepost-table__sort" onClick={() => toggleSort(column)} type="button">
-                    {column.title}
-                    <span aria-hidden="true">
-                      {activeSort?.key === column.key ? (activeSort.order === "asc" ? " ↑" : " ↓") : ""}
-                    </span>
-                  </button>
-                ) : (
-                  column.title
+          {hasColumnGroups ? (
+            <>
+              <tr>
+                {renderExpandedRow && <th aria-label="Expand rows" rowSpan={2} />}
+                {selectable && <th aria-label="Selection" rowSpan={2} />}
+                {columns.map((column) =>
+                  column.children?.length
+                    ? renderHeaderCell(column, -1, { colSpan: leafCount(column) })
+                    : renderHeaderCell(column, leafColumns.indexOf(column), { rowSpan: 2 })
                 )}
-              </th>
-            ))}
-          </tr>
+              </tr>
+              <tr>
+                {columns.flatMap((column) =>
+                  column.children?.length ? flattenColumns(column.children).map((child) => renderHeaderCell(child, leafColumns.indexOf(child))) : []
+                )}
+              </tr>
+            </>
+          ) : (
+            <tr>
+              {renderExpandedRow && <th aria-label="Expand rows" />}
+              {selectable && <th aria-label="Selection" />}
+              {leafColumns.map((column, columnIndex) => renderHeaderCell(column, columnIndex))}
+            </tr>
+          )}
         </thead>
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={columns.length + extraColumnCount}>{loadingText}</td>
+              <td colSpan={leafColumns.length + extraColumnCount}>{loadingText}</td>
             </tr>
           ) : visibleData.length > 0 ? (
             visibleData.map((row, index) => {
               const key = getRowKey(row, data.indexOf(row));
               const selected = selectedKeys.includes(key);
               const expanded = activeExpandedKeys.includes(key);
-              const labelBase = String(getCellValue(row, columns[0]?.key ?? "") ?? key);
+              const labelBase = String(getCellValue(row, leafColumns[0]?.key ?? "") ?? key);
 
               return (
                 <React.Fragment key={key}>
@@ -262,20 +341,21 @@ function TableInner<T extends object>({
                         />
                       </td>
                     )}
-                    {columns.map((column) => {
+                    {leafColumns.map((column, columnIndex) => {
                       const editing = editingCell?.rowKey === key && editingCell.key === column.key;
                       const cellValue = column.render ? column.render(row, index) : getCellValue(row, column.key);
 
                       return (
                         <td
                           key={String(column.key)}
+                          data-fixed={column.fixed}
                           onClick={() => onCellClick?.(row, column, index)}
                           onDoubleClick={() => {
                             if (!editable || !column.editable) return;
                             setEditingCell({ rowKey: key, key: column.key });
                             setEditDraft(String(getCellValue(row, column.key) ?? ""));
                           }}
-                          style={{ textAlign: column.align }}
+                          style={columnStyle(column, columnIndex, leafColumns)}
                         >
                           {editing ? (
                             <input
@@ -299,7 +379,7 @@ function TableInner<T extends object>({
                   </tr>
                   {renderExpandedRow && expanded && (
                     <tr className="pinepost-table__expanded-row">
-                      <td colSpan={columns.length + extraColumnCount}>{renderExpandedRow(row, index)}</td>
+                      <td colSpan={leafColumns.length + extraColumnCount}>{renderExpandedRow(row, index)}</td>
                     </tr>
                   )}
                 </React.Fragment>
@@ -307,7 +387,7 @@ function TableInner<T extends object>({
             })
           ) : (
             <tr>
-              <td colSpan={columns.length + extraColumnCount}>{emptyText}</td>
+              <td colSpan={leafColumns.length + extraColumnCount}>{emptyText}</td>
             </tr>
           )}
         </tbody>
@@ -316,8 +396,8 @@ function TableInner<T extends object>({
             <tr className="pinepost-table__summary-row">
               {renderExpandedRow && <td />}
               {selectable && <td />}
-              {columns.map((column) => (
-                <td key={String(column.key)} style={{ textAlign: column.align }}>
+              {leafColumns.map((column, columnIndex) => (
+                <td key={String(column.key)} data-fixed={column.fixed} style={columnStyle(column, columnIndex, leafColumns)}>
                   {summaryValues[String(column.key)]}
                 </td>
               ))}
