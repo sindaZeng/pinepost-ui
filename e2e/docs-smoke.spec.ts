@@ -13,13 +13,18 @@ async function expectNoPageOverflow(page: import("@playwright/test").Page) {
 }
 
 test.describe("Pinepost docs smoke", () => {
-  test("renders one selected component page with API workbench and copy controls", async ({ page }) => {
+  test("renders one selected component page with segmented examples and copy controls", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Table 表格" }).click();
 
     await expect(page.locator("h1")).toHaveText("Table 表格");
     await expect(page.locator("h1")).toHaveCount(1);
-    await expect(page.getByRole("region", { name: /Table API 演示台|Table API workbench/ })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: /Table 示例导航|Table examples/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /基础表格|Basic table/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /筛选与清空|Filters and reset/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /展开行与汇总|Expanded rows and summary/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /列设置与视图|Column settings and views/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /高级 Playground|Advanced Playground/ })).toBeVisible();
     await expect(page.getByText("TableColumnSettings", { exact: true })).toBeVisible();
     await expect(page.getByText("columnOrder / defaultColumnOrder")).toBeVisible();
 
@@ -30,22 +35,23 @@ test.describe("Pinepost docs smoke", () => {
     await expectNoPageOverflow(page);
   });
 
-  test("keeps priority API workbench pages navigable without page overflow", async ({ page }) => {
+  test("keeps priority component pages segmented without page overflow", async ({ page }) => {
     await page.goto("/");
 
-    for (const { name, region } of [
-      { name: "Form 表单", region: /Form API 演示台|Form API workbench/ },
-      { name: "Upload 上传", region: /Upload API 演示台|Upload API workbench/ },
-      { name: "Select 选择器", region: /Select API 演示台|Select API workbench/ },
-      { name: "Cascader 级联选择", region: /Cascader API 演示台|Cascader API workbench/ },
-      { name: "TreeSelect 树形选择", region: /TreeSelect API 演示台|TreeSelect API workbench/ },
-      { name: "DateRangePickerPanel 日期范围面板", region: /DateRangePickerPanel API 演示台|DateRangePickerPanel API workbench/ },
-      { name: "TimeRangePickerPanel 时间范围面板", region: /TimeRangePickerPanel API 演示台|TimeRangePickerPanel API workbench/ }
+    for (const { name, example } of [
+      { name: "Form 表单", example: /校验与提交|Validation and submit/ },
+      { name: "Upload 上传", example: /手动上传队列|Manual upload queue/ },
+      { name: "Select 选择器", example: /搜索与多选|Search and multiple/ },
+      { name: "Cascader 级联选择", example: /多路线选择|Multiple route selection/ },
+      { name: "TreeSelect 树形选择", example: /树形多选|Tree multiple selection/ },
+      { name: "DateRangePickerPanel 日期范围面板", example: /排期快捷预设|Scheduling shortcuts/ },
+      { name: "TimeRangePickerPanel 时间范围面板", example: /常用时间段|Common time ranges/ }
     ]) {
       await page.getByRole("button", { name }).click();
       await expect(page.locator("h1")).toHaveText(name);
       await expect(page.locator("h1")).toHaveCount(1);
-      await expect(page.getByRole("region", { name: region })).toBeVisible();
+      await expect(page.getByRole("region", { name: example })).toBeVisible();
+      await expect(page.getByRole("navigation", { name: new RegExp(`${name.split(" ")[0]} 示例导航|examples`) })).toBeVisible();
       await expectNoPageOverflow(page);
     }
   });
@@ -54,19 +60,19 @@ test.describe("Pinepost docs smoke", () => {
     await page.goto("/");
 
     await page.getByRole("button", { name: "Cascader 级联选择" }).click();
-    await expect(page.getByRole("region", { name: /Cascader API 演示台|Cascader API workbench/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /多路线选择|Multiple route selection/ })).toBeVisible();
     await expect(page.getByText("CascaderMultipleValue").first()).toBeVisible();
     await page.getByRole("button", { name: /1 selected/ }).click();
     await expect(page.getByRole("button", { name: /苔藓桌|Moss desk/ }).first()).toBeVisible();
     await expectNoPageOverflow(page);
 
     await page.getByRole("button", { name: "DateRangePickerPanel 日期范围面板" }).click();
-    await expect(page.getByRole("region", { name: /DateRangePickerPanel API 演示台|DateRangePickerPanel API workbench/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /排期快捷预设|Scheduling shortcuts/ })).toBeVisible();
     await expect(page.getByText("createPinepostDateRangePresets").first()).toBeVisible();
     await expectNoPageOverflow(page);
 
     await page.getByRole("button", { name: "TimeRangePickerPanel 时间范围面板" }).click();
-    await expect(page.getByRole("region", { name: /TimeRangePickerPanel API 演示台|TimeRangePickerPanel API workbench/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /常用时间段|Common time ranges/ })).toBeVisible();
     await expect(page.getByText("createPinepostTimeRangePresets").first()).toBeVisible();
     await expectNoPageOverflow(page);
   });

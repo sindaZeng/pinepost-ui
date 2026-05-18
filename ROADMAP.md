@@ -4,8 +4,8 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 
 ## Near Term
 
-- Continue moving lower-frequency component pages onto the API workbench pattern.
-- Expand visual baseline review with more component detail pages and workbench states.
+- Continue adding richer segmented examples for lower-frequency component pages.
+- Expand visual baseline review with more component detail pages and product states.
 - Add more screen reader affordances for deep selection workflows.
 
 ## Mid Term

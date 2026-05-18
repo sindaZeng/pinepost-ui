@@ -41,13 +41,15 @@ test.describe("Pinepost docs visual baselines", () => {
 
     await page.getByRole("button", { name: "Table 表格" }).click();
     await expect(page.locator("h1")).toHaveText("Table 表格");
-    await expect(page.getByRole("region", { name: /Table API 演示台|Table API workbench/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /基础表格|Basic table/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /高级 Playground|Advanced Playground/ })).toBeVisible();
     await attachMainScreenshot(page, "table-main", testInfo);
     await expectNoPageOverflow(page);
 
     await page.getByRole("button", { name: "Upload 上传" }).click();
     await expect(page.locator("h1")).toHaveText("Upload 上传");
-    await expect(page.getByRole("region", { name: /Upload API 演示台|Upload API workbench/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /手动上传队列|Manual upload queue/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /高级 Playground|Advanced Playground/ })).toBeVisible();
     await attachMainScreenshot(page, "upload-main", testInfo);
     await expectNoPageOverflow(page);
   });

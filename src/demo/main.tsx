@@ -196,13 +196,23 @@ type DocRecipe = {
   title: string;
 };
 
+type DocExample = {
+  code: string;
+  description?: string;
+  id: string;
+  preview: React.ReactNode;
+  title: string;
+};
+
 type DocItem = {
   api: ApiRow[];
   apiSections?: ApiSection[];
   code: string;
   description: string;
+  examples?: DocExample[];
   group: string;
   id: string;
+  playground?: React.ReactNode;
   preview: React.ReactNode;
   recipes?: DocRecipe[];
   searchText?: string;
@@ -496,6 +506,64 @@ function DemoWorkbench({
   );
 }
 
+function DemoSectionNav({ examples, item, labels }: { examples: DocExample[]; item: DocItem; labels: (typeof copy)["zh-CN"] }) {
+  const zh = labels.language === "语言";
+  const componentName = item.title.split(" ")[0] ?? item.title;
+
+  if (examples.length < 2) return null;
+
+  return (
+    <nav className="docs-example-nav" aria-label={zh ? `${componentName} 示例导航` : `${componentName} examples`}>
+      {examples.map((example) => (
+        <a href={`#${item.id}-${example.id}`} key={example.id}>
+          {example.title}
+        </a>
+      ))}
+      {(item.playground ?? item.workbench) && (
+        <a href={`#${item.id}-playground`}>{zh ? "高级 Playground" : "Advanced Playground"}</a>
+      )}
+    </nav>
+  );
+}
+
+function DemoExample({ example, item, labels }: { example: DocExample; item: DocItem; labels: (typeof copy)["zh-CN"] }) {
+  return (
+    <section className="docs-example" id={`${item.id}-${example.id}`} aria-label={example.title}>
+      <div className="docs-example__head">
+        <div>
+          <strong>{example.title}</strong>
+          {example.description && <p>{example.description}</p>}
+        </div>
+      </div>
+      <div className="docs-example__preview">
+        <div className="docs-example__label">{labels.preview}</div>
+        <div className="docs-preview-surface">{example.preview}</div>
+      </div>
+      <CodeBlock codeText={example.code} label={labels.usage} labels={labels} />
+    </section>
+  );
+}
+
+function AdvancedPlayground({ children, id, labels }: { children: React.ReactNode; id: string; labels: (typeof copy)["zh-CN"] }) {
+  const zh = labels.language === "语言";
+
+  if (!children) return null;
+
+  return (
+    <section className="docs-playground" id={`${id}-playground`} aria-label={zh ? "高级 Playground" : "Advanced Playground"}>
+      <div className="docs-playground__head">
+        <strong>{zh ? "高级 Playground" : "Advanced Playground"}</strong>
+        <p>
+          {zh
+            ? "把多个能力组合在一起验证，适合确认事件、方法和受控状态。"
+            : "A combined area for checking events, methods, and controlled state."}
+        </p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 function ApiTable({ item, labels }: { item: DocItem; labels: (typeof copy)["zh-CN"] }) {
   const sections = item.apiSections ?? [{ rows: item.api, title: labels.attributes }];
 
@@ -533,6 +601,23 @@ function ApiTable({ item, labels }: { item: DocItem; labels: (typeof copy)["zh-C
 }
 
 function DocSection({ item, labels }: { item: DocItem; labels: (typeof copy)["zh-CN"] }) {
+  const examples: DocExample[] = item.examples ?? [
+    {
+      id: "basic",
+      title: labels.language === "语言" ? "基础用法" : "Basic usage",
+      description: item.description,
+      preview: item.preview,
+      code: item.code
+    },
+    ...(item.recipes ?? []).map((recipe, index) => ({
+      id: `recipe-${index + 1}`,
+      title: recipe.title,
+      description: recipe.description,
+      preview: recipe.preview ?? item.preview,
+      code: recipe.code
+    }))
+  ];
+
   return (
     <section className="docs-section">
       <div className="docs-section__head">
@@ -540,34 +625,15 @@ function DocSection({ item, labels }: { item: DocItem; labels: (typeof copy)["zh
         <h2>{item.title}</h2>
         <p>{item.description}</p>
       </div>
-      {item.workbench ? (
-        item.workbench
-      ) : (
-        <>
-          <div className="docs-example">
-            <div className="docs-example__preview">
-              <div className="docs-example__label">{labels.preview}</div>
-              <div className="docs-preview-surface">{item.preview}</div>
-            </div>
-            <CodeBlock codeText={item.code} label={labels.usage} labels={labels} />
-          </div>
-          {item.recipes && item.recipes.length > 0 && (
-            <div className="docs-recipes" aria-label={`${item.title} ${labels.recipes}`}>
-              <h3>{labels.recipes}</h3>
-              {item.recipes.map((recipe) => (
-                <div className="docs-recipe" key={recipe.title}>
-                  <div className="docs-recipe__head">
-                    <strong>{recipe.title}</strong>
-                    {recipe.description && <p>{recipe.description}</p>}
-                  </div>
-                  {recipe.preview && <div className="docs-preview-surface">{recipe.preview}</div>}
-                  <CodeBlock codeText={recipe.code} label={recipe.title} labels={labels} />
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+      <DemoSectionNav examples={examples} item={item} labels={labels} />
+      <div className="docs-examples">
+        {examples.map((example) => (
+          <DemoExample example={example} item={item} labels={labels} key={example.id} />
+        ))}
+      </div>
+      <AdvancedPlayground id={item.id} labels={labels}>
+        {item.playground ?? item.workbench}
+      </AdvancedPlayground>
       <ApiTable item={item} labels={labels} />
     </section>
   );
@@ -1508,6 +1574,12 @@ function App() {
   const [messageBoxOpen, setMessageBoxOpen] = React.useState(false);
   const [toastOpen, setToastOpen] = React.useState(false);
   const [formPreviewModel, setFormPreviewModel] = React.useState({ desk: "cedar" });
+  const formExampleRef = React.useRef<FormRef>(null);
+  const formExampleRouteRef = React.useRef<HTMLInputElement>(null);
+  const [formExampleModel, setFormExampleModel] = React.useState({ owner: "", route: "" });
+  const [formExampleMode, setFormExampleMode] = React.useState<"success" | "server-error">("success");
+  const [formExampleStatus, setFormExampleStatus] = React.useState("");
+  const [formExampleFocusRequest, setFormExampleFocusRequest] = React.useState(0);
   const formWorkbenchRef = React.useRef<FormRef>(null);
   const formRouteInputRef = React.useRef<HTMLInputElement>(null);
   const [formWorkbenchModel, setFormWorkbenchModel] = React.useState({ owner: "", route: "" });
@@ -1519,6 +1591,7 @@ function App() {
   const [selectWorkbenchValue, setSelectWorkbenchValue] = React.useState<string | string[]>(["north"]);
   const [selectWorkbenchEvents, setSelectWorkbenchEvents] = React.useState<string[]>([]);
   const cascaderWorkbenchRef = React.useRef<CascaderRef>(null);
+  const [cascaderWorkbenchValue, setCascaderWorkbenchValue] = React.useState<CascaderMultipleValue>([]);
   const [cascaderWorkbenchEvents, setCascaderWorkbenchEvents] = React.useState<string[]>([]);
   const treeSelectWorkbenchRef = React.useRef<TreeSelectRef>(null);
   const [treeSelectWorkbenchValue, setTreeSelectWorkbenchValue] = React.useState<string | string[]>(["dispatch"]);
@@ -1527,12 +1600,15 @@ function App() {
   const [treeWorkbenchCheckedKeys, setTreeWorkbenchCheckedKeys] = React.useState(["cedar"]);
   const [treeWorkbenchExpandedKeys, setTreeWorkbenchExpandedKeys] = React.useState(["routes"]);
   const [treeWorkbenchEvents, setTreeWorkbenchEvents] = React.useState<string[]>([]);
+  const uploadExampleRef = React.useRef<UploadRef>(null);
   const uploadRef = React.useRef<UploadRef>(null);
   const [uploadPreviewStatus, setUploadPreviewStatus] = React.useState("");
   const [uploadWorkbenchEvents, setUploadWorkbenchEvents] = React.useState<string[]>([]);
   const tableRef = React.useRef<TableRef<DemoRouteRow>>(null);
   const [tableQuery, setTableQuery] = React.useState("");
   const [tableReadyFilter, setTableReadyFilter] = React.useState(true);
+  const [tableFilterExampleReady, setTableFilterExampleReady] = React.useState(true);
+  const [tableFilterExampleStatus, setTableFilterExampleStatus] = React.useState("");
   const [tableActiveView, setTableActiveView] = React.useState("full");
   const [tableSelectedCount, setTableSelectedCount] = React.useState(0);
   const [tableWorkbenchStatus, setTableWorkbenchStatus] = React.useState("");
@@ -1587,6 +1663,12 @@ function App() {
     const id = window.setTimeout(() => formRouteInputRef.current?.focus({ preventScroll: true }), 0);
     return () => window.clearTimeout(id);
   }, [formFocusRequest]);
+
+  React.useEffect(() => {
+    if (formExampleFocusRequest === 0) return;
+    const id = window.setTimeout(() => formExampleRouteRef.current?.focus({ preventScroll: true }), 0);
+    return () => window.clearTimeout(id);
+  }, [formExampleFocusRequest]);
 
   const routeOptions = [
     {
@@ -1651,6 +1733,8 @@ function App() {
     return queryMatch && statusMatch;
   });
   const tableFilterTags = tableReadyFilter ? [{ key: "status", label: zh ? "状态：就绪" : "Status: Ready" }] : [];
+  const tableFilterExampleRows = tableFilterExampleReady ? tableRows.filter((row) => row.status === (zh ? "就绪" : "Ready")) : tableRows;
+  const tableFilterExampleTags = tableFilterExampleReady ? [{ key: "status", label: zh ? "状态：就绪" : "Status: Ready" }] : [];
   const routeTreeData = [
     {
       value: "routes",
@@ -1668,6 +1752,157 @@ function App() {
     formWorkbenchRef.current?.clearValidate();
     setFormWorkbenchStatus(zh ? "表单已重置。" : "Form reset.");
     pushDemoEvent(setFormWorkbenchEvents, zh ? "methods.resetFields + 本地模型重置" : "methods.resetFields + local model reset");
+  }
+
+  function renderFormExamples(): DocExample[] {
+    return [
+      {
+        id: "validation-submit",
+        title: zh ? "校验与提交" : "Validation and submit",
+        description: zh ? "提交前先校验字段，失败只显示错误并聚焦第一个错误项，成功和服务端失败互不串场。" : "Validate before submit; invalid fields focus first, while success and server errors stay isolated.",
+        preview: (
+          <div className="docs-product-panel">
+            <Form
+              ref={formExampleRef}
+              model={formExampleModel}
+              rules={{
+                route: [{ required: true, message: zh ? "请填写路线。" : "Route is required." }],
+                owner: [{ required: true, message: zh ? "请填写负责人。" : "Owner is required." }]
+              }}
+              submitErrorMessage={zh ? "服务端拒绝保存，请检查路线窗口。" : "Server rejected the save. Check the route window."}
+              submittingMessage={zh ? "正在保存配置..." : "Saving configuration..."}
+              validateTrigger={["blur", "submit"]}
+              onFinish={async () => {
+                setFormExampleStatus(zh ? "正在提交..." : "Submitting...");
+                await new Promise((resolve) => window.setTimeout(resolve, 80));
+                if (formExampleMode === "server-error") {
+                  setFormExampleStatus(zh ? "服务端拒绝保存。" : "Server rejected the save.");
+                  throw new Error("Server rejected");
+                }
+                setFormExampleStatus(zh ? "保存成功。" : "Saved successfully.");
+              }}
+              onFinishFailed={() => {
+                setFormExampleStatus(zh ? "请先修正表单错误。" : "Fix validation errors first.");
+                formExampleRouteRef.current?.focus({ preventScroll: true });
+                formExampleRef.current?.scrollToField("route");
+                setFormExampleFocusRequest((current) => current + 1);
+              }}
+            >
+              <FormField name="route" label={zh ? "路线" : "Route"} htmlFor="demo-form-route" required>
+                <Input
+                  ref={formExampleRouteRef}
+                  id="demo-form-route"
+                  value={formExampleModel.route}
+                  onChange={(event) => {
+                    const { value } = event.currentTarget;
+                    setFormExampleModel((current) => ({ ...current, route: value }));
+                  }}
+                  placeholder="A7"
+                />
+              </FormField>
+              <FormField name="owner" label={zh ? "负责人" : "Owner"} htmlFor="demo-form-owner" required>
+                <Input
+                  id="demo-form-owner"
+                  value={formExampleModel.owner}
+                  onChange={(event) => {
+                    const { value } = event.currentTarget;
+                    setFormExampleModel((current) => ({ ...current, owner: value }));
+                  }}
+                  placeholder={zh ? "雪松" : "Cedar"}
+                />
+              </FormField>
+              <div className="docs-example-actions">
+                <Button
+                  type="submit"
+                  onClick={(event) => {
+                    if (formExampleModel.route && formExampleModel.owner) return;
+                    event.preventDefault();
+                    void formExampleRef.current?.validate();
+                    setFormExampleStatus(zh ? "请先修正表单错误。" : "Fix validation errors first.");
+                    setFormExampleFocusRequest((current) => current + 1);
+                  }}
+                >
+                  {zh ? "提交保存" : "Submit save"}
+                </Button>
+                <Button size="sm" variant={formExampleMode === "success" ? "primary" : "soft"} onClick={() => setFormExampleMode("success")}>
+                  {zh ? "模拟成功" : "Simulate success"}
+                </Button>
+                <Button size="sm" variant={formExampleMode === "server-error" ? "stamp" : "soft"} onClick={() => setFormExampleMode("server-error")}>
+                  {zh ? "模拟服务端失败" : "Simulate server error"}
+                </Button>
+              </div>
+            </Form>
+            {formExampleStatus && (
+              <Alert
+                variant={formExampleStatus.includes("成功") || formExampleStatus.includes("Saved") ? "success" : "info"}
+                title={formExampleStatus}
+              />
+            )}
+          </div>
+        ),
+        code: code([
+          'import { Form, FormField, Input, Button, type FormRef } from "pinepost-ui";',
+          "",
+          "const formRef = React.useRef<FormRef>(null);",
+          "const [model, setModel] = React.useState({ route: '', owner: '' });",
+          "",
+          "<Form",
+          "  ref={formRef}",
+          "  model={model}",
+          "  rules={rules}",
+          "  validateTrigger={['blur', 'submit']}",
+          "  onFinish={saveRoute}",
+          "  onFinishFailed={() => formRef.current?.scrollToField('route')}",
+          ">",
+          "  <FormField name=\"route\" label=\"路线\" required>",
+          "    <Input value={model.route} onChange={(event) => setModel({ ...model, route: event.currentTarget.value })} />",
+          "  </FormField>",
+          "  <Button type=\"submit\">提交保存</Button>",
+          "</Form>"
+        ])
+      },
+      {
+        id: "layout-states",
+        title: zh ? "布局与禁用状态" : "Layout and disabled state",
+        description: zh ? "横向、内联和禁用字段适合配置页中的只读审批信息。" : "Horizontal, inline, and disabled fields fit read-only approval details.",
+        preview: (
+          <Form layout="horizontal" model={{ route: "A7", owner: "Cedar" }}>
+            <FormField name="route" label={zh ? "路线" : "Route"}>
+              <Input value="A7" readOnly />
+            </FormField>
+            <FormField name="owner" label={zh ? "负责人" : "Owner"}>
+              <Input value={zh ? "雪松" : "Cedar"} disabled />
+            </FormField>
+          </Form>
+        ),
+        code: code([
+          '<Form layout="horizontal" model={model}>',
+          '  <FormField name="route" label="路线"><Input readOnly value="A7" /></FormField>',
+          '  <FormField name="owner" label="负责人"><Input disabled value="雪松" /></FormField>',
+          '</Form>'
+        ])
+      },
+      {
+        id: "methods",
+        title: zh ? "方法控制" : "Methods",
+        description: zh ? "ref methods 可以校验单个字段、清空错误或重置表单。" : "Ref methods validate a field, clear messages, or reset the form.",
+        preview: (
+          <Space>
+            <Button size="sm" variant="soft" onClick={() => void formExampleRef.current?.validateField("route")}>{zh ? "校验路线" : "Validate route"}</Button>
+            <Button size="sm" variant="soft" onClick={() => formExampleRef.current?.clearValidate()}>{zh ? "清空校验" : "Clear validate"}</Button>
+            <Button size="sm" variant="parcel" onClick={() => {
+              setFormExampleModel({ owner: "", route: "" });
+              formExampleRef.current?.resetFields();
+            }}>{zh ? "重置表单" : "Reset form"}</Button>
+          </Space>
+        ),
+        code: code([
+          "formRef.current?.validateField('route');",
+          "formRef.current?.clearValidate();",
+          "formRef.current?.resetFields();"
+        ])
+      }
+    ];
   }
 
   function renderFormWorkbench() {
@@ -1806,6 +2041,199 @@ function App() {
     setTableReadyFilter(false);
     setTableWorkbenchStatus(zh ? "筛选已清空。" : "Filters cleared.");
     pushDemoEvent(setTableWorkbenchEvents, zh ? "onFilterClear: 清空筛选" : "onFilterClear: filters cleared");
+  }
+
+  function renderTableExamples(): DocExample[] {
+    const simpleColumns = [
+      { key: "desk", title: zh ? "桌台" : "Desk", width: 120 },
+      { key: "route", title: zh ? "路线" : "Route", sortable: true, width: 120 },
+      { key: "count", title: zh ? "数量" : "Count", align: "right" as const, sortable: true, width: 90 },
+      { key: "status", title: zh ? "状态" : "Status", width: 120 }
+    ];
+
+    return [
+      {
+        id: "basic",
+        title: zh ? "基础表格" : "Basic table",
+        description: zh ? "用清爽的数据网格展示日常运营记录，默认不混入配置控件。" : "A clean data grid for daily operations without mixing control panels into the main example.",
+        preview: (
+          <Table
+            rowKey="id"
+            density="compact"
+            columns={simpleColumns}
+            data={tableRows}
+          />
+        ),
+        code: code([
+          'import { Table } from "pinepost-ui";',
+          "",
+          "<Table",
+          "  rowKey=\"id\"",
+          "  density=\"compact\"",
+          "  columns={columns}",
+          "  data={rows}",
+          "/>"
+        ])
+      },
+      {
+        id: "filters",
+        title: zh ? "筛选与清空" : "Filters and reset",
+        description: zh ? "筛选标签、搜索条件和清空动作只影响当前表格，不触发无关全局反馈。" : "Filter chips, search, and reset actions only update this table example.",
+        preview: (
+          <div className="docs-product-panel">
+            <div className="docs-example-actions">
+              <Tag>{zh ? `结果 ${tableFilterExampleRows.length}` : `${tableFilterExampleRows.length} results`}</Tag>
+              {tableFilterExampleTags.map((tag) => <Tag key={tag.key}>{tag.label}</Tag>)}
+              <Button size="sm" variant="soft" onClick={() => {
+                setTableFilterExampleReady(false);
+                setTableFilterExampleStatus(zh ? "筛选已清空。" : "Filters cleared.");
+              }}>{zh ? "清空筛选" : "Clear filters"}</Button>
+              <Button size="sm" variant="soft" onClick={() => {
+                setTableFilterExampleReady(true);
+                setTableFilterExampleStatus(zh ? "已启用就绪筛选。" : "Ready filter enabled.");
+              }}>{zh ? "只看就绪" : "Ready only"}</Button>
+            </div>
+            {tableFilterExampleStatus && <Alert variant="info" title={tableFilterExampleStatus} />}
+            <Table
+              rowKey="id"
+              density="compact"
+              filterTags={tableFilterExampleTags}
+              onFilterClear={() => {
+                setTableFilterExampleReady(false);
+                setTableFilterExampleStatus(zh ? "筛选已清空。" : "Filters cleared.");
+              }}
+              columns={simpleColumns}
+              data={tableFilterExampleRows}
+            />
+          </div>
+        ),
+        code: code([
+          "<Table",
+          "  rowKey=\"id\"",
+          "  filterTags={filters}",
+          "  onFilterClear={clearFilters}",
+          "  columns={columns}",
+          "  data={filteredRows}",
+          "/>"
+        ])
+      },
+      {
+        id: "selection-sort",
+        title: zh ? "排序与选择" : "Sorting and selection",
+        description: zh ? "可排序列和行选择适合列表批量处理。" : "Sortable columns and row selection support batch workflows.",
+        preview: (
+          <Table
+            rowKey="id"
+            selectable
+            density="compact"
+            sortState={{ key: "count", order: "desc" }}
+            columns={simpleColumns}
+            data={tableRows}
+          />
+        ),
+        code: code([
+          "<Table",
+          "  rowKey=\"id\"",
+          "  selectable",
+          "  sortState={{ key: 'count', order: 'desc' }}",
+          "  columns={columns}",
+          "  data={rows}",
+          "/>"
+        ])
+      },
+      {
+        id: "expanded-summary",
+        title: zh ? "展开行与汇总" : "Expanded rows and summary",
+        description: zh ? "展开行承载附加说明，汇总行用于数字列合计。" : "Expanded rows carry details while summary rows total numeric columns.",
+        preview: (
+          <Table
+            rowKey="id"
+            density="compact"
+            defaultExpandedRowKeys={["a7"]}
+            renderExpandedRow={(row) => <Text>{zh ? `${row.route} 今日优先投递。` : `${row.route} ships first today.`}</Text>}
+            summary={(rows) => ({ route: zh ? "合计" : "Total", count: rows.reduce((total, row) => total + row.count, 0) })}
+            columns={simpleColumns}
+            data={tableRows}
+          />
+        ),
+        code: code([
+          "<Table",
+          "  rowKey=\"id\"",
+          "  defaultExpandedRowKeys={['a7']}",
+          "  renderExpandedRow={(row) => <p>{row.route} detail</p>}",
+          "  summary={(rows) => ({ count: rows.reduce((sum, row) => sum + row.count, 0) })}",
+          "  columns={columns}",
+          "  data={rows}",
+          "/>"
+        ])
+      },
+      {
+        id: "settings-views",
+        title: zh ? "列设置与视图" : "Column settings and views",
+        description: zh ? "列顺序、隐藏列、密度和视图预设分成独立配置段，更接近真实后台设置。" : "Column order, visibility, density, and view presets sit in their own settings example.",
+        preview: (
+          <div className="docs-field-grid">
+            <TableColumnSettings
+              columns={[
+                { key: "route", title: zh ? "路线" : "Route" },
+                { key: "count", title: zh ? "数量" : "Count" },
+                { key: "status", title: zh ? "状态" : "Status" }
+              ]}
+              value={tableSettings}
+              onValueChange={setTableSettings}
+              storageKey="pinepost-demo-table-settings-v20"
+            />
+            <Table
+              rowKey="id"
+              density={tableSettings.density}
+              columnOrder={tableSettings.columnOrder}
+              hiddenColumns={tableSettings.hiddenColumns}
+              viewPresetLabel={zh ? "视图" : "View"}
+              viewPresets={[
+                { key: "full", label: zh ? "完整" : "Full", hiddenColumns: [] },
+                { key: "review", label: zh ? "复核" : "Review", columnOrder: ["status", "route", "count"], hiddenColumns: ["count"] }
+              ]}
+              columns={[
+                { key: "route", title: zh ? "路线" : "Route" },
+                { key: "count", title: zh ? "数量" : "Count", align: "right" },
+                { key: "status", title: zh ? "状态" : "Status" }
+              ]}
+              data={tableRows}
+            />
+          </div>
+        ),
+        code: code([
+          'import { Table, TableColumnSettings } from "pinepost-ui";',
+          "",
+          "<TableColumnSettings columns={columns} value={settings} onValueChange={setSettings} />",
+          "<Table",
+          "  columns={columns}",
+          "  data={rows}",
+          "  columnOrder={settings.columnOrder}",
+          "  hiddenColumns={settings.hiddenColumns}",
+          "  density={settings.density}",
+          "  viewPresets={viewPresets}",
+          "/>"
+        ])
+      },
+      {
+        id: "states",
+        title: zh ? "空、加载与错误" : "Empty, loading, and error",
+        description: zh ? "边界状态和表格主体分开表达，避免用户误以为操作已经成功。" : "Boundary states are shown separately so product state stays unambiguous.",
+        preview: (
+          <div className="docs-state-grid">
+            <Loading label={zh ? "正在加载表格" : "Loading table"} />
+            <Empty title={zh ? "没有匹配记录" : "No matching rows"} description={zh ? "调整筛选条件后再试。" : "Adjust filters and try again."} />
+            <Alert variant="warning" title={zh ? "数据同步失败" : "Sync failed"} description={zh ? "保留当前表格，不覆盖已选项。" : "Keep current rows and preserve selection."} />
+          </div>
+        ),
+        code: code([
+          '<Loading label="正在加载表格" />',
+          '<Empty title="没有匹配记录" />',
+          '<Alert variant="warning" title="数据同步失败" />'
+        ])
+      }
+    ];
   }
 
   function renderTableWorkbench() {
@@ -2006,7 +2434,7 @@ function App() {
         )}
         methods={(
           <div className="docs-workbench__actions">
-            <Button size="sm" onClick={() => void uploadRef.current?.submit()}>{zh ? "开始上传" : "Start upload"}</Button>
+            <Button size="sm" onClick={() => void uploadRef.current?.submit()}>{zh ? "提交 Playground 队列" : "Submit playground queue"}</Button>
             <Button size="sm" variant="soft" onClick={() => {
               const file = uploadRef.current?.getFiles().find((item) => item.status === "error");
               if (file) uploadRef.current?.retryFile(file.uid);
@@ -2037,6 +2465,317 @@ function App() {
         ])}
       />
     );
+  }
+
+  function renderUploadExamples(): DocExample[] {
+    return [
+      {
+        id: "manual-queue",
+        title: zh ? "手动上传队列" : "Manual upload queue",
+        description: zh ? "文件先进入队列，用户确认后再调用 submit，适合审批材料和素材上传。" : "Files enter a queue first and upload only after submit, fitting approval files and assets.",
+        preview: (
+          <Space direction="vertical">
+            <Upload
+              ref={uploadExampleRef}
+              drag
+              limit={3}
+              label={zh ? "拖放路线清单" : "Drop route manifests"}
+              description={zh ? "选择文件后点击开始上传。" : "Choose files, then start upload."}
+              customRequest={async ({ onProgress, onSuccess }) => {
+                onProgress?.(66);
+                await new Promise((resolve) => window.setTimeout(resolve, 80));
+                onSuccess?.({ ok: true });
+              }}
+              renderFile={(file, actions) => (
+                <div className="docs-upload-card">
+                  <strong>{file.name}</strong>
+                  <Badge variant={file.status === "success" ? "sky" : file.status === "error" ? "stamp" : "leaf"}>{file.status}</Badge>
+                  <Button size="sm" variant="soft" onClick={actions.remove}>
+                    {zh ? "移除" : "Remove"}
+                  </Button>
+                </div>
+              )}
+            />
+            <Button size="sm" onClick={() => void uploadExampleRef.current?.submit()}>{zh ? "开始上传" : "Start upload"}</Button>
+          </Space>
+        ),
+        code: code([
+          'import { Upload, type UploadRef } from "pinepost-ui";',
+          "",
+          "const uploadRef = React.useRef<UploadRef>(null);",
+          "",
+          "<Upload ref={uploadRef} drag limit={3} customRequest={uploadAsset} />",
+          "<Button onClick={() => uploadRef.current?.submit()}>开始上传</Button>"
+        ])
+      },
+      {
+        id: "custom-file",
+        title: zh ? "自定义文件项" : "Custom file item",
+        description: zh ? "renderFile 可把文件状态接入自己的素材墙或业务列表。" : "renderFile lets file state appear in a product asset wall or custom list.",
+        preview: (
+          <Upload
+            defaultFileList={[{ uid: "asset-1", name: "stamp-sheet.png", percent: 36, status: "error", error: new Error("Demo failure") }]}
+            renderFile={(file, actions) => (
+              <div className="docs-upload-card">
+                <strong>{file.name}</strong>
+                <Badge variant={file.status === "error" ? "stamp" : "sky"}>{file.status}</Badge>
+                <Button size="sm" variant="soft" onClick={file.status === "error" ? actions.retry : actions.remove}>
+                  {file.status === "error" ? (zh ? "重试" : "Retry") : (zh ? "移除" : "Remove")}
+                </Button>
+              </div>
+            )}
+          />
+        ),
+        code: code([
+          "<Upload",
+          "  defaultFileList={files}",
+          "  renderFile={(file, actions) => <AssetRow file={file} actions={actions} />}",
+          "  onRetry={trackRetry}",
+          "/>"
+        ])
+      },
+      {
+        id: "hidden-list",
+        title: zh ? "隐藏内置列表" : "Hidden built-in list",
+        description: zh ? "showFileList=false 时可以只保留触发器，把列表交给业务区渲染。" : "showFileList=false keeps only the trigger while product UI renders the list elsewhere.",
+        preview: <Upload showFileList={false} label={zh ? "选择活动图片" : "Choose campaign image"} />,
+        code: code(['<Upload showFileList={false} label="选择活动图片" />'])
+      }
+    ];
+  }
+
+  function renderSelectExamples(): DocExample[] {
+    return [
+      {
+        id: "search-multiple",
+        title: zh ? "搜索与多选" : "Search and multiple",
+        description: zh ? "多选、清空和搜索组合成一个常见负责人选择器。" : "Multiple selection, clear, and search make a practical owner picker.",
+        preview: (
+          <Select
+            aria-label={zh ? "负责人选择" : "Owner picker"}
+            multiple
+            clearable
+            filterable
+            placeholder={zh ? "选择负责人" : "Choose owners"}
+            value={selectWorkbenchValue}
+            onValueChange={setSelectWorkbenchValue}
+            options={[
+              { value: "north", label: zh ? "北线负责人" : "North owner", group: zh ? "日常" : "Daily" },
+              { value: "market", label: zh ? "集市负责人" : "Market owner", group: zh ? "活动" : "Campaign" },
+              { value: "backup", label: zh ? "备用负责人" : "Backup owner", group: zh ? "日常" : "Daily" }
+            ]}
+          />
+        ),
+        code: code([
+          "<Select",
+          "  multiple",
+          "  clearable",
+          "  filterable",
+          "  options={ownerOptions}",
+          "  value={owners}",
+          "  onValueChange={setOwners}",
+          "/>"
+        ])
+      },
+      {
+        id: "groups",
+        title: zh ? "分组选项" : "Grouped options",
+        description: zh ? "用 group 字段把选项按业务上下文分层。" : "Use group to organize options by product context.",
+        preview: <Select options={[{ value: "daily", label: zh ? "日常路线" : "Daily routes", group: zh ? "运营" : "Ops" }, { value: "event", label: zh ? "活动路线" : "Campaign routes", group: zh ? "活动" : "Campaign" }]} placeholder={zh ? "选择场景" : "Choose scenario"} />,
+        code: code(['<Select options={[{ value: "daily", label: "日常路线", group: "运营" }]} />'])
+      },
+      {
+        id: "remote",
+        title: zh ? "远程搜索事件" : "Remote search event",
+        description: zh ? "remoteMethod 接收查询词，业务层可以接远程接口。" : "remoteMethod receives the query so the product can call a remote source.",
+        preview: <Select filterable remoteMethod={() => undefined} options={[{ value: "cedar", label: zh ? "雪松" : "Cedar" }]} placeholder={zh ? "输入关键字" : "Type keyword"} />,
+        code: code(['<Select filterable remoteMethod={fetchOptions} options={options} />'])
+      }
+    ];
+  }
+
+  function renderCascaderExamples(): DocExample[] {
+    return [
+      {
+        id: "multiple-routes",
+        title: zh ? "多路线选择" : "Multiple route selection",
+        description: zh ? "multiple 模式返回完整路径数组，适合一个任务绑定多条路线。" : "multiple mode returns full path arrays for tasks bound to several routes.",
+        preview: (
+          <Cascader
+            multiple
+            clearable
+            filterable
+            options={routeOptions}
+            placeholder={zh ? "选择多条路线" : "Choose routes"}
+            value={cascaderMultiValue}
+            onValueChange={(value) => setCascaderMultiValue(value as CascaderMultipleValue)}
+          />
+        ),
+        code: code([
+          "const [routes, setRoutes] = React.useState<CascaderMultipleValue>([]);",
+          "",
+          "<Cascader",
+          "  multiple",
+          "  clearable",
+          "  filterable",
+          "  options={routeOptions}",
+          "  value={routes}",
+          "  onValueChange={(value) => setRoutes(value as CascaderMultipleValue)}",
+          "/>"
+        ])
+      },
+      {
+        id: "single",
+        title: zh ? "单路线选择" : "Single route selection",
+        description: zh ? "单选模式保持 string[] 路径值，适合地址或组织层级。" : "Single mode keeps a string[] path for address or organization hierarchy.",
+        preview: <Cascader clearable options={routeOptions} value={cascaderValue} onValueChange={(value) => setCascaderValue(value as string[])} />,
+        code: code(['<Cascader options={routeOptions} value={route} onValueChange={setRoute} />'])
+      },
+      {
+        id: "filter",
+        title: zh ? "筛选路径" : "Filter paths",
+        description: zh ? "filterable 让深层路径可以直接搜索。" : "filterable lets users search deep paths directly.",
+        preview: <Cascader filterable options={routeOptions} placeholder={zh ? "搜索路线" : "Search routes"} />,
+        code: code(['<Cascader filterable options={routeOptions} />'])
+      }
+    ];
+  }
+
+  function renderTreeSelectExamples(): DocExample[] {
+    return [
+      {
+        id: "multiple",
+        title: zh ? "树形多选" : "Tree multiple selection",
+        description: zh ? "多选树适合权限范围、组织范围和分类筛选。" : "Tree multiple selection fits scopes, organization ranges, and category filters.",
+        preview: (
+          <TreeSelect
+            multiple
+            clearable
+            filterable
+            data={routeTreeData}
+            defaultExpanded={["routes"]}
+            value={treeSelectWorkbenchValue}
+            onValueChange={setTreeSelectWorkbenchValue}
+            placeholder={zh ? "选择范围" : "Choose scope"}
+          />
+        ),
+        code: code([
+          "<TreeSelect",
+          "  multiple",
+          "  clearable",
+          "  filterable",
+          "  data={treeData}",
+          "  value={scope}",
+          "  onValueChange={setScope}",
+          "/>"
+        ])
+      },
+      {
+        id: "custom-node",
+        title: zh ? "自定义节点" : "Custom node",
+        description: zh ? "renderNode 可在节点中加入数量、状态或图标。" : "renderNode can add counts, status, or icons inside nodes.",
+        preview: <TreeSelect data={routeTreeData} renderNode={(node) => <span>{node.label} · {zh ? "可见" : "Visible"}</span>} />,
+        code: code(["<TreeSelect data={treeData} renderNode={(node) => <span>{node.label}</span>} />"])
+      }
+    ];
+  }
+
+  function renderTreeExamples(): DocExample[] {
+    return [
+      {
+        id: "check-expand",
+        title: zh ? "勾选与展开" : "Check and expand",
+        description: zh ? "受控 checkedKeys 和 expandedKeys 让树形控件适合设置页。" : "Controlled checkedKeys and expandedKeys make Tree useful in settings pages.",
+        preview: (
+          <Tree
+            checkable
+            items={routeTreeData}
+            expandedKeys={treeWorkbenchExpandedKeys}
+            checkedKeys={treeWorkbenchCheckedKeys}
+            onExpandChange={setTreeWorkbenchExpandedKeys}
+            onCheckChange={setTreeWorkbenchCheckedKeys}
+          />
+        ),
+        code: code([
+          "<Tree",
+          "  checkable",
+          "  items={treeData}",
+          "  expandedKeys={expandedKeys}",
+          "  checkedKeys={checkedKeys}",
+          "  onExpandChange={setExpandedKeys}",
+          "  onCheckChange={setCheckedKeys}",
+          "/>"
+        ])
+      },
+      {
+        id: "lazy",
+        title: zh ? "节点事件" : "Node events",
+        description: zh ? "点击、选择、展开事件适合驱动右侧详情面板。" : "Click, select, and expand events can drive a side detail panel.",
+        preview: <Tree items={routeTreeData} defaultExpanded={["routes"]} onNodeClick={() => undefined} />,
+        code: code(["<Tree items={treeData} defaultExpanded={['routes']} onNodeClick={openDetail} />"])
+      }
+    ];
+  }
+
+  function renderDateRangeExamples(): DocExample[] {
+    return [
+      {
+        id: "scheduling-shortcuts",
+        title: zh ? "排期快捷预设" : "Scheduling shortcuts",
+        description: zh ? "用 helper 生成今天、最近 7 天、本周等业务排期快捷项。" : "Use helpers to generate today, last 7 days, this week, and other scheduling shortcuts.",
+        preview: (
+          <Space direction="vertical">
+            <DateRangePickerPanel value={dateRangeValue} onValueChange={setDateRangeValue} shortcuts={dateRangePresets} />
+            <Tag>{formatPinepostDateRange(dateRangeValue, { fallback: zh ? "未选择" : "Open", locale })}</Tag>
+          </Space>
+        ),
+        code: code([
+          "const shortcuts = createPinepostDateRangePresets({ locale: 'zh-CN' });",
+          "<DateRangePickerPanel value={range} onValueChange={setRange} shortcuts={shortcuts} />"
+        ])
+      },
+      {
+        id: "disabled",
+        title: zh ? "限制日期" : "Disabled dates",
+        description: zh ? "disabledDate 可以屏蔽不可排期的日期。" : "disabledDate blocks dates that cannot be scheduled.",
+        preview: <DateRangePickerPanel disabledDate={(date) => date < new Date(2026, 4, 1)} />,
+        code: code(["<DateRangePickerPanel disabledDate={(date) => date < minDate} />"])
+      }
+    ];
+  }
+
+  function renderTimeRangeExamples(): DocExample[] {
+    return [
+      {
+        id: "common-ranges",
+        title: zh ? "常用时间段" : "Common time ranges",
+        description: zh ? "上午、下午、全天等预设可以直接写入预约窗口。" : "Morning, afternoon, and all-day presets can write directly to appointment windows.",
+        preview: (
+          <Space direction="vertical">
+            <TimeRangePickerPanel
+              value={timeRangeValue}
+              onValueChange={setTimeRangeValue}
+              start="09:00"
+              end="18:00"
+              step="00:30"
+              shortcuts={timeRangePresets}
+            />
+            <Tag>{formatPinepostTimeRange(timeRangeValue, { fallback: zh ? "未定" : "Open", locale })}</Tag>
+          </Space>
+        ),
+        code: code([
+          "const shortcuts = createPinepostTimeRangePresets({ locale: 'zh-CN' });",
+          '<TimeRangePickerPanel start="09:00" end="18:00" step="00:30" shortcuts={shortcuts} />'
+        ])
+      },
+      {
+        id: "step",
+        title: zh ? "步长控制" : "Step control",
+        description: zh ? "start、end 和 step 控制可选时间粒度。" : "start, end, and step control selectable time granularity.",
+        preview: <TimeRangePickerPanel start="08:00" end="12:00" step="01:00" />,
+        code: code(['<TimeRangePickerPanel start="08:00" end="12:00" step="01:00" />'])
+      }
+    ];
   }
 
   function renderSelectWorkbench() {
@@ -2103,7 +2842,7 @@ function App() {
         title={zh ? "Cascader API 演示台" : "Cascader API workbench"}
         labels={labels}
         events={cascaderWorkbenchEvents}
-        status={zh ? `已选择 ${cascaderMultiValue.length} 条路线。` : `${cascaderMultiValue.length} routes selected.`}
+        status={zh ? `已选择 ${cascaderWorkbenchValue.length} 条路线。` : `${cascaderWorkbenchValue.length} routes selected.`}
         description={zh ? "一个多路线派发器演示 multiple、filterable、clearable、showAllLevels、onExpandChange 和 ref methods。" : "One route dispatcher covers multiple, filterable, clearable, showAllLevels, onExpandChange, and ref methods."}
         preview={(
           <Cascader
@@ -2113,11 +2852,11 @@ function App() {
             filterable
             options={routeOptions}
             placeholder={zh ? "选择多条路线" : "Choose routes"}
-            value={cascaderMultiValue}
+            value={cascaderWorkbenchValue}
             onExpandChange={(value) => pushDemoEvent(setCascaderWorkbenchEvents, zh ? `onExpandChange: ${value.join("/")}` : `onExpandChange: ${value.join("/")}`)}
             onVisibleChange={(open) => pushDemoEvent(setCascaderWorkbenchEvents, zh ? `onVisibleChange: ${open ? "打开" : "关闭"}` : `onVisibleChange: ${open ? "open" : "closed"}`)}
             onValueChange={(value) => {
-              setCascaderMultiValue(value as CascaderMultipleValue);
+              setCascaderWorkbenchValue(value as CascaderMultipleValue);
               pushDemoEvent(setCascaderWorkbenchEvents, zh ? "onValueChange: 多路线已更新" : "onValueChange: routes updated");
             }}
           />
@@ -2461,7 +3200,8 @@ function App() {
       description: zh
         ? "可访问的下拉选择器，支持键盘选择、点外关闭、筛选和远程数据。"
         : "Accessible dropdown selection with keyboard control, outside-dismiss, filtering, and remote data.",
-      workbench: renderSelectWorkbench(),
+      examples: renderSelectExamples(),
+      playground: renderSelectWorkbench(),
       preview: (
         <Select
           aria-label={zh ? "路线桌" : "Route desk"}
@@ -2568,7 +3308,8 @@ function App() {
       group: labels.groups.form,
       title: zh ? "Form 表单" : "Form",
       description: zh ? "Form 与 FormField 提供标签、说明、校验错误、触发时机和异步提交状态。" : "Form and FormField provide labels, hints, errors, validation triggers, and async submit state.",
-      workbench: renderFormWorkbench(),
+      examples: renderFormExamples(),
+      playground: renderFormWorkbench(),
       preview: (
         <Form
           model={formPreviewModel}
@@ -2686,7 +3427,8 @@ function App() {
       group: labels.groups.form,
       title: zh ? "Upload 上传" : "Upload",
       description: zh ? "支持受控队列、拖拽、数量限制、生命周期事件和手动提交。" : "Supports controlled queues, drag upload, limits, lifecycle events, and manual submit.",
-      workbench: renderUploadWorkbench(),
+      examples: renderUploadExamples(),
+      playground: renderUploadWorkbench(),
       preview: (
         <div className="docs-upload-preview">
           <Upload
@@ -2822,7 +3564,8 @@ function App() {
       title: zh ? "Cascader 级联选择" : "Cascader",
       description: zh ? "多层路线选择器，支持筛选、清空、懒加载、自定义节点、键盘导航、展开事件和方法调用。" : "Layered route selection with filtering, clear action, lazy loading, custom nodes, keyboard navigation, expand events, and methods.",
       searchText: "multi cascader multiple 多选 多路线 selection route",
-      workbench: renderCascaderWorkbench(),
+      examples: renderCascaderExamples(),
+      playground: renderCascaderWorkbench(),
       preview: (
         <Cascader
           clearable
@@ -2959,7 +3702,8 @@ function App() {
       group: labels.groups.form,
       title: zh ? "TreeSelect 树形选择" : "TreeSelect",
       description: zh ? "树结构选择器，支持单选、多选、筛选、懒加载、自定义节点和节点点击事件。" : "Tree selector with single or multiple selection, filtering, lazy loading, custom nodes, and node events.",
-      workbench: renderTreeSelectWorkbench(),
+      examples: renderTreeSelectExamples(),
+      playground: renderTreeSelectWorkbench(),
       preview: (
         <TreeSelect
           clearable
@@ -3313,7 +4057,8 @@ function App() {
       title: zh ? "Table 表格" : "Table",
       description: zh ? "数据表格支持列组、固定列、排序、筛选、选择、展开行、汇总行和内联编辑。" : "Data table with column groups, fixed columns, sorting, filtering, selection, row expansion, summaries, and inline editing.",
       searchText: "table preset view preset 视图预设 release notes release draft preset workflow",
-      workbench: renderTableWorkbench(),
+      examples: renderTableExamples(),
+      playground: renderTableWorkbench(),
       preview: (
         <Table
           rowKey="id"
@@ -3651,7 +4396,8 @@ function App() {
       group: labels.groups.display,
       title: zh ? "Tree 树形控件" : "Tree",
       description: zh ? "用于路线、目录和分组层级，支持选择、勾选、过滤和懒加载节点。" : "A tree for routes, folders, and grouped hierarchy with selection, checking, filtering, and lazy nodes.",
-      workbench: renderTreeWorkbench(),
+      examples: renderTreeExamples(),
+      playground: renderTreeWorkbench(),
       preview: (
         <Tree
           lazy
@@ -4513,7 +5259,8 @@ function App() {
       title: zh ? "DateRangePickerPanel 日期范围面板" : "DateRangePickerPanel",
       description: zh ? "选择开始和结束日期，适合排班、活动和报表范围。" : "Selects start and end dates for schedules, campaigns, and report ranges.",
       searchText: "preset scheduling 排期 快捷预设 date range shortcuts",
-      workbench: renderDateRangeWorkbench(),
+      examples: renderDateRangeExamples(),
+      playground: renderDateRangeWorkbench(),
       preview: (
         <Space direction="vertical">
           <DateRangePickerPanel
@@ -4615,7 +5362,8 @@ function App() {
       title: zh ? "TimeRangePickerPanel 时间范围面板" : "TimeRangePickerPanel",
       description: zh ? "并排选择开始和结束时间，适合配送窗口和预约时段。" : "Paired start and end time panels for delivery windows and appointments.",
       searchText: "preset scheduling 排期 快捷预设 time range shortcuts",
-      workbench: renderTimeRangeWorkbench(),
+      examples: renderTimeRangeExamples(),
+      playground: renderTimeRangeWorkbench(),
       preview: (
         <Space direction="vertical">
           <TimeRangePickerPanel
@@ -5011,8 +5759,8 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme collections, Recipe Gallery state recipes, Form/Table API workbenches</span><Tag variant="parcel">Beta</Tag><span>Recipe Bundles, Table presets, Cascader multi-select, Date/time presets, Upload and selection workbenches, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "剩余组件演示台、深层选择无障碍、发布检查自动化" : "Remaining component workbenches, deep selection accessibility, release checklist automation"}</span></div>,
-      code: code(["Stable: production-ready basics, theme collections, stateful recipes, and core API workbenches", "Beta: recipe bundles, table presets, multi-route selection, scheduling presets, and visual checks", "Planned: remaining workbenches and future refinements"]),
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme collections, Recipe Gallery state recipes, segmented Form/Table demos</span><Tag variant="parcel">Beta</Tag><span>Recipe Bundles, Table presets, Cascader multi-select, Date/time presets, Upload and selection playgrounds, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "更多分段示例、深层选择无障碍、发布检查自动化" : "More segmented examples, deep selection accessibility, release checklist automation"}</span></div>,
+      code: code(["Stable: production-ready basics, theme collections, stateful recipes, and segmented core demos", "Beta: recipe bundles, table presets, multi-route selection, scheduling presets, and visual checks", "Planned: more segmented examples and future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },
         { prop: "Beta", type: "status", defaultValue: "-", description: zh ? "API 已可用，继续打磨边界。" : "Usable API with active refinement." },

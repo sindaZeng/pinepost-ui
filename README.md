@@ -121,9 +121,14 @@ The v0.19 expansion hardens the docs catalog with isolated API workbenches for
 commercial workflows, including realistic Form submit states, Table filtering,
 Upload lifecycle actions, selection flows, trees, and scheduling panels.
 
+The v0.20 expansion rebuilds the demo catalog around segmented examples,
+example navigation, copyable code, API tables, and advanced playgrounds. Table,
+Form, Upload, Select, Cascader, TreeSelect, Tree, and date/time panels now show
+separate product scenarios instead of one crowded combined demo.
+
 The demo site is also the component catalog: each documented component includes
-a live preview, usage example, API workbench where useful, copyable recipes, and
-API table.
+a live preview, segmented usage examples, an advanced playground where useful,
+copyable recipes, and an API table.
 
 ## Originality
 

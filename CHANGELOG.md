@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.20.0
+
+- Added a rebuilt demo catalog with segmented examples, example navigation, copyable code, API tables, and advanced playground sections.
+- Split Table documentation into focused examples for basics, filtering, sorting, selection, expansion, summaries, column settings, views, and boundary states.
+- Converted high-frequency Form, Upload, Select, Cascader, TreeSelect, Tree, DateRangePickerPanel, and TimeRangePickerPanel demos into isolated product scenarios.
+- Reduced visual noise in complex demo surfaces and expanded Playwright coverage for segmented examples, copy controls, and isolated feedback.
+
 ## 0.19.0
 
 - Reworked high-frequency docs previews into isolated API workbenches with local status, methods, event logs, and copyable code.

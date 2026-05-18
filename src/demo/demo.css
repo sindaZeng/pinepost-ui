@@ -303,6 +303,60 @@ body {
   overflow: hidden;
 }
 
+.docs-examples {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+
+.docs-example-nav {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+  min-width: 0;
+}
+
+.docs-example-nav a {
+  background: color-mix(in srgb, var(--pinepost-paper-raised) 88%, white);
+  border: 1px solid color-mix(in srgb, var(--pinepost-border) 76%, transparent);
+  border-radius: var(--pinepost-radius-sm);
+  color: var(--pinepost-ink);
+  font-size: 0.8rem;
+  font-weight: 900;
+  line-height: 1.2;
+  padding: 7px 10px;
+  text-decoration: none;
+}
+
+.docs-example-nav a:hover {
+  background: color-mix(in srgb, var(--pinepost-moss) 42%, var(--pinepost-paper-raised));
+}
+
+.docs-example__head,
+.docs-playground__head {
+  border-bottom: 1px solid color-mix(in srgb, var(--pinepost-border) 42%, transparent);
+  display: grid;
+  gap: 5px;
+  padding: 16px 22px 14px;
+}
+
+.docs-example__head strong,
+.docs-playground__head strong {
+  color: var(--pinepost-ink);
+  font-size: 1.02rem;
+  line-height: 1.25;
+}
+
+.docs-example__head p,
+.docs-playground__head p {
+  color: var(--pinepost-muted);
+  line-height: 1.55;
+  margin: 0;
+  max-width: 820px;
+}
+
 .docs-example__preview {
   display: grid;
   gap: 14px;
@@ -328,14 +382,25 @@ body {
 
 .docs-preview-surface {
   background:
-    repeating-linear-gradient(0deg, rgba(140, 113, 71, 0.06) 0 1px, transparent 1px 28px),
-    color-mix(in srgb, var(--pinepost-paper-raised) 90%, white);
-  border: 1px dashed color-mix(in srgb, var(--pinepost-border) 74%, transparent);
-  border-radius: var(--pinepost-radius-md);
+    repeating-linear-gradient(0deg, rgba(140, 113, 71, 0.035) 0 1px, transparent 1px 30px),
+    color-mix(in srgb, var(--pinepost-paper-raised) 96%, white);
+  border: 1px solid color-mix(in srgb, var(--pinepost-border) 46%, transparent);
+  border-radius: var(--pinepost-radius-sm);
   min-height: 112px;
   min-width: 0;
   overflow: auto;
   padding: 20px;
+}
+
+.docs-playground {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+  min-width: 0;
+}
+
+.docs-playground > .docs-workbench {
+  box-shadow: none;
 }
 
 .docs-code {
@@ -495,7 +560,32 @@ body {
   gap: 8px;
 }
 
+.docs-product-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.docs-example-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.docs-state-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+}
+
 .docs-workbench .pinepost-form-field {
+  align-content: start;
+  min-height: 92px;
+}
+
+.docs-example .pinepost-form-field {
   align-content: start;
   min-height: 92px;
 }
@@ -1173,6 +1263,7 @@ body {
   .docs-topbar,
   .docs-guide-grid,
   .docs-theme-studio__layout,
+  .docs-state-grid,
   .docs-workbench__grid {
     grid-template-columns: 1fr;
   }
