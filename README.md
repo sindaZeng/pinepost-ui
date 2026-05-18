@@ -117,8 +117,13 @@ helpers for date, date range, and time range workflows.
 The v0.18 expansion adds portable Recipe Bundle helpers that combine theme
 collections, table view presets, scheduling keys, and recipe references.
 
+The v0.19 expansion hardens the docs catalog with isolated API workbenches for
+commercial workflows, including realistic Form submit states, Table filtering,
+Upload lifecycle actions, selection flows, trees, and scheduling panels.
+
 The demo site is also the component catalog: each documented component includes
-a live preview, usage example, copyable recipes, and API table.
+a live preview, usage example, API workbench where useful, copyable recipes, and
+API table.
 
 ## Originality
 

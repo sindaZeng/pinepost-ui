@@ -165,7 +165,13 @@ import {
   type PinepostThemeValidationIssue,
   type PinepostRecipeBundleValidationIssue,
   type CascaderMultipleValue,
+  type CascaderRef,
+  type FormRef,
+  type SelectRef,
   type TableColumnSettingsValue,
+  type TableRef,
+  type TreeRef,
+  type TreeSelectRef,
   type UploadRef
 } from "../index";
 import "../styles.css";
@@ -201,6 +207,7 @@ type DocItem = {
   recipes?: DocRecipe[];
   searchText?: string;
   title: string;
+  workbench?: React.ReactNode;
 };
 
 type NavGroup = {
@@ -209,6 +216,14 @@ type NavGroup = {
 };
 
 type GuidePanelId = "install" | "recipes" | "theme" | "theme-studio";
+
+type DemoRouteRow = {
+  count: number;
+  desk: string;
+  id: string;
+  route: string;
+  status: string;
+};
 
 const themeOrder: PinepostTheme[] = ["calm", "play", "shop"];
 const localeOrder: PinepostLocale[] = ["zh-CN", "en"];
@@ -402,6 +417,85 @@ function CodeBlock({ codeText, label, labels }: { codeText: string; label: strin
   );
 }
 
+function pushDemoEvent(setter: React.Dispatch<React.SetStateAction<string[]>>, message: string) {
+  setter((current) => [message, ...current].slice(0, 5));
+}
+
+function DemoEventLog({ empty, events, title }: { empty: string; events: string[]; title: string }) {
+  return (
+    <div className="docs-workbench__log" aria-label={title}>
+      <strong>{title}</strong>
+      {events.length > 0 ? (
+        <ol>
+          {events.map((event, index) => (
+            <li key={`${event}-${index}`}>{event}</li>
+          ))}
+        </ol>
+      ) : (
+        <p>{empty}</p>
+      )}
+    </div>
+  );
+}
+
+function DemoWorkbench({
+  codeText,
+  controls,
+  description,
+  events,
+  labels,
+  methods,
+  preview,
+  status,
+  title
+}: {
+  codeText: string;
+  controls?: React.ReactNode;
+  description?: React.ReactNode;
+  events: string[];
+  labels: (typeof copy)["zh-CN"];
+  methods?: React.ReactNode;
+  preview: React.ReactNode;
+  status?: React.ReactNode;
+  title: string;
+}) {
+  const zh = labels.language === "语言";
+
+  return (
+    <section className="docs-workbench" aria-label={title}>
+      <div className="docs-workbench__head">
+        <div>
+          <strong>{title}</strong>
+          {description && <p>{description}</p>}
+        </div>
+        {status && <div className="docs-workbench__status" role="status">{status}</div>}
+      </div>
+      <div className="docs-workbench__grid">
+        <div className="docs-workbench__preview">
+          <div className="docs-example__label">{labels.preview}</div>
+          <div className="docs-preview-surface">{preview}</div>
+        </div>
+        <div className="docs-workbench__side">
+          {controls && (
+            <div className="docs-workbench__panel">
+              <strong>{zh ? "API 控件" : "API controls"}</strong>
+              {controls}
+            </div>
+          )}
+          {methods && (
+            <div className="docs-workbench__panel">
+              <strong>{labels.methods}</strong>
+              {methods}
+            </div>
+          )}
+          <DemoEventLog events={events} title={zh ? "事件日志" : "Event log"} empty={zh ? "等待交互。" : "Waiting for interaction."} />
+        </div>
+      </div>
+      <CodeBlock codeText={codeText} label={labels.usage} labels={labels} />
+    </section>
+  );
+}
+
 function ApiTable({ item, labels }: { item: DocItem; labels: (typeof copy)["zh-CN"] }) {
   const sections = item.apiSections ?? [{ rows: item.api, title: labels.attributes }];
 
@@ -446,27 +540,33 @@ function DocSection({ item, labels }: { item: DocItem; labels: (typeof copy)["zh
         <h2>{item.title}</h2>
         <p>{item.description}</p>
       </div>
-      <div className="docs-example">
-        <div className="docs-example__preview">
-          <div className="docs-example__label">{labels.preview}</div>
-          <div className="docs-preview-surface">{item.preview}</div>
-        </div>
-        <CodeBlock codeText={item.code} label={labels.usage} labels={labels} />
-      </div>
-      {item.recipes && item.recipes.length > 0 && (
-        <div className="docs-recipes" aria-label={`${item.title} ${labels.recipes}`}>
-          <h3>{labels.recipes}</h3>
-          {item.recipes.map((recipe) => (
-            <div className="docs-recipe" key={recipe.title}>
-              <div className="docs-recipe__head">
-                <strong>{recipe.title}</strong>
-                {recipe.description && <p>{recipe.description}</p>}
-              </div>
-              {recipe.preview && <div className="docs-preview-surface">{recipe.preview}</div>}
-              <CodeBlock codeText={recipe.code} label={recipe.title} labels={labels} />
+      {item.workbench ? (
+        item.workbench
+      ) : (
+        <>
+          <div className="docs-example">
+            <div className="docs-example__preview">
+              <div className="docs-example__label">{labels.preview}</div>
+              <div className="docs-preview-surface">{item.preview}</div>
             </div>
-          ))}
-        </div>
+            <CodeBlock codeText={item.code} label={labels.usage} labels={labels} />
+          </div>
+          {item.recipes && item.recipes.length > 0 && (
+            <div className="docs-recipes" aria-label={`${item.title} ${labels.recipes}`}>
+              <h3>{labels.recipes}</h3>
+              {item.recipes.map((recipe) => (
+                <div className="docs-recipe" key={recipe.title}>
+                  <div className="docs-recipe__head">
+                    <strong>{recipe.title}</strong>
+                    {recipe.description && <p>{recipe.description}</p>}
+                  </div>
+                  {recipe.preview && <div className="docs-preview-surface">{recipe.preview}</div>}
+                  <CodeBlock codeText={recipe.code} label={recipe.title} labels={labels} />
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
       <ApiTable item={item} labels={labels} />
     </section>
@@ -1408,8 +1508,37 @@ function App() {
   const [messageBoxOpen, setMessageBoxOpen] = React.useState(false);
   const [toastOpen, setToastOpen] = React.useState(false);
   const [formPreviewModel, setFormPreviewModel] = React.useState({ desk: "cedar" });
+  const formWorkbenchRef = React.useRef<FormRef>(null);
+  const formRouteInputRef = React.useRef<HTMLInputElement>(null);
+  const [formWorkbenchModel, setFormWorkbenchModel] = React.useState({ owner: "", route: "" });
+  const [formSubmitMode, setFormSubmitMode] = React.useState<"success" | "server-error">("success");
+  const [formWorkbenchStatus, setFormWorkbenchStatus] = React.useState("");
+  const [formWorkbenchEvents, setFormWorkbenchEvents] = React.useState<string[]>([]);
+  const [formFocusRequest, setFormFocusRequest] = React.useState(0);
+  const selectWorkbenchRef = React.useRef<SelectRef>(null);
+  const [selectWorkbenchValue, setSelectWorkbenchValue] = React.useState<string | string[]>(["north"]);
+  const [selectWorkbenchEvents, setSelectWorkbenchEvents] = React.useState<string[]>([]);
+  const cascaderWorkbenchRef = React.useRef<CascaderRef>(null);
+  const [cascaderWorkbenchEvents, setCascaderWorkbenchEvents] = React.useState<string[]>([]);
+  const treeSelectWorkbenchRef = React.useRef<TreeSelectRef>(null);
+  const [treeSelectWorkbenchValue, setTreeSelectWorkbenchValue] = React.useState<string | string[]>(["dispatch"]);
+  const [treeSelectWorkbenchEvents, setTreeSelectWorkbenchEvents] = React.useState<string[]>([]);
+  const treeWorkbenchRef = React.useRef<TreeRef>(null);
+  const [treeWorkbenchCheckedKeys, setTreeWorkbenchCheckedKeys] = React.useState(["cedar"]);
+  const [treeWorkbenchExpandedKeys, setTreeWorkbenchExpandedKeys] = React.useState(["routes"]);
+  const [treeWorkbenchEvents, setTreeWorkbenchEvents] = React.useState<string[]>([]);
   const uploadRef = React.useRef<UploadRef>(null);
   const [uploadPreviewStatus, setUploadPreviewStatus] = React.useState("");
+  const [uploadWorkbenchEvents, setUploadWorkbenchEvents] = React.useState<string[]>([]);
+  const tableRef = React.useRef<TableRef<DemoRouteRow>>(null);
+  const [tableQuery, setTableQuery] = React.useState("");
+  const [tableReadyFilter, setTableReadyFilter] = React.useState(true);
+  const [tableActiveView, setTableActiveView] = React.useState("full");
+  const [tableSelectedCount, setTableSelectedCount] = React.useState(0);
+  const [tableWorkbenchStatus, setTableWorkbenchStatus] = React.useState("");
+  const [tableWorkbenchEvents, setTableWorkbenchEvents] = React.useState<string[]>([]);
+  const [dateRangeWorkbenchEvents, setDateRangeWorkbenchEvents] = React.useState<string[]>([]);
+  const [timeRangeWorkbenchEvents, setTimeRangeWorkbenchEvents] = React.useState<string[]>([]);
   const [tableSettings, setTableSettings] = React.useState<TableColumnSettingsValue>({
     columnOrder: ["route", "count", "status"],
     density: "compact",
@@ -1452,6 +1581,12 @@ function App() {
     setToastOpen(false);
     window.setTimeout(() => setToastOpen(true), 70);
   }
+
+  React.useEffect(() => {
+    if (formFocusRequest === 0) return;
+    const id = window.setTimeout(() => formRouteInputRef.current?.focus({ preventScroll: true }), 0);
+    return () => window.clearTimeout(id);
+  }, [formFocusRequest]);
 
   const routeOptions = [
     {
@@ -1504,6 +1639,746 @@ function App() {
       }))
     }
   ];
+
+  const tableRows: DemoRouteRow[] = [
+    { id: "a7", desk: zh ? "雪松" : "Cedar", route: "A7", status: zh ? "就绪" : "Ready", count: 8 },
+    { id: "b2", desk: zh ? "苔藓" : "Moss", route: "B2", status: zh ? "复核" : "Review", count: 3 },
+    { id: "c4", desk: zh ? "河岸" : "River", route: "C4", status: zh ? "就绪" : "Ready", count: 5 }
+  ];
+  const filteredTableRows = tableRows.filter((row) => {
+    const queryMatch = tableQuery ? `${row.desk} ${row.route} ${row.status}`.toLowerCase().includes(tableQuery.toLowerCase()) : true;
+    const statusMatch = tableReadyFilter ? row.status === (zh ? "就绪" : "Ready") : true;
+    return queryMatch && statusMatch;
+  });
+  const tableFilterTags = tableReadyFilter ? [{ key: "status", label: zh ? "状态：就绪" : "Status: Ready" }] : [];
+  const routeTreeData = [
+    {
+      value: "routes",
+      label: zh ? "路线分组" : "Route group",
+      children: [
+        { value: "cedar", label: zh ? "雪松桌" : "Cedar desk" },
+        { value: "moss", label: zh ? "苔藓桌" : "Moss desk" },
+        { value: "dispatch", label: zh ? "调度组" : "Dispatch team" }
+      ]
+    }
+  ];
+
+  function resetFormWorkbench() {
+    setFormWorkbenchModel({ owner: "", route: "" });
+    formWorkbenchRef.current?.clearValidate();
+    setFormWorkbenchStatus(zh ? "表单已重置。" : "Form reset.");
+    pushDemoEvent(setFormWorkbenchEvents, zh ? "methods.resetFields + 本地模型重置" : "methods.resetFields + local model reset");
+  }
+
+  function renderFormWorkbench() {
+    return (
+      <DemoWorkbench
+        title={zh ? "Form API 演示台" : "Form API workbench"}
+        labels={labels}
+        events={formWorkbenchEvents}
+        status={formWorkbenchStatus || (zh ? "等待提交。" : "Waiting for submit.")}
+        description={zh ? "同一个业务表单里演示 model、rules、validateTrigger、异步提交、错误聚焦和 ref methods。" : "One product form covers model, rules, validate triggers, async submit, error focus, and ref methods."}
+        preview={(
+          <Form
+            ref={formWorkbenchRef}
+            model={formWorkbenchModel}
+            rules={{
+              route: [{ required: true, message: zh ? "请填写路线。" : "Route is required." }],
+              owner: [{ required: true, message: zh ? "请填写负责人。" : "Owner is required." }]
+            }}
+            submitErrorMessage={zh ? "服务端拒绝保存，请检查路线窗口。" : "Server rejected the save. Check the route window."}
+            submittingMessage={zh ? "正在保存配置..." : "Saving configuration..."}
+            validateTrigger={["blur", "submit"]}
+            onFinish={async () => {
+              pushDemoEvent(setFormWorkbenchEvents, zh ? "onFinish: 校验通过，开始提交" : "onFinish: valid, submitting");
+              setFormWorkbenchStatus(zh ? "正在提交..." : "Submitting...");
+              await new Promise((resolve) => window.setTimeout(resolve, 80));
+              if (formSubmitMode === "server-error") {
+                setFormWorkbenchStatus(zh ? "服务端拒绝保存。" : "Server rejected the save.");
+                throw new Error("Server rejected");
+              }
+              setFormWorkbenchStatus(zh ? "保存成功。" : "Saved successfully.");
+              pushDemoEvent(setFormWorkbenchEvents, zh ? "onFinish: 保存成功" : "onFinish: saved successfully");
+            }}
+            onFinishFailed={() => {
+              setFormWorkbenchStatus(zh ? "请先修正表单错误。" : "Fix validation errors first.");
+              pushDemoEvent(setFormWorkbenchEvents, zh ? "onFinishFailed: 已聚焦第一个错误字段" : "onFinishFailed: focused first invalid field");
+              formRouteInputRef.current?.focus({ preventScroll: true });
+              formWorkbenchRef.current?.scrollToField("route");
+              setFormFocusRequest((current) => current + 1);
+              window.requestAnimationFrame(() => formRouteInputRef.current?.focus({ preventScroll: true }));
+              window.setTimeout(() => formRouteInputRef.current?.focus({ preventScroll: true }), 80);
+            }}
+          >
+            <FormField name="route" label={zh ? "路线" : "Route"} htmlFor="workbench-route" required validatingMessage={zh ? "检查路线窗口..." : "Checking route window..."}>
+              <Input
+                ref={formRouteInputRef}
+                id="workbench-route"
+                value={formWorkbenchModel.route}
+                onChange={(event) => {
+                  const { value } = event.currentTarget;
+                  setFormWorkbenchModel((current) => ({ ...current, route: value }));
+                }}
+                placeholder="A7"
+              />
+            </FormField>
+            <FormField name="owner" label={zh ? "负责人" : "Owner"} htmlFor="workbench-owner" required>
+              <Input
+                id="workbench-owner"
+                value={formWorkbenchModel.owner}
+                onChange={(event) => {
+                  const { value } = event.currentTarget;
+                  setFormWorkbenchModel((current) => ({ ...current, owner: value }));
+                }}
+                placeholder={zh ? "雪松" : "Cedar"}
+              />
+            </FormField>
+            <Button
+              type="submit"
+              onClick={(event) => {
+                if (formWorkbenchModel.route && formWorkbenchModel.owner) return;
+                event.preventDefault();
+                void formWorkbenchRef.current?.validate();
+                setFormWorkbenchStatus(zh ? "请先修正表单错误。" : "Fix validation errors first.");
+                pushDemoEvent(setFormWorkbenchEvents, zh ? "submit: 已聚焦第一个错误字段" : "submit: focused first invalid field");
+                setFormFocusRequest((current) => current + 1);
+              }}
+            >
+              {zh ? "提交保存" : "Submit save"}
+            </Button>
+          </Form>
+        )}
+        controls={(
+          <div className="docs-workbench__controls">
+            <span>{zh ? "提交结果" : "Submit result"}</span>
+            <Segmented
+              value={formSubmitMode}
+              onValueChange={(value) => {
+                setFormSubmitMode(value as "success" | "server-error");
+                setFormWorkbenchStatus(value === "server-error" ? (zh ? "下次提交会模拟服务端失败。" : "Next submit will simulate a server error.") : (zh ? "下次提交会成功。" : "Next submit will succeed."));
+              }}
+              options={[
+                { value: "success", label: zh ? "模拟成功" : "Simulate success" },
+                { value: "server-error", label: zh ? "模拟服务端失败" : "Simulate server error" }
+              ]}
+            />
+          </div>
+        )}
+        methods={(
+          <div className="docs-workbench__actions">
+            <Button size="sm" variant="soft" onClick={() => void formWorkbenchRef.current?.validateField("route").then((valid) => {
+              setFormWorkbenchStatus(valid ? (zh ? "路线字段有效。" : "Route field is valid.") : (zh ? "路线字段仍有错误。" : "Route field still has errors."));
+              pushDemoEvent(setFormWorkbenchEvents, zh ? "methods.validateField('route')" : "methods.validateField('route')");
+            })}>{zh ? "校验路线" : "Validate route"}</Button>
+            <Button size="sm" variant="soft" onClick={() => {
+              formWorkbenchRef.current?.clearValidate();
+              setFormWorkbenchStatus(zh ? "错误提示已清空。" : "Validation messages cleared.");
+              pushDemoEvent(setFormWorkbenchEvents, zh ? "methods.clearValidate" : "methods.clearValidate");
+            }}>{zh ? "清空校验" : "Clear validate"}</Button>
+            <Button size="sm" variant="parcel" onClick={resetFormWorkbench}>{zh ? "重置表单" : "Reset form"}</Button>
+          </div>
+        )}
+        codeText={code([
+          'import { Form, FormField, Input, Button, type FormRef } from "pinepost-ui";',
+          "",
+          "const formRef = React.useRef<FormRef>(null);",
+          "const [model, setModel] = React.useState({ route: '', owner: '' });",
+          "",
+          "<Form",
+          "  ref={formRef}",
+          "  model={model}",
+          "  rules={rules}",
+          "  validateTrigger={['blur', 'submit']}",
+          "  onFinish={saveRoute}",
+          "  onFinishFailed={() => formRef.current?.scrollToField('route')}",
+          ">",
+          "  <FormField name=\"route\" label=\"路线\" required>",
+          "    <Input value={model.route} onChange={(event) => setModel({ ...model, route: event.currentTarget.value })} />",
+          "  </FormField>",
+          "  <Button type=\"submit\">提交保存</Button>",
+          "</Form>"
+        ])}
+      />
+    );
+  }
+
+  function clearTableFilters() {
+    setTableReadyFilter(false);
+    setTableWorkbenchStatus(zh ? "筛选已清空。" : "Filters cleared.");
+    pushDemoEvent(setTableWorkbenchEvents, zh ? "onFilterClear: 清空筛选" : "onFilterClear: filters cleared");
+  }
+
+  function renderTableWorkbench() {
+    return (
+      <DemoWorkbench
+        title={zh ? "Table API 演示台" : "Table API workbench"}
+        labels={labels}
+        events={tableWorkbenchEvents}
+        status={tableWorkbenchStatus || (zh ? `已选择 ${tableSelectedCount} 行` : `${tableSelectedCount} selected`)}
+        description={zh ? "同一张业务表演示筛选、搜索、排序、选择、展开、编辑、视图预设、列设置和 ref methods。" : "One product table covers filters, search, sorting, selection, expansion, editing, view presets, column settings, and ref methods."}
+        preview={(
+          <div className="docs-field-grid">
+            <div className="docs-workbench__summary">
+              {tableFilterTags.map((tag) => <Tag key={tag.key}>{tag.label}</Tag>)}
+              <Tag variant="sky">{zh ? `结果 ${filteredTableRows.length}` : `${filteredTableRows.length} results`}</Tag>
+              <Tag variant="parcel">{tableActiveView === "review" ? (zh ? "复核视图" : "Review view") : (zh ? "完整视图" : "Full view")}</Tag>
+            </div>
+            <TableColumnSettings
+              columns={[
+                { key: "route", title: zh ? "路线" : "Route" },
+                { key: "count", title: zh ? "数量" : "Count" },
+                { key: "status", title: zh ? "状态" : "Status" }
+              ]}
+              value={tableSettings}
+              onValueChange={(value) => {
+                setTableSettings(value);
+                pushDemoEvent(setTableWorkbenchEvents, zh ? "TableColumnSettings: 设置已更新" : "TableColumnSettings: settings changed");
+              }}
+              storageKey="pinepost-demo-table-settings-v19"
+            />
+            <Table
+              ref={tableRef}
+              rowKey="id"
+              selectable
+              editable
+              density={tableSettings.density}
+              filterTags={tableFilterTags}
+              filters={{ status: tableReadyFilter ? (row) => row.status === (zh ? "就绪" : "Ready") : () => true }}
+              hiddenColumns={tableSettings.hiddenColumns}
+              columnOrder={tableSettings.columnOrder}
+              onFilterClear={clearTableFilters}
+              onSelectionChange={(rows) => {
+                setTableSelectedCount(rows.length);
+                pushDemoEvent(setTableWorkbenchEvents, zh ? `onSelectionChange: ${rows.length} 行` : `onSelectionChange: ${rows.length} rows`);
+              }}
+              onSortChange={(state) => pushDemoEvent(setTableWorkbenchEvents, state ? (zh ? `onSortChange: ${String(state.key)}` : `onSortChange: ${String(state.key)}`) : (zh ? "onSortChange: 已清空" : "onSortChange: cleared"))}
+              onCellEdit={(row, key, value) => {
+                setTableWorkbenchStatus(zh ? `${row.route} 的 ${String(key)} 已编辑。` : `${row.route} ${String(key)} edited.`);
+                pushDemoEvent(setTableWorkbenchEvents, zh ? "onCellEdit: 已提交编辑" : "onCellEdit: edit committed");
+              }}
+              onExpandChange={(keys) => pushDemoEvent(setTableWorkbenchEvents, zh ? `onExpandChange: ${keys.length} 个展开` : `onExpandChange: ${keys.length} expanded`)}
+              viewPreset={tableActiveView}
+              onViewPresetChange={(key) => {
+                setTableActiveView(key);
+                setTableWorkbenchStatus(zh ? "视图已切换。" : "View changed.");
+                pushDemoEvent(setTableWorkbenchEvents, zh ? `onViewPresetChange: ${key}` : `onViewPresetChange: ${key}`);
+              }}
+              viewPresetLabel={zh ? "视图" : "View"}
+              viewPresets={[
+                { key: "full", label: zh ? "完整" : "Full", columnWidths: { route: 140, count: 90 }, hiddenColumns: [] },
+                { key: "review", label: zh ? "复核" : "Review", columnOrder: ["status", "route", "count"], hiddenColumns: ["count"], sortState: { key: "count", order: "desc" } }
+              ]}
+              defaultExpandedRowKeys={["a7"]}
+              renderExpandedRow={(row) => <Text>{zh ? `${row.route} 今日优先投递。` : `${row.route} ships first today.`}</Text>}
+              summary={(rows) => ({ route: zh ? "合计" : "Total", count: rows.reduce((total, row) => total + row.count, 0) })}
+              columns={[
+                { key: "desk", title: zh ? "桌台" : "Desk", fixed: "left", width: 120 },
+                { key: "route", title: zh ? "路线" : "Route", editable: true, sortable: true, width: 120 },
+                { key: "count", title: zh ? "数量" : "Count", align: "right", sortable: true, width: 90 },
+                { key: "status", title: zh ? "状态" : "Status", fixed: "right", width: 120 }
+              ]}
+              data={filteredTableRows}
+            />
+          </div>
+        )}
+        controls={(
+          <div className="docs-workbench__controls">
+            <label>
+              {zh ? "搜索路线" : "Search routes"}
+              <Input value={tableQuery} onChange={(event) => setTableQuery(event.currentTarget.value)} placeholder="A7" inputSize="sm" />
+            </label>
+            <div className="docs-workbench__actions">
+              <Button size="sm" variant={tableReadyFilter ? "primary" : "soft"} onClick={() => {
+                setTableReadyFilter(true);
+                setTableWorkbenchStatus(zh ? "已启用就绪筛选。" : "Ready filter enabled.");
+                pushDemoEvent(setTableWorkbenchEvents, zh ? "filterTags: 状态就绪" : "filterTags: ready status");
+              }}>{zh ? "只看就绪" : "Ready only"}</Button>
+              <Button size="sm" variant="soft" onClick={clearTableFilters}>{zh ? "清空筛选" : "Clear filters"}</Button>
+            </div>
+          </div>
+        )}
+        methods={(
+          <div className="docs-workbench__actions">
+            <Button size="sm" variant="soft" onClick={() => {
+              tableRef.current?.sort("count", "desc");
+              setTableWorkbenchStatus(zh ? "已按数量降序。" : "Sorted by count descending.");
+              pushDemoEvent(setTableWorkbenchEvents, zh ? "methods.sort('count')" : "methods.sort('count')");
+            }}>{zh ? "按数量排序" : "Sort count"}</Button>
+            <Button size="sm" variant="soft" onClick={() => {
+              tableRef.current?.clearSelection();
+              setTableSelectedCount(0);
+              pushDemoEvent(setTableWorkbenchEvents, zh ? "methods.clearSelection" : "methods.clearSelection");
+            }}>{zh ? "清空选择" : "Clear selection"}</Button>
+            <Button size="sm" variant="parcel" onClick={() => {
+              tableRef.current?.setViewPreset("review");
+              setTableActiveView("review");
+              setTableWorkbenchStatus(zh ? "视图已切换。" : "View changed.");
+              pushDemoEvent(setTableWorkbenchEvents, zh ? "methods.setViewPreset('review')" : "methods.setViewPreset('review')");
+            }}>{zh ? "切换复核视图" : "Switch review view"}</Button>
+          </div>
+        )}
+        codeText={code([
+          'import { Table, TableColumnSettings, type TableRef } from "pinepost-ui";',
+          "",
+          "const tableRef = React.useRef<TableRef<Row>>(null);",
+          "const [settings, setSettings] = React.useState({ hiddenColumns: [], columnOrder: ['route', 'count', 'status'], density: 'compact' });",
+          "",
+          "<TableColumnSettings columns={columns} value={settings} onValueChange={setSettings} />",
+          "<Table",
+          "  ref={tableRef}",
+          "  rowKey=\"id\"",
+          "  selectable",
+          "  editable",
+          "  filterTags={filters}",
+          "  onFilterClear={clearFilters}",
+          "  onSelectionChange={setSelection}",
+          "  onCellEdit={saveCell}",
+          "  viewPresets={viewPresets}",
+          "  columnOrder={settings.columnOrder}",
+          "  hiddenColumns={settings.hiddenColumns}",
+          "  density={settings.density}",
+          "/>"
+        ])}
+      />
+    );
+  }
+
+  function renderUploadWorkbench() {
+    return (
+      <DemoWorkbench
+        title={zh ? "Upload API 演示台" : "Upload API workbench"}
+        labels={labels}
+        events={uploadWorkbenchEvents}
+        status={uploadPreviewStatus || (zh ? "等待选择文件。" : "Waiting for files.")}
+        description={zh ? "一个素材上传台演示拖拽、limit、customRequest、renderFile、生命周期事件和 ref methods。" : "One asset uploader covers drag, limits, custom requests, renderFile, lifecycle events, and ref methods."}
+        preview={(
+          <div className="docs-upload-preview">
+            <Upload
+              ref={uploadRef}
+              drag
+              limit={3}
+              label={zh ? "拖放路线清单" : "Drop route manifests"}
+              description={zh ? "选择文件后点击开始上传，失败文件可以重试。" : "Choose a file, then start upload; failed files can retry."}
+              defaultFileList={[{ uid: "failed-asset", name: "stamp-sheet.png", percent: 36, status: "error", error: new Error("Demo failure") }]}
+              customRequest={async ({ file, onProgress, onSuccess }) => {
+                onProgress?.(64);
+                pushDemoEvent(setUploadWorkbenchEvents, zh ? `onProgress: ${file.name}` : `onProgress: ${file.name}`);
+                await new Promise((resolve) => window.setTimeout(resolve, 90));
+                onSuccess?.({ ok: true });
+              }}
+              onChange={(file) => {
+                setUploadPreviewStatus(zh ? "文件已进入待上传队列。" : "File queued for upload.");
+                pushDemoEvent(setUploadWorkbenchEvents, zh ? `onChange: ${file.name}` : `onChange: ${file.name}`);
+              }}
+              onPreview={(file) => {
+                setUploadPreviewStatus(zh ? `预览 ${file.name}` : `Previewing ${file.name}`);
+                pushDemoEvent(setUploadWorkbenchEvents, zh ? "onPreview" : "onPreview");
+              }}
+              onRemove={(file) => {
+                setUploadPreviewStatus(zh ? `${file.name} 已移除。` : `${file.name} removed.`);
+                pushDemoEvent(setUploadWorkbenchEvents, zh ? "onRemove" : "onRemove");
+              }}
+              onRetry={(file) => {
+                setUploadPreviewStatus(zh ? `${file.name} 已回到待上传。` : `${file.name} returned to ready.`);
+                pushDemoEvent(setUploadWorkbenchEvents, zh ? "onRetry" : "onRetry");
+              }}
+              onSuccess={(_, file) => {
+                setUploadPreviewStatus(zh ? "上传完成，队列状态已更新。" : "Upload complete; queue status updated.");
+                pushDemoEvent(setUploadWorkbenchEvents, zh ? `onSuccess: ${file.name}` : `onSuccess: ${file.name}`);
+              }}
+              renderFile={(file, actions) => (
+                <div className="docs-upload-card">
+                  <strong>{file.name}</strong>
+                  <Badge variant={file.status === "error" ? "stamp" : file.status === "success" ? "sky" : "leaf"}>{file.status}</Badge>
+                  <Button size="sm" variant="soft" onClick={file.status === "error" ? actions.retry : actions.remove}>
+                    {file.status === "error" ? (zh ? "重试" : "Retry") : (zh ? "移除" : "Remove")}
+                  </Button>
+                </div>
+              )}
+            />
+          </div>
+        )}
+        controls={(
+          <div className="docs-workbench__controls">
+            <span>{zh ? "队列模式" : "Queue mode"}</span>
+            <Tag>{zh ? "内置列表 + 自定义文件项" : "Built-in list + custom rows"}</Tag>
+          </div>
+        )}
+        methods={(
+          <div className="docs-workbench__actions">
+            <Button size="sm" onClick={() => void uploadRef.current?.submit()}>{zh ? "开始上传" : "Start upload"}</Button>
+            <Button size="sm" variant="soft" onClick={() => {
+              const file = uploadRef.current?.getFiles().find((item) => item.status === "error");
+              if (file) uploadRef.current?.retryFile(file.uid);
+              pushDemoEvent(setUploadWorkbenchEvents, zh ? "methods.retryFile" : "methods.retryFile");
+            }}>{zh ? "重试失败项" : "Retry failed"}</Button>
+            <Button size="sm" variant="parcel" onClick={() => {
+              uploadRef.current?.clearFiles();
+              setUploadPreviewStatus(zh ? "队列已清空。" : "Queue cleared.");
+              pushDemoEvent(setUploadWorkbenchEvents, zh ? "methods.clearFiles" : "methods.clearFiles");
+            }}>{zh ? "清空队列" : "Clear queue"}</Button>
+          </div>
+        )}
+        codeText={code([
+          'import { Upload, Button, type UploadRef } from "pinepost-ui";',
+          "",
+          "const uploadRef = React.useRef<UploadRef>(null);",
+          "",
+          "<Upload",
+          "  ref={uploadRef}",
+          "  drag",
+          "  limit={3}",
+          "  customRequest={uploadAsset}",
+          "  renderFile={(file, actions) => <AssetRow file={file} actions={actions} />}",
+          "  onRetry={trackRetry}",
+          "  onSuccess={trackSuccess}",
+          "/>",
+          "<Button onClick={() => uploadRef.current?.submit()}>开始上传</Button>"
+        ])}
+      />
+    );
+  }
+
+  function renderSelectWorkbench() {
+    return (
+      <DemoWorkbench
+        title={zh ? "Select API 演示台" : "Select API workbench"}
+        labels={labels}
+        events={selectWorkbenchEvents}
+        status={Array.isArray(selectWorkbenchValue) && selectWorkbenchValue.length > 0 ? (zh ? `已选择 ${selectWorkbenchValue.length} 项。` : `${selectWorkbenchValue.length} selected.`) : (zh ? "等待选择。" : "Waiting for selection.")}
+        description={zh ? "一个负责人选择器演示 multiple、clearable、filterable、分组、remoteMethod、onClear 和 ref methods。" : "One owner selector covers multiple, clearable, filterable, groups, remoteMethod, onClear, and ref methods."}
+        preview={(
+          <Select
+            ref={selectWorkbenchRef}
+            aria-label={zh ? "负责人选择" : "Owner picker"}
+            multiple
+            clearable
+            filterable
+            placeholder={zh ? "选择负责人" : "Choose owners"}
+            value={selectWorkbenchValue}
+            onValueChange={(value) => {
+              setSelectWorkbenchValue(value);
+              pushDemoEvent(setSelectWorkbenchEvents, zh ? `onValueChange: ${Array.isArray(value) ? value.join(", ") : value}` : `onValueChange: ${Array.isArray(value) ? value.join(", ") : value}`);
+            }}
+            onClear={() => pushDemoEvent(setSelectWorkbenchEvents, zh ? "onClear: 已清空" : "onClear: cleared")}
+            remoteMethod={(query) => pushDemoEvent(setSelectWorkbenchEvents, zh ? `remoteMethod: ${query || "空查询"}` : `remoteMethod: ${query || "empty query"}`)}
+            options={[
+              { value: "north", label: zh ? "北线负责人" : "North owner", group: zh ? "日常" : "Daily" },
+              { value: "market", label: zh ? "集市负责人" : "Market owner", group: zh ? "活动" : "Campaign" },
+              { value: "backup", label: zh ? "备用负责人" : "Backup owner", group: zh ? "日常" : "Daily" }
+            ]}
+          />
+        )}
+        controls={<Text>{zh ? "打开下拉后输入关键字可触发远程搜索事件。" : "Open the list and type to trigger remote search events."}</Text>}
+        methods={(
+          <div className="docs-workbench__actions">
+            <Button size="sm" variant="soft" onClick={() => selectWorkbenchRef.current?.focus()}>{zh ? "聚焦" : "Focus"}</Button>
+            <Button size="sm" variant="soft" onClick={() => selectWorkbenchRef.current?.clear()}>{zh ? "清空" : "Clear"}</Button>
+            <Button size="sm" variant="parcel" onClick={() => selectWorkbenchRef.current?.blur()}>{zh ? "失焦" : "Blur"}</Button>
+          </div>
+        )}
+        codeText={code([
+          'import { Select, type SelectRef } from "pinepost-ui";',
+          "",
+          "const selectRef = React.useRef<SelectRef>(null);",
+          "",
+          "<Select",
+          "  ref={selectRef}",
+          "  multiple",
+          "  clearable",
+          "  filterable",
+          "  options={ownerOptions}",
+          "  value={owners}",
+          "  onValueChange={setOwners}",
+          "  remoteMethod={fetchOwners}",
+          "/>"
+        ])}
+      />
+    );
+  }
+
+  function renderCascaderWorkbench() {
+    return (
+      <DemoWorkbench
+        title={zh ? "Cascader API 演示台" : "Cascader API workbench"}
+        labels={labels}
+        events={cascaderWorkbenchEvents}
+        status={zh ? `已选择 ${cascaderMultiValue.length} 条路线。` : `${cascaderMultiValue.length} routes selected.`}
+        description={zh ? "一个多路线派发器演示 multiple、filterable、clearable、showAllLevels、onExpandChange 和 ref methods。" : "One route dispatcher covers multiple, filterable, clearable, showAllLevels, onExpandChange, and ref methods."}
+        preview={(
+          <Cascader
+            ref={cascaderWorkbenchRef}
+            multiple
+            clearable
+            filterable
+            options={routeOptions}
+            placeholder={zh ? "选择多条路线" : "Choose routes"}
+            value={cascaderMultiValue}
+            onExpandChange={(value) => pushDemoEvent(setCascaderWorkbenchEvents, zh ? `onExpandChange: ${value.join("/")}` : `onExpandChange: ${value.join("/")}`)}
+            onVisibleChange={(open) => pushDemoEvent(setCascaderWorkbenchEvents, zh ? `onVisibleChange: ${open ? "打开" : "关闭"}` : `onVisibleChange: ${open ? "open" : "closed"}`)}
+            onValueChange={(value) => {
+              setCascaderMultiValue(value as CascaderMultipleValue);
+              pushDemoEvent(setCascaderWorkbenchEvents, zh ? "onValueChange: 多路线已更新" : "onValueChange: routes updated");
+            }}
+          />
+        )}
+        controls={<Text>{zh ? "叶子节点可多选，筛选命中后也会保持完整路径值。" : "Leaf nodes are multi-selectable, including filtered matches."}</Text>}
+        methods={(
+          <div className="docs-workbench__actions">
+            <Button size="sm" variant="soft" onClick={() => cascaderWorkbenchRef.current?.focus()}>{zh ? "聚焦" : "Focus"}</Button>
+            <Button size="sm" variant="soft" onClick={() => cascaderWorkbenchRef.current?.clear()}>{zh ? "清空" : "Clear"}</Button>
+            <Button size="sm" variant="parcel" onClick={() => cascaderWorkbenchRef.current?.blur()}>{zh ? "失焦" : "Blur"}</Button>
+          </div>
+        )}
+        codeText={code([
+          'import { Cascader, type CascaderMultipleValue } from "pinepost-ui";',
+          "",
+          "const [routes, setRoutes] = React.useState<CascaderMultipleValue>([]);",
+          "",
+          "<Cascader",
+          "  multiple",
+          "  clearable",
+          "  filterable",
+          "  options={routeOptions}",
+          "  value={routes}",
+          "  onValueChange={(value) => setRoutes(value as CascaderMultipleValue)}",
+          "/>"
+        ])}
+      />
+    );
+  }
+
+  function renderTreeSelectWorkbench() {
+    return (
+      <DemoWorkbench
+        title={zh ? "TreeSelect API 演示台" : "TreeSelect API workbench"}
+        labels={labels}
+        events={treeSelectWorkbenchEvents}
+        status={Array.isArray(treeSelectWorkbenchValue) ? (zh ? `已选择 ${treeSelectWorkbenchValue.length} 个节点。` : `${treeSelectWorkbenchValue.length} nodes selected.`) : (zh ? "单选模式。" : "Single mode.")}
+        description={zh ? "一个权限范围选择器演示 multiple、filterable、clearable、defaultExpanded、renderNode 和 ref methods。" : "One scope picker covers multiple, filterable, clearable, defaultExpanded, renderNode, and ref methods."}
+        preview={(
+          <TreeSelect
+            ref={treeSelectWorkbenchRef}
+            multiple
+            clearable
+            filterable
+            data={routeTreeData}
+            defaultExpanded={["routes"]}
+            placeholder={zh ? "选择可见范围" : "Choose visibility scope"}
+            renderNode={(node) => <span>{node.label}</span>}
+            value={treeSelectWorkbenchValue}
+            onNodeClick={(node) => pushDemoEvent(setTreeSelectWorkbenchEvents, zh ? `onNodeClick: ${node.value}` : `onNodeClick: ${node.value}`)}
+            onVisibleChange={(open) => pushDemoEvent(setTreeSelectWorkbenchEvents, zh ? `onVisibleChange: ${open ? "打开" : "关闭"}` : `onVisibleChange: ${open ? "open" : "closed"}`)}
+            onValueChange={(value) => {
+              setTreeSelectWorkbenchValue(value);
+              pushDemoEvent(setTreeSelectWorkbenchEvents, zh ? "onValueChange: 范围已更新" : "onValueChange: scope updated");
+            }}
+          />
+        )}
+        controls={<Text>{zh ? "筛选、点击节点和清空都会写入事件日志。" : "Filtering, node clicks, and clear actions write to the event log."}</Text>}
+        methods={(
+          <div className="docs-workbench__actions">
+            <Button size="sm" variant="soft" onClick={() => treeSelectWorkbenchRef.current?.focus()}>{zh ? "聚焦" : "Focus"}</Button>
+            <Button size="sm" variant="soft" onClick={() => treeSelectWorkbenchRef.current?.clear()}>{zh ? "清空" : "Clear"}</Button>
+            <Button size="sm" variant="parcel" onClick={() => treeSelectWorkbenchRef.current?.blur()}>{zh ? "失焦" : "Blur"}</Button>
+          </div>
+        )}
+        codeText={code([
+          'import { TreeSelect, type TreeSelectRef } from "pinepost-ui";',
+          "",
+          "const treeSelectRef = React.useRef<TreeSelectRef>(null);",
+          "",
+          "<TreeSelect",
+          "  ref={treeSelectRef}",
+          "  multiple",
+          "  clearable",
+          "  filterable",
+          "  data={scopeTree}",
+          "  defaultExpanded={['routes']}",
+          "  value={scope}",
+          "  onValueChange={setScope}",
+          "/>"
+        ])}
+      />
+    );
+  }
+
+  function renderTreeWorkbench() {
+    return (
+      <DemoWorkbench
+        title={zh ? "Tree API 演示台" : "Tree API workbench"}
+        labels={labels}
+        events={treeWorkbenchEvents}
+        status={zh ? `已勾选 ${treeWorkbenchCheckedKeys.length} 个节点。` : `${treeWorkbenchCheckedKeys.length} checked.`}
+        description={zh ? "一个路线树演示 checkable、expandedKeys、checkedKeys、lazy load、节点事件和 ref methods。" : "One route tree covers checkable, expandedKeys, checkedKeys, lazy load, node events, and ref methods."}
+        preview={(
+          <Tree
+            ref={treeWorkbenchRef}
+            checkable
+            expandedKeys={treeWorkbenchExpandedKeys}
+            checkedKeys={treeWorkbenchCheckedKeys}
+            items={routeTreeData}
+            onCheckChange={(keys) => {
+              setTreeWorkbenchCheckedKeys(keys);
+              pushDemoEvent(setTreeWorkbenchEvents, zh ? `onCheckChange: ${keys.length} 个节点` : `onCheckChange: ${keys.length} nodes`);
+            }}
+            onExpandChange={(keys) => {
+              setTreeWorkbenchExpandedKeys(keys);
+              pushDemoEvent(setTreeWorkbenchEvents, zh ? `onExpandChange: ${keys.length} 个展开` : `onExpandChange: ${keys.length} expanded`);
+            }}
+            onNodeClick={(node) => pushDemoEvent(setTreeWorkbenchEvents, zh ? `onNodeClick: ${node.value}` : `onNodeClick: ${node.value}`)}
+            onSelect={(value) => pushDemoEvent(setTreeWorkbenchEvents, zh ? `onSelect: ${value}` : `onSelect: ${value}`)}
+          />
+        )}
+        controls={<Text>{zh ? "受控展开和勾选状态展示在顶部状态条。" : "Controlled expanded and checked state appears in the status bar."}</Text>}
+        methods={(
+          <div className="docs-workbench__actions">
+            <Button size="sm" variant="soft" onClick={() => {
+              treeWorkbenchRef.current?.setExpandedKeys(["routes"]);
+              setTreeWorkbenchExpandedKeys(["routes"]);
+              pushDemoEvent(setTreeWorkbenchEvents, zh ? "methods.setExpandedKeys" : "methods.setExpandedKeys");
+            }}>{zh ? "展开根节点" : "Expand root"}</Button>
+            <Button size="sm" variant="soft" onClick={() => {
+              treeWorkbenchRef.current?.setCheckedKeys(["cedar", "moss"]);
+              setTreeWorkbenchCheckedKeys(["cedar", "moss"]);
+              pushDemoEvent(setTreeWorkbenchEvents, zh ? "methods.setCheckedKeys" : "methods.setCheckedKeys");
+            }}>{zh ? "勾选桌台" : "Check desks"}</Button>
+            <Button size="sm" variant="parcel" onClick={() => {
+              treeWorkbenchRef.current?.clearChecked();
+              setTreeWorkbenchCheckedKeys([]);
+              pushDemoEvent(setTreeWorkbenchEvents, zh ? "methods.clearChecked" : "methods.clearChecked");
+            }}>{zh ? "清空勾选" : "Clear checked"}</Button>
+          </div>
+        )}
+        codeText={code([
+          'import { Tree, type TreeRef } from "pinepost-ui";',
+          "",
+          "const treeRef = React.useRef<TreeRef>(null);",
+          "",
+          "<Tree",
+          "  ref={treeRef}",
+          "  checkable",
+          "  expandedKeys={expandedKeys}",
+          "  checkedKeys={checkedKeys}",
+          "  items={treeItems}",
+          "  onCheckChange={setCheckedKeys}",
+          "  onExpandChange={setExpandedKeys}",
+          "/>"
+        ])}
+      />
+    );
+  }
+
+  function renderDateRangeWorkbench() {
+    return (
+      <DemoWorkbench
+        title={zh ? "DateRangePickerPanel API 演示台" : "DateRangePickerPanel API workbench"}
+        labels={labels}
+        events={dateRangeWorkbenchEvents}
+        status={formatPinepostDateRange(dateRangeValue, { fallback: zh ? "未选择" : "Open", locale })}
+        description={zh ? "一个运营排期筛选器演示 value、onValueChange、shortcuts、disabledDate 和格式化 helper。" : "One scheduling filter covers value, onValueChange, shortcuts, disabledDate, and formatting helpers."}
+        preview={(
+          <Space direction="vertical">
+            <DateRangePickerPanel
+              value={dateRangeValue}
+              onValueChange={(value) => {
+                setDateRangeValue(value);
+                pushDemoEvent(setDateRangeWorkbenchEvents, zh ? "onValueChange: 日期范围已更新" : "onValueChange: date range updated");
+              }}
+              shortcuts={dateRangePresets}
+              disabledDate={(date) => date < new Date(2026, 4, 1)}
+            />
+            <Tag>{formatPinepostDateRange(dateRangeValue, { fallback: zh ? "未选择" : "Open", locale })}</Tag>
+          </Space>
+        )}
+        controls={<Text>{zh ? "快捷预设来自 createPinepostDateRangePresets，可直接写入业务筛选条件。" : "Shortcuts come from createPinepostDateRangePresets and update product filters directly."}</Text>}
+        methods={(
+          <div className="docs-workbench__actions">
+            <Button size="sm" variant="soft" onClick={() => {
+              const next: [Date, Date] = [new Date(2026, 4, 18), new Date(2026, 4, 24)];
+              setDateRangeValue(next);
+              pushDemoEvent(setDateRangeWorkbenchEvents, zh ? "shortcut: 本周" : "shortcut: this week");
+            }}>{zh ? "设为本周" : "Set this week"}</Button>
+            <Button size="sm" variant="parcel" onClick={() => {
+              setDateRangeValue([undefined, undefined]);
+              pushDemoEvent(setDateRangeWorkbenchEvents, zh ? "clear: 已清空范围" : "clear: range cleared");
+            }}>{zh ? "清空范围" : "Clear range"}</Button>
+          </div>
+        )}
+        codeText={code([
+          'import { DateRangePickerPanel, createPinepostDateRangePresets, formatPinepostDateRange } from "pinepost-ui";',
+          "",
+          "const shortcuts = createPinepostDateRangePresets({ locale: 'zh-CN' });",
+          "",
+          "<DateRangePickerPanel",
+          "  value={range}",
+          "  onValueChange={setRange}",
+          "  shortcuts={shortcuts}",
+          "  disabledDate={(date) => date < minDate}",
+          "/>",
+          "formatPinepostDateRange(range, { locale: 'zh-CN' })"
+        ])}
+      />
+    );
+  }
+
+  function renderTimeRangeWorkbench() {
+    return (
+      <DemoWorkbench
+        title={zh ? "TimeRangePickerPanel API 演示台" : "TimeRangePickerPanel API workbench"}
+        labels={labels}
+        events={timeRangeWorkbenchEvents}
+        status={formatPinepostTimeRange(timeRangeValue, { fallback: zh ? "未定" : "Open", locale })}
+        description={zh ? "一个预约窗口演示 value、onValueChange、start/end/step、shortcuts 和格式化 helper。" : "One appointment window covers value, onValueChange, start/end/step, shortcuts, and formatting helpers."}
+        preview={(
+          <Space direction="vertical">
+            <TimeRangePickerPanel
+              value={timeRangeValue}
+              onValueChange={(value) => {
+                setTimeRangeValue(value);
+                pushDemoEvent(setTimeRangeWorkbenchEvents, zh ? "onValueChange: 时间范围已更新" : "onValueChange: time range updated");
+              }}
+              start="09:00"
+              end="18:00"
+              step="00:30"
+              startLabel={zh ? "开始时间" : "Start time"}
+              endLabel={zh ? "结束时间" : "End time"}
+              shortcuts={timeRangePresets}
+            />
+            <Tag>{formatPinepostTimeRange(timeRangeValue, { fallback: zh ? "未定" : "Open", locale })}</Tag>
+          </Space>
+        )}
+        controls={<Text>{zh ? "快捷预设来自 createPinepostTimeRangePresets，适合运营排期和预约窗口。" : "Shortcuts come from createPinepostTimeRangePresets for scheduling and appointments."}</Text>}
+        methods={(
+          <div className="docs-workbench__actions">
+            <Button size="sm" variant="soft" onClick={() => {
+              setTimeRangeValue(["09:00", "12:00"]);
+              pushDemoEvent(setTimeRangeWorkbenchEvents, zh ? "shortcut: 上午" : "shortcut: morning");
+            }}>{zh ? "设为上午" : "Set morning"}</Button>
+            <Button size="sm" variant="parcel" onClick={() => {
+              setTimeRangeValue([undefined, undefined]);
+              pushDemoEvent(setTimeRangeWorkbenchEvents, zh ? "clear: 已清空窗口" : "clear: window cleared");
+            }}>{zh ? "清空窗口" : "Clear window"}</Button>
+          </div>
+        )}
+        codeText={code([
+          'import { TimeRangePickerPanel, createPinepostTimeRangePresets, formatPinepostTimeRange } from "pinepost-ui";',
+          "",
+          "const shortcuts = createPinepostTimeRangePresets({ locale: 'zh-CN' });",
+          "",
+          "<TimeRangePickerPanel",
+          "  value={timeRange}",
+          "  onValueChange={setTimeRange}",
+          "  start=\"09:00\"",
+          "  end=\"18:00\"",
+          "  step=\"00:30\"",
+          "  shortcuts={shortcuts}",
+          "/>",
+          "formatPinepostTimeRange(timeRange, { locale: 'zh-CN' })"
+        ])}
+      />
+    );
+  }
 
   const docs: DocItem[] = [
     {
@@ -1586,6 +2461,7 @@ function App() {
       description: zh
         ? "可访问的下拉选择器，支持键盘选择、点外关闭、筛选和远程数据。"
         : "Accessible dropdown selection with keyboard control, outside-dismiss, filtering, and remote data.",
+      workbench: renderSelectWorkbench(),
       preview: (
         <Select
           aria-label={zh ? "路线桌" : "Route desk"}
@@ -1692,6 +2568,7 @@ function App() {
       group: labels.groups.form,
       title: zh ? "Form 表单" : "Form",
       description: zh ? "Form 与 FormField 提供标签、说明、校验错误、触发时机和异步提交状态。" : "Form and FormField provide labels, hints, errors, validation triggers, and async submit state.",
+      workbench: renderFormWorkbench(),
       preview: (
         <Form
           model={formPreviewModel}
@@ -1809,6 +2686,7 @@ function App() {
       group: labels.groups.form,
       title: zh ? "Upload 上传" : "Upload",
       description: zh ? "支持受控队列、拖拽、数量限制、生命周期事件和手动提交。" : "Supports controlled queues, drag upload, limits, lifecycle events, and manual submit.",
+      workbench: renderUploadWorkbench(),
       preview: (
         <div className="docs-upload-preview">
           <Upload
@@ -1944,6 +2822,7 @@ function App() {
       title: zh ? "Cascader 级联选择" : "Cascader",
       description: zh ? "多层路线选择器，支持筛选、清空、懒加载、自定义节点、键盘导航、展开事件和方法调用。" : "Layered route selection with filtering, clear action, lazy loading, custom nodes, keyboard navigation, expand events, and methods.",
       searchText: "multi cascader multiple 多选 多路线 selection route",
+      workbench: renderCascaderWorkbench(),
       preview: (
         <Cascader
           clearable
@@ -2080,6 +2959,7 @@ function App() {
       group: labels.groups.form,
       title: zh ? "TreeSelect 树形选择" : "TreeSelect",
       description: zh ? "树结构选择器，支持单选、多选、筛选、懒加载、自定义节点和节点点击事件。" : "Tree selector with single or multiple selection, filtering, lazy loading, custom nodes, and node events.",
+      workbench: renderTreeSelectWorkbench(),
       preview: (
         <TreeSelect
           clearable
@@ -2433,6 +3313,7 @@ function App() {
       title: zh ? "Table 表格" : "Table",
       description: zh ? "数据表格支持列组、固定列、排序、筛选、选择、展开行、汇总行和内联编辑。" : "Data table with column groups, fixed columns, sorting, filtering, selection, row expansion, summaries, and inline editing.",
       searchText: "table preset view preset 视图预设 release notes release draft preset workflow",
+      workbench: renderTableWorkbench(),
       preview: (
         <Table
           rowKey="id"
@@ -2770,6 +3651,7 @@ function App() {
       group: labels.groups.display,
       title: zh ? "Tree 树形控件" : "Tree",
       description: zh ? "用于路线、目录和分组层级，支持选择、勾选、过滤和懒加载节点。" : "A tree for routes, folders, and grouped hierarchy with selection, checking, filtering, and lazy nodes.",
+      workbench: renderTreeWorkbench(),
       preview: (
         <Tree
           lazy
@@ -3631,6 +4513,7 @@ function App() {
       title: zh ? "DateRangePickerPanel 日期范围面板" : "DateRangePickerPanel",
       description: zh ? "选择开始和结束日期，适合排班、活动和报表范围。" : "Selects start and end dates for schedules, campaigns, and report ranges.",
       searchText: "preset scheduling 排期 快捷预设 date range shortcuts",
+      workbench: renderDateRangeWorkbench(),
       preview: (
         <Space direction="vertical">
           <DateRangePickerPanel
@@ -3732,6 +4615,7 @@ function App() {
       title: zh ? "TimeRangePickerPanel 时间范围面板" : "TimeRangePickerPanel",
       description: zh ? "并排选择开始和结束时间，适合配送窗口和预约时段。" : "Paired start and end time panels for delivery windows and appointments.",
       searchText: "preset scheduling 排期 快捷预设 time range shortcuts",
+      workbench: renderTimeRangeWorkbench(),
       preview: (
         <Space direction="vertical">
           <TimeRangePickerPanel
@@ -4127,8 +5011,8 @@ function App() {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme collections, Recipe Gallery state recipes</span><Tag variant="parcel">Beta</Tag><span>Recipe Bundles, Table presets, Cascader multi-select, Date/time presets, Form, TreeSelect, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "深层选择无障碍、发布检查自动化" : "Deep selection accessibility, release checklist automation"}</span></div>,
-      code: code(["Stable: production-ready basics, theme collections, and stateful recipes", "Beta: recipe bundles, table presets, multi-route selection, scheduling presets, and visual checks", "Planned: future refinements"]),
+      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme collections, Recipe Gallery state recipes, Form/Table API workbenches</span><Tag variant="parcel">Beta</Tag><span>Recipe Bundles, Table presets, Cascader multi-select, Date/time presets, Upload and selection workbenches, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "剩余组件演示台、深层选择无障碍、发布检查自动化" : "Remaining component workbenches, deep selection accessibility, release checklist automation"}</span></div>,
+      code: code(["Stable: production-ready basics, theme collections, stateful recipes, and core API workbenches", "Beta: recipe bundles, table presets, multi-route selection, scheduling presets, and visual checks", "Planned: remaining workbenches and future refinements"]),
       api: [
         { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },
         { prop: "Beta", type: "status", defaultValue: "-", description: zh ? "API 已可用，继续打磨边界。" : "Usable API with active refinement." },

@@ -13,15 +13,13 @@ async function expectNoPageOverflow(page: import("@playwright/test").Page) {
 }
 
 test.describe("Pinepost docs smoke", () => {
-  test("renders one selected component page with recipes and copy controls", async ({ page }) => {
+  test("renders one selected component page with API workbench and copy controls", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Table 表格" }).click();
 
     await expect(page.locator("h1")).toHaveText("Table 表格");
     await expect(page.locator("h1")).toHaveCount(1);
-    await expect(page.getByText("业务表格配置台").first()).toBeVisible();
-    await expect(page.getByText("视图预设导出").first()).toBeVisible();
-    await expect(page.getByText("进入 Recipe Bundle").first()).toBeVisible();
+    await expect(page.getByRole("region", { name: /Table API 演示台|Table API workbench/ })).toBeVisible();
     await expect(page.getByText("TableColumnSettings", { exact: true })).toBeVisible();
     await expect(page.getByText("columnOrder / defaultColumnOrder")).toBeVisible();
 
@@ -32,22 +30,22 @@ test.describe("Pinepost docs smoke", () => {
     await expectNoPageOverflow(page);
   });
 
-  test("keeps priority recipe pages navigable without page overflow", async ({ page }) => {
+  test("keeps priority API workbench pages navigable without page overflow", async ({ page }) => {
     await page.goto("/");
 
-    for (const name of [
-      "Form 表单",
-      "Upload 上传",
-      "Select 选择器",
-      "Cascader 级联选择",
-      "TreeSelect 树形选择",
-      "DateRangePickerPanel 日期范围面板",
-      "TimeRangePickerPanel 时间范围面板"
+    for (const { name, region } of [
+      { name: "Form 表单", region: /Form API 演示台|Form API workbench/ },
+      { name: "Upload 上传", region: /Upload API 演示台|Upload API workbench/ },
+      { name: "Select 选择器", region: /Select API 演示台|Select API workbench/ },
+      { name: "Cascader 级联选择", region: /Cascader API 演示台|Cascader API workbench/ },
+      { name: "TreeSelect 树形选择", region: /TreeSelect API 演示台|TreeSelect API workbench/ },
+      { name: "DateRangePickerPanel 日期范围面板", region: /DateRangePickerPanel API 演示台|DateRangePickerPanel API workbench/ },
+      { name: "TimeRangePickerPanel 时间范围面板", region: /TimeRangePickerPanel API 演示台|TimeRangePickerPanel API workbench/ }
     ]) {
       await page.getByRole("button", { name }).click();
       await expect(page.locator("h1")).toHaveText(name);
       await expect(page.locator("h1")).toHaveCount(1);
-      await expect(page.getByText("业务配方")).toBeVisible();
+      await expect(page.getByRole("region", { name: region })).toBeVisible();
       await expectNoPageOverflow(page);
     }
   });
@@ -56,19 +54,19 @@ test.describe("Pinepost docs smoke", () => {
     await page.goto("/");
 
     await page.getByRole("button", { name: "Cascader 级联选择" }).click();
-    await expect(page.getByText("多路线选择").first()).toBeVisible();
+    await expect(page.getByRole("region", { name: /Cascader API 演示台|Cascader API workbench/ })).toBeVisible();
     await expect(page.getByText("CascaderMultipleValue").first()).toBeVisible();
     await page.getByRole("button", { name: /1 selected/ }).click();
     await expect(page.getByRole("button", { name: /苔藓桌|Moss desk/ }).first()).toBeVisible();
     await expectNoPageOverflow(page);
 
     await page.getByRole("button", { name: "DateRangePickerPanel 日期范围面板" }).click();
-    await expect(page.getByText("运营排期快捷预设").first()).toBeVisible();
+    await expect(page.getByRole("region", { name: /DateRangePickerPanel API 演示台|DateRangePickerPanel API workbench/ })).toBeVisible();
     await expect(page.getByText("createPinepostDateRangePresets").first()).toBeVisible();
     await expectNoPageOverflow(page);
 
     await page.getByRole("button", { name: "TimeRangePickerPanel 时间范围面板" }).click();
-    await expect(page.getByText("运营排期快捷预设").first()).toBeVisible();
+    await expect(page.getByRole("region", { name: /TimeRangePickerPanel API 演示台|TimeRangePickerPanel API workbench/ })).toBeVisible();
     await expect(page.getByText("createPinepostTimeRangePresets").first()).toBeVisible();
     await expectNoPageOverflow(page);
   });

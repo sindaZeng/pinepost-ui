@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.19.0
+
+- Reworked high-frequency docs previews into isolated API workbenches with local status, methods, event logs, and copyable code.
+- Hardened Form and Table demos so failed validation and filter clearing no longer trigger unrelated success feedback.
+- Expanded commercial workflow demos for Upload, Select, Cascader, TreeSelect, Tree, DateRangePickerPanel, and TimeRangePickerPanel.
+- Added Playwright coverage for realistic submit states, table filter isolation, and workbench availability.
+
 ## 0.18.0
 
 - Added portable Recipe Bundle helpers for saving theme collections, table view presets, schedule config, and recipe references.

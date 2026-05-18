@@ -46,27 +46,96 @@ test.describe("Pinepost component QA hardening", () => {
       mimeType: "text/plain",
       buffer: Buffer.from("route qa")
     });
-    await expect(page.getByText("route-manifest.txt")).toBeVisible();
+    await expect(page.locator(".pinepost-upload__list strong", { hasText: "route-manifest.txt" })).toBeVisible();
     await expect(page.locator(".pinepost-upload__list").getByText("ready", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: /^(开始上传|Start upload)$/ }).click();
     await expect(page.locator(".pinepost-upload__list").getByText("success", { exact: true })).toBeVisible();
   });
 
-  test("validates the Form docs preview against the visible recipient field", async ({ page }) => {
+  test("validates the Form docs workbench against visible fields", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Form 表单" }).click();
 
-    const form = page.locator("main form").first();
-    const recipient = form.getByLabel(/收件处|Recipient/);
-    await recipient.fill("");
-    await form.getByRole("button", { name: /提交路线|Submit route/ }).click();
+    const workbench = page.getByRole("region", { name: /Form API 演示台|Form API workbench/ });
+    const form = workbench.locator("form").first();
+    const route = form.getByLabel(/路线|Route/);
+    await route.fill("");
+    await form.getByRole("button", { name: /提交保存|Submit save/ }).click();
 
-    await expect(form.getByRole("alert").filter({ hasText: /请填写收件处|Recipient is required/ })).toBeVisible();
+    await expect(form.getByRole("alert").filter({ hasText: /请填写路线|Route is required/ })).toBeVisible();
 
-    await recipient.fill("Moss desk");
-    await form.getByRole("button", { name: /提交路线|Submit route/ }).click();
-    await expect(form.getByRole("alert").filter({ hasText: /请填写收件处|Recipient is required/ })).toHaveCount(0);
+    await route.fill("A7");
+    await form.getByLabel(/负责人|Owner/).fill("Cedar");
+    await form.getByRole("button", { name: /提交保存|Submit save/ }).click();
+    await expect(form.getByRole("alert").filter({ hasText: /请填写路线|Route is required/ })).toHaveCount(0);
+  });
+
+  test("keeps Form submit states realistic and isolated", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Form 表单" }).click();
+
+    const workbench = page.getByRole("region", { name: /Form API 演示台|Form API workbench/ });
+    const route = workbench.getByLabel(/路线|Route/);
+    const operator = workbench.getByLabel(/负责人|Owner/);
+
+    await route.fill("");
+    await operator.fill("");
+    await workbench.getByRole("button", { name: /提交保存|Submit save/ }).click();
+
+    await expect(workbench.getByRole("alert").filter({ hasText: /请填写路线|Route is required/ })).toBeVisible();
+    await expect(workbench.getByText(/保存成功|Saved successfully/)).toHaveCount(0);
+    await expect(page.getByText(/路线已确认|Route confirmed/)).toHaveCount(0);
+    await expect(route).toBeFocused();
+
+    await route.fill("A7");
+    await operator.fill("Cedar");
+    await workbench.getByRole("button", { name: /模拟服务端失败|Simulate server error/ }).click();
+    await workbench.getByRole("button", { name: /提交保存|Submit save/ }).click();
+
+    await expect(workbench.getByRole("alert").filter({ hasText: /服务端拒绝|Server rejected/ })).toBeVisible();
+    await expect(workbench.getByText(/保存成功|Saved successfully/)).toHaveCount(0);
+
+    await workbench.getByRole("button", { name: /模拟成功|Simulate success/ }).click();
+    await workbench.getByRole("button", { name: /提交保存|Submit save/ }).click();
+    await expect(workbench.getByText(/保存成功|Saved successfully/).first()).toBeVisible();
+  });
+
+  test("keeps Table filter clearing inside the table workbench", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Table 表格" }).click();
+
+    const workbench = page.getByRole("region", { name: /Table API 演示台|Table API workbench/ });
+    await expect(workbench.getByText(/状态：就绪|Status: Ready/).first()).toBeVisible();
+
+    await workbench.getByRole("button", { name: /清空筛选|Clear filters/ }).click();
+
+    await expect(workbench.getByText(/筛选已清空|Filters cleared/)).toBeVisible();
+    await expect(workbench.getByText(/状态：就绪|Status: Ready/)).toHaveCount(0);
+    await expect(page.getByText(/路线已确认|Route confirmed/)).toHaveCount(0);
+
+    await workbench.getByRole("button", { name: /切换复核视图|Switch review view/ }).click();
+    await expect(workbench.getByText(/视图已切换|View changed/)).toBeVisible();
+  });
+
+  test("shows API workbench entry points for commercial workflow components", async ({ page }) => {
+    await page.goto("/");
+
+    for (const item of [
+      { nav: "Upload 上传", region: /Upload API 演示台|Upload API workbench/ },
+      { nav: "Select 选择器", region: /Select API 演示台|Select API workbench/ },
+      { nav: "Cascader 级联选择", region: /Cascader API 演示台|Cascader API workbench/ },
+      { nav: "TreeSelect 树形选择", region: /TreeSelect API 演示台|TreeSelect API workbench/ },
+      { nav: "Tree 树形控件", region: /Tree API 演示台|Tree API workbench/ },
+      { nav: "DateRangePickerPanel 日期范围面板", region: /DateRangePickerPanel API 演示台|DateRangePickerPanel API workbench/ },
+      { nav: "TimeRangePickerPanel 时间范围面板", region: /TimeRangePickerPanel API 演示台|TimeRangePickerPanel API workbench/ }
+    ]) {
+      await page.getByRole("button", { name: item.nav }).click();
+      const workbench = page.getByRole("region", { name: item.region });
+      await expect(workbench).toBeVisible();
+      await expect(workbench.locator(".docs-workbench__log")).toBeVisible();
+      await expect(workbench.locator(".docs-workbench__panel").filter({ hasText: /Methods|方法/ })).toBeVisible();
+    }
   });
 
   test("keeps picker panel docs previews controlled by visible user choices", async ({ page }) => {
