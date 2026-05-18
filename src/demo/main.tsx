@@ -1397,6 +1397,9 @@ function App() {
   const [mentionValue, setMentionValue] = React.useState("请交给 @cedar ");
   const [timeSelectValue, setTimeSelectValue] = React.useState("09:30");
   const [timePanelValue, setTimePanelValue] = React.useState("09:30");
+  const [colorPanelValue, setColorPanelValue] = React.useState("#4f8f5f");
+  const [datePanelValue, setDatePanelValue] = React.useState(new Date(2026, 4, 17));
+  const [shipDateValue, setShipDateValue] = React.useState(new Date(2026, 4, 18));
   const [dateRangeValue, setDateRangeValue] = React.useState<[Date | undefined, Date | undefined]>([new Date(2026, 4, 17), new Date(2026, 4, 19)]);
   const [dateTimePanelValue, setDateTimePanelValue] = React.useState(new Date(2026, 4, 17, 9, 30));
   const [timeRangeValue, setTimeRangeValue] = React.useState<[string | undefined, string | undefined]>(["09:00", "11:00"]);
@@ -1404,6 +1407,7 @@ function App() {
   const [virtualTreeSelected, setVirtualTreeSelected] = React.useState("north-3");
   const [messageBoxOpen, setMessageBoxOpen] = React.useState(false);
   const [toastOpen, setToastOpen] = React.useState(false);
+  const [formPreviewModel, setFormPreviewModel] = React.useState({ desk: "cedar" });
   const uploadRef = React.useRef<UploadRef>(null);
   const [uploadPreviewStatus, setUploadPreviewStatus] = React.useState("");
   const [tableSettings, setTableSettings] = React.useState<TableColumnSettingsValue>({
@@ -1690,14 +1694,19 @@ function App() {
       description: zh ? "Form 与 FormField 提供标签、说明、校验错误、触发时机和异步提交状态。" : "Form and FormField provide labels, hints, errors, validation triggers, and async submit state.",
       preview: (
         <Form
-          model={{ desk: "cedar" }}
+          model={formPreviewModel}
           onFinish={async () => showToast()}
           rules={{ desk: [{ required: true, message: zh ? "请填写收件处。" : "Recipient is required." }] }}
           submittingMessage={zh ? "正在提交路线..." : "Submitting route..."}
           validateTrigger="blur"
         >
-          <FormField label={zh ? "收件处" : "Recipient"} htmlFor="demo-recipient" required description={zh ? "用于路线分配。" : "Used for route assignment."}>
-            <Input id="demo-recipient" placeholder={zh ? "苔藓桌" : "Moss desk"} />
+          <FormField name="desk" label={zh ? "收件处" : "Recipient"} htmlFor="demo-recipient" required description={zh ? "用于路线分配。" : "Used for route assignment."}>
+            <Input
+              id="demo-recipient"
+              onChange={(event) => setFormPreviewModel({ desk: event.currentTarget.value })}
+              placeholder={zh ? "苔藓桌" : "Moss desk"}
+              value={formPreviewModel.desk}
+            />
           </FormField>
           <FormField label={zh ? "校验提示" : "Validation"} error={zh ? "请填写路线。" : "Route is required."}>
             <Input placeholder={zh ? "路线编号" : "Route code"} />
@@ -1708,9 +1717,11 @@ function App() {
       code: code([
         'import { Form, FormField, Input } from "pinepost-ui";',
         "",
+        "const [model, setModel] = React.useState({ desk: \"\" });",
+        "",
         '<Form model={model} rules={rules} validateTrigger="blur" onFinish={saveRoute}>',
         '  <FormField name="desk" label="收件处" required validatingMessage="检查桌台中...">',
-        '    <Input placeholder="苔藓桌" />',
+        '    <Input value={model.desk} onChange={(event) => setModel({ desk: event.currentTarget.value })} placeholder="苔藓桌" />',
         "  </FormField>",
         "</Form>"
       ]),
@@ -3564,8 +3575,14 @@ function App() {
       group: labels.groups.form,
       title: zh ? "ColorPickerPanel 颜色面板" : "ColorPickerPanel",
       description: zh ? "独立颜色面板，适合主题编辑和活动配置。" : "A standalone color panel for theme and campaign editing.",
-      preview: <ColorPickerPanel value="#4f8f5f" presets={["#4f8f5f", "#c9624b", "#87b9c9"]} />,
-      code: code(['import { ColorPickerPanel } from "pinepost-ui";', "", '<ColorPickerPanel presets={["#4f8f5f", "#c9624b"]} />']),
+      preview: <ColorPickerPanel value={colorPanelValue} onValueChange={setColorPanelValue} presets={["#4f8f5f", "#c9624b", "#87b9c9"]} />,
+      code: code([
+        'import { ColorPickerPanel } from "pinepost-ui";',
+        "",
+        'const [color, setColor] = React.useState("#4f8f5f");',
+        "",
+        '<ColorPickerPanel value={color} onValueChange={setColor} presets={["#4f8f5f", "#c9624b"]} />'
+      ]),
       api: [
         { prop: "value", type: "string", defaultValue: "-", description: zh ? "受控颜色。" : "Controlled color." },
         { prop: "presets", type: "string[]", defaultValue: "[]", description: zh ? "预设色板。" : "Preset swatches." },
@@ -3577,13 +3594,20 @@ function App() {
       group: labels.groups.form,
       title: zh ? "DatePickerPanel 日期面板" : "DatePickerPanel",
       description: zh ? "可嵌入的日期面板，支持快捷日期和禁用日期。" : "Embeddable date panel with shortcuts and disabled dates.",
-      preview: <DatePickerPanel value={new Date(2026, 4, 17)} shortcuts={datePresets} />,
-      code: code(['import { DatePickerPanel, createPinepostDatePresets } from "pinepost-ui";', "", "const shortcuts = createPinepostDatePresets({ locale: 'zh-CN' });", "<DatePickerPanel shortcuts={shortcuts} />"]),
+      preview: <DatePickerPanel value={datePanelValue} onValueChange={setDatePanelValue} shortcuts={datePresets} />,
+      code: code([
+        'import { DatePickerPanel, createPinepostDatePresets } from "pinepost-ui";',
+        "",
+        "const shortcuts = createPinepostDatePresets({ locale: 'zh-CN' });",
+        "const [date, setDate] = React.useState(new Date());",
+        "",
+        "<DatePickerPanel value={date} onValueChange={setDate} shortcuts={shortcuts} />"
+      ]),
       recipes: [
         {
           title: zh ? "活动日期快捷项" : "Campaign date shortcuts",
           description: zh ? "快捷项可以封装业务日期，disabledDate 保留不可投递日期。" : "Shortcuts can encode product dates while disabledDate blocks unavailable days.",
-          preview: <DatePickerPanel value={new Date(2026, 4, 18)} disabledDate={(date) => date.getDay() === 0} shortcuts={[{ label: zh ? "下个工作日" : "Next workday", value: () => new Date(2026, 4, 18) }]} />,
+          preview: <DatePickerPanel value={shipDateValue} onValueChange={setShipDateValue} disabledDate={(date) => date.getDay() === 0} shortcuts={[{ label: zh ? "下个工作日" : "Next workday", value: () => new Date(2026, 4, 18) }]} />,
           code: code([
             "<DatePickerPanel",
             "  value={shipDate}",
