@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.0
+
+- Added a demo-owned Component Maturity matrix with levels, scores, focus flags, current gaps, and next actions for commercial-depth planning.
+- Hardened Table row selection with controlled selected keys, default selected keys, select-all behavior, `getSelectionKeys()`, and key-aware `onSelectionChange` callbacks.
+- Hardened Form, Upload, Select/Cascader/TreeSelect, and date/time panels across validation errors, multi-file upload state, grouped option rendering, native clear buttons, dismissal behavior, root prop forwarding, and accessible date labels.
+- Kept display-oriented components in a non-focus status so v0.22 prioritizes heavy form and data credibility over broad shallow expansion.
+
 ## 0.21.0
 
 - Recorded the verified v0.21 boundary for the segmented demo architecture split before starting the v0.22 maturity pass.

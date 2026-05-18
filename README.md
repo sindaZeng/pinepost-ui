@@ -129,6 +129,10 @@ separate product scenarios instead of one crowded combined demo.
 The v0.21 boundary records the verified segmented demo architecture split as a
 release-line checkpoint before the next maturity pass.
 
+The v0.22 maturity pass publishes a docs-owned component maturity matrix and
+hardens Table, Form, Upload, Select/Cascader/TreeSelect, and date/time panels
+for deeper commercial workflows instead of adding more shallow component count.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, segmented usage examples, an advanced playground where useful,
 copyable recipes, and an API table.

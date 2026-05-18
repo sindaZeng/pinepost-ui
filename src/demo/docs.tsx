@@ -7,6 +7,7 @@ import { createFoundationCatalogDocs } from "./examples/catalog-foundation";
 import { createSelectionCatalogDocs } from "./examples/catalog-selection";
 import { createDataCatalogDocs } from "./examples/catalog-data";
 import { createSurfaceCatalogDocs } from "./examples/catalog-surface";
+import { createMaturityCatalogDocs } from "./examples/catalog-maturity";
 import { createGuideCatalogDocs } from "./examples/catalog-guide";
 
 export function createDemoDocs(context: DemoContext): DocItem[] {
@@ -27,6 +28,7 @@ export function createDemoDocs(context: DemoContext): DocItem[] {
     ...createSelectionCatalogDocs(catalogContext),
     ...createDataCatalogDocs(catalogContext),
     ...createSurfaceCatalogDocs(catalogContext),
+    ...createMaturityCatalogDocs(catalogContext),
     ...createGuideCatalogDocs(catalogContext)
   ];
 }

@@ -9,10 +9,12 @@ export type FormRule = {
 };
 
 export type FormValidateTrigger = "blur" | "change" | "submit";
+export type FormValidationErrors = Record<string, React.ReactNode>;
 
 export interface FormRef {
   clearValidate: (names?: string | string[]) => void;
   getFieldError: (name: string) => React.ReactNode | undefined;
+  getFieldsError: () => FormValidationErrors;
   getSubmitError: () => React.ReactNode | undefined;
   isFieldValidating: (name: string) => boolean;
   isSubmitting: () => boolean;
@@ -26,7 +28,7 @@ export interface FormProps extends Omit<React.FormHTMLAttributes<HTMLFormElement
   layout?: "vertical" | "horizontal" | "inline";
   model?: Record<string, unknown>;
   onFinish?: (model: Record<string, unknown>) => void | Promise<void>;
-  onFinishFailed?: (model: Record<string, unknown>) => void;
+  onFinishFailed?: (model: Record<string, unknown>, errors: FormValidationErrors) => void;
   onSubmit?: React.FormEventHandler<HTMLFormElement>;
   rules?: Record<string, FormRule[]>;
   submitErrorMessage?: React.ReactNode;
@@ -128,6 +130,25 @@ export const Form = React.forwardRef<FormRef, FormProps>(
       return undefined;
     }
 
+    const validateFields = React.useCallback(
+      async (names: string[]) => {
+        const nextErrors: FormValidationErrors = {};
+
+        for (const name of names) {
+          setFieldValidating(name, true);
+          try {
+            const error = await runFieldValidation(name);
+            if (error) nextErrors[name] = error;
+          } finally {
+            setFieldValidating(name, false);
+          }
+        }
+
+        return nextErrors;
+      },
+      [model, rules]
+    );
+
     const validateField = React.useCallback(
       async (name: string) => {
         setFieldValidating(name, true);
@@ -148,26 +169,15 @@ export const Form = React.forwardRef<FormRef, FormProps>(
     );
 
     const validate = React.useCallback(async () => {
-      const names = Object.keys(rules);
-      const nextErrors: Record<string, React.ReactNode> = {};
-
-      for (const name of names) {
-        setFieldValidating(name, true);
-        try {
-          const error = await runFieldValidation(name);
-          if (error) nextErrors[name] = error;
-        } finally {
-          setFieldValidating(name, false);
-        }
-      }
-
+      const nextErrors = await validateFields(Object.keys(rules));
       setErrors(nextErrors);
       return Object.keys(nextErrors).length === 0;
-    }, [model, rules]);
+    }, [rules, validateFields]);
 
     React.useImperativeHandle(ref, () => ({
       clearValidate,
       getFieldError: (name) => errors[name],
+      getFieldsError: () => errors,
       getSubmitError: () => submitError,
       isFieldValidating: (name) => Boolean(validating[name]),
       isSubmitting: () => submitting,
@@ -190,9 +200,10 @@ export const Form = React.forwardRef<FormRef, FormProps>(
       if (event.defaultPrevented || !onFinish) return;
       event.preventDefault();
       setSubmitError(undefined);
-      const valid = await validate();
-      if (!valid) {
-        onFinishFailed?.(model);
+      const nextErrors = await validateFields(Object.keys(rules));
+      setErrors(nextErrors);
+      if (Object.keys(nextErrors).length > 0) {
+        onFinishFailed?.(model, nextErrors);
         return;
       }
 
@@ -265,9 +276,13 @@ export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
   ({ children, className, description, error, htmlFor, label, name, required, validatingMessage, validateTrigger, ...props }, ref) => {
     const context = React.useContext(FormContext);
     const localRef = React.useRef<HTMLDivElement>(null);
+    const generatedId = React.useId();
     const fieldError = (name ? context?.errors[name] : undefined) ?? error;
     const fieldValidating = Boolean(name ? context?.validating[name] : false);
     const activeTrigger = validateTrigger ?? context?.validateTrigger;
+    const descriptionId = `${generatedId}-description`;
+    const errorId = `${generatedId}-error`;
+    const validatingId = `${generatedId}-validating`;
 
     React.useImperativeHandle(ref, () => localRef.current as HTMLDivElement);
 
@@ -278,6 +293,13 @@ export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
 
     const control = React.isValidElement(children)
       ? React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
+          "aria-describedby": [
+            (children.props as { "aria-describedby"?: string })["aria-describedby"],
+            fieldError ? errorId : undefined,
+            !fieldError && fieldValidating && validatingMessage ? validatingId : undefined,
+            !fieldError && !fieldValidating && description ? descriptionId : undefined
+          ].filter(Boolean).join(" ") || undefined,
+          "aria-invalid": Boolean(fieldError) || undefined,
           onBlur: composeEventHandlers((children.props as { onBlur?: (event: React.FocusEvent) => void }).onBlur, () => {
             if (name && context && hasValidateTrigger(activeTrigger, "blur")) void context.validateField(name);
           }),
@@ -300,14 +322,14 @@ export const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
           {required && <span aria-hidden="true">*</span>}
         </label>
         <div className="pinepost-form-field__control">{control}</div>
-        {description && !fieldError && !fieldValidating && <p className="pinepost-form-field__description">{description}</p>}
+        {description && !fieldError && !fieldValidating && <p id={descriptionId} className="pinepost-form-field__description">{description}</p>}
         {fieldValidating && validatingMessage && (
-          <p className="pinepost-form-field__description" role="status">
+          <p id={validatingId} className="pinepost-form-field__description" role="status">
             {validatingMessage}
           </p>
         )}
         {fieldError && (
-          <p className="pinepost-form-field__error" role="alert">
+          <p id={errorId} className="pinepost-form-field__error" role="alert">
             {fieldError}
           </p>
         )}
@@ -540,8 +562,14 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
     const abortRef = React.useRef<AbortController | null>(null);
     const [internalFileList, setInternalFileList] = React.useState(defaultFileList);
     const currentFileList = fileList ?? internalFileList;
+    const fileListRef = React.useRef(currentFileList);
+
+    React.useEffect(() => {
+      fileListRef.current = currentFileList;
+    }, [currentFileList]);
 
     function setFiles(nextFiles: UploadFile[]) {
+      fileListRef.current = nextFiles;
       if (fileList === undefined) setInternalFileList(nextFiles);
     }
 
@@ -553,26 +581,27 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
         if (allowed) accepted.push(fileToUploadFile(file));
       }
 
-      const availableSlots = typeof limit === "number" ? Math.max(0, limit - currentFileList.length) : accepted.length;
+      const baseList = fileListRef.current;
+      const availableSlots = typeof limit === "number" ? Math.max(0, limit - baseList.length) : accepted.length;
       const nextAccepted = accepted.slice(0, availableSlots);
       const exceeded = accepted.slice(availableSlots).map((item) => item.raw).filter(Boolean) as File[];
-      const nextList = [...currentFileList, ...nextAccepted];
+      const nextList = [...baseList, ...nextAccepted];
 
-      if (exceeded.length > 0) onExceed?.(exceeded, currentFileList);
+      if (exceeded.length > 0) onExceed?.(exceeded, baseList);
       setFiles(nextList);
       onFilesChange?.(nextAccepted.map((item) => item.raw).filter(Boolean) as File[]);
       nextAccepted.forEach((file) => onChange?.(file, nextList));
     }
 
     function replaceFile(nextFile: UploadFile) {
-      const nextList = currentFileList.map((file) => (file.uid === nextFile.uid ? nextFile : file));
+      const nextList = fileListRef.current.map((file) => (file.uid === nextFile.uid ? nextFile : file));
       setFiles(nextList);
       return nextList;
     }
 
     async function submit() {
       abortRef.current = new AbortController();
-      const readyFiles = currentFileList.filter((file) => file.status === "ready" && file.raw);
+      const readyFiles = fileListRef.current.filter((file) => file.status === "ready" && file.raw);
 
       for (const file of readyFiles) {
         const uploading = { ...file, status: "uploading" as const };
@@ -608,7 +637,7 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
     }
 
     function retryFile(uid: string) {
-      const file = currentFileList.find((item) => item.uid === uid);
+      const file = fileListRef.current.find((item) => item.uid === uid);
       if (!file) return undefined;
       const retried: UploadFile = { ...file, error: undefined, percent: 0, response: undefined, status: "ready" };
       const nextList = replaceFile(retried);
@@ -619,14 +648,14 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
     React.useImperativeHandle(ref, () => ({
       abort: () => abortRef.current?.abort(),
       clearFiles: () => setFiles([]),
-      getFiles: () => currentFileList,
+      getFiles: () => fileListRef.current,
       retryFile,
       setFiles,
       submit
-    }), [currentFileList, retryFile, submit]);
+    }), [retryFile, submit]);
 
     function removeFile(file: UploadFile) {
-      const nextList = currentFileList.filter((item) => item.uid !== file.uid);
+      const nextList = fileListRef.current.filter((item) => item.uid !== file.uid);
       setFiles(nextList);
       onRemove?.(file, nextList);
     }
@@ -663,7 +692,9 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
           ref={inputRef}
           id={inputId}
           onChange={(event) => {
-            void addFiles(Array.from(event.currentTarget.files ?? []));
+            const files = Array.from(event.currentTarget.files ?? []);
+            event.currentTarget.value = "";
+            void addFiles(files);
           }}
           multiple={multiple}
           type="file"

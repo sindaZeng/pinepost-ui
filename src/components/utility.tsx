@@ -128,6 +128,10 @@ function getMonthCells(month: Date, weekStartsOn: 0 | 1) {
   return [...cells, ...Array.from({ length: (7 - (cells.length % 7)) % 7 }, () => undefined)];
 }
 
+function dateButtonLabel(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export const DatePickerPanel = React.forwardRef<HTMLDivElement, DatePickerPanelProps>(
   (
     {
@@ -151,6 +155,7 @@ export const DatePickerPanel = React.forwardRef<HTMLDivElement, DatePickerPanelP
     const weekdays = weekStartsOn === 1 ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     function commit(nextDate: Date) {
+      if (disabledDate?.(nextDate)) return;
       if (value === undefined) setInternalValue(nextDate);
       onValueChange?.(nextDate);
     }
@@ -183,6 +188,7 @@ export const DatePickerPanel = React.forwardRef<HTMLDivElement, DatePickerPanelP
             date ? (
               <button
                 key={date.toISOString()}
+                aria-label={dateButtonLabel(date)}
                 aria-pressed={sameDate(date, selectedDate)}
                 className="pinepost-date-panel__day"
                 disabled={disabledDate?.(date)}
@@ -252,6 +258,7 @@ export const DateRangePickerPanel = React.forwardRef<HTMLDivElement, DateRangePi
     const weekdays = weekStartsOn === 1 ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     function commit(nextValue: DateRangeValue) {
+      if (nextValue.some((date) => date && disabledDate?.(date))) return;
       if (value === undefined) setInternalValue(nextValue);
       onValueChange?.(nextValue);
     }
@@ -294,6 +301,7 @@ export const DateRangePickerPanel = React.forwardRef<HTMLDivElement, DateRangePi
             date ? (
               <button
                 key={date.toISOString()}
+                aria-label={dateButtonLabel(date)}
                 aria-pressed={sameDate(date, currentValue[0]) || sameDate(date, currentValue[1])}
                 className="pinepost-date-panel__day"
                 data-in-range={dateInRange(date, currentValue) || undefined}
@@ -591,6 +599,7 @@ export function formatPinepostTimeRange(value: TimeRangeValue, options: Omit<Pin
 export interface DateTimePickerPanelProps
   extends Omit<DatePickerPanelProps, "defaultValue" | "onValueChange" | "shortcuts" | "value"> {
   defaultValue?: Date;
+  disabledTime?: TimePickerPanelProps["disabledTime"];
   end?: string;
   onValueChange?: (value: Date) => void;
   shortcuts?: DatePickerShortcut[];
@@ -616,13 +625,18 @@ export const DateTimePickerPanel = React.forwardRef<HTMLDivElement, DateTimePick
     {
       className,
       defaultValue,
+      disabledDate,
+      disabledTime,
       end = "18:00",
+      month,
       onValueChange,
+      renderDay,
       shortcuts = [],
       start = "09:00",
       step = "00:30",
       value,
-      ...props
+      weekStartsOn = 1,
+      ...rootProps
     },
     ref
   ) => {
@@ -631,12 +645,13 @@ export const DateTimePickerPanel = React.forwardRef<HTMLDivElement, DateTimePick
     const currentTime = formatTime(currentValue) || start;
 
     function commit(nextValue: Date) {
+      if (disabledDate?.(nextValue) || disabledTime?.(formatTime(nextValue))) return;
       if (value === undefined) setInternalValue(nextValue);
       onValueChange?.(nextValue);
     }
 
     return (
-      <div ref={ref} className={cn("pinepost-date-time-panel", className)}>
+      <div ref={ref} className={cn("pinepost-date-time-panel", className)} {...rootProps}>
         {shortcuts.length > 0 && (
           <div className="pinepost-date-time-panel__shortcuts">
             {shortcuts.map((shortcut) => (
@@ -651,11 +666,15 @@ export const DateTimePickerPanel = React.forwardRef<HTMLDivElement, DateTimePick
           </div>
         )}
         <DatePickerPanel
-          {...props}
+          disabledDate={disabledDate}
+          month={month}
+          renderDay={renderDay}
           value={currentValue}
+          weekStartsOn={weekStartsOn}
           onValueChange={(date) => commit(dateWithTime(date, currentTime))}
         />
         <TimePickerPanel
+          disabledTime={disabledTime}
           end={end}
           start={start}
           step={step}

@@ -2445,7 +2445,7 @@
   justify-content: space-between;
   min-height: 42px;
   min-width: 220px;
-  padding: 0 12px;
+  padding: 0 42px 0 12px;
 }
 
 .pinepost-picker-trigger [data-placeholder="true"] {
@@ -2454,11 +2454,20 @@
 
 .pinepost-picker-trigger__clear {
   align-items: center;
+  background: color-mix(in srgb, var(--pinepost-moss) 60%, var(--pinepost-paper-raised));
+  border: 1px solid var(--pinepost-border);
   border-radius: 999px;
   color: var(--pinepost-muted);
+  cursor: pointer;
   display: inline-flex;
+  font-family: var(--pinepost-font);
+  font-weight: 900;
   height: 22px;
   justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: 12px;
+  top: 10px;
   width: 22px;
 }
 
@@ -3107,6 +3116,7 @@
   font-weight: 900;
   height: 22px;
   justify-content: center;
+  padding: 0;
   position: absolute;
   right: 34px;
   top: 10px;

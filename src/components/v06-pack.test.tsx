@@ -137,7 +137,8 @@ describe("Pinepost UI v0.6 pack", () => {
 
     expect(screen.queryByText("South")).not.toBeInTheDocument();
     await user.click(screen.getByRole("checkbox", { name: "Select North" }));
-    expect(onSelectionChange).toHaveBeenCalledWith([expect.objectContaining({ id: "a" })]);
+    expect(onSelectionChange).toHaveBeenCalledWith([expect.objectContaining({ id: "a" })], ["a"]);
+    expect(tableRef.current?.getSelectionKeys()).toEqual(["a"]);
     act(() => tableRef.current?.toggleRowSelection({ id: "b", route: "South", count: 1 }, true));
     expect(tableRef.current?.getSelectionRows()).toHaveLength(2);
     act(() => tableRef.current?.clearSelection());

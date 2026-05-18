@@ -221,18 +221,14 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
           <span className="pinepost-select__icon" aria-hidden="true">v</span>
         </button>
         {clearable && selectedValues.length > 0 && (
-          <span
+          <button
             aria-label={`Clear ${String(placeholder)}`}
             className="pinepost-select__clear"
             onClick={clear}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") clear();
-            }}
-            role="button"
-            tabIndex={0}
+            type="button"
           >
             x
-          </span>
+          </button>
         )}
         {open && (
           <div
@@ -255,8 +251,9 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
               />
             )}
             <div className="pinepost-select__viewport">
-              {groups.length > 0
-                ? groups.map((group) => (
+              {groups.length > 0 ? (
+                <>
+                  {groups.map((group) => (
                     <div className="pinepost-select__group" key={String(group)}>
                       <strong>{group}</strong>
                       {visibleOptions
@@ -264,8 +261,15 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
                         .filter((item) => item.option.group === group)
                         .map((item) => renderOption(item.option, item.index))}
                     </div>
-                  ))
-                : visibleOptions.map(renderOption)}
+                  ))}
+                  {visibleOptions
+                    .map((option, index) => ({ option, index }))
+                    .filter((item) => !item.option.group)
+                    .map((item) => renderOption(item.option, item.index))}
+                </>
+              ) : (
+                visibleOptions.map(renderOption)
+              )}
             </div>
           </div>
         )}

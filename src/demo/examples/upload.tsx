@@ -339,9 +339,10 @@ export function createUploadExamples(context: DemoContext) {
             <Upload
               ref={uploadRef}
               drag
+              multiple
               limit={3}
               label={zh ? "拖放路线清单" : "Drop route manifests"}
-              description={zh ? "选择文件后点击开始上传，失败文件可以重试。" : "Choose a file, then start upload; failed files can retry."}
+              description={zh ? "选择文件后点击开始上传，失败文件可以重试。" : "Choose files, then start upload; failed files can retry."}
               defaultFileList={[{ uid: "failed-asset", name: "stamp-sheet.png", percent: 36, status: "error", error: new Error("Demo failure") }]}
               customRequest={async ({ file, onProgress, onSuccess }) => {
                 onProgress?.(64);
@@ -410,6 +411,7 @@ export function createUploadExamples(context: DemoContext) {
           "<Upload",
           "  ref={uploadRef}",
           "  drag",
+          "  multiple",
           "  limit={3}",
           "  customRequest={uploadAsset}",
           "  renderFile={(file, actions) => <AssetRow file={file} actions={actions} />}",
@@ -433,6 +435,7 @@ export function createUploadExamples(context: DemoContext) {
             <Upload
               ref={uploadExampleRef}
               drag
+              multiple
               limit={3}
               label={zh ? "拖放路线清单" : "Drop route manifests"}
               description={zh ? "选择文件后点击开始上传。" : "Choose files, then start upload."}
@@ -459,7 +462,7 @@ export function createUploadExamples(context: DemoContext) {
           "",
           "const uploadRef = React.useRef<UploadRef>(null);",
           "",
-          "<Upload ref={uploadRef} drag limit={3} customRequest={uploadAsset} />",
+          "<Upload ref={uploadRef} drag multiple limit={3} customRequest={uploadAsset} />",
           "<Button onClick={() => uploadRef.current?.submit()}>开始上传</Button>"
         ])
       },

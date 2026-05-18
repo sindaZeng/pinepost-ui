@@ -56,6 +56,27 @@ test.describe("Pinepost docs smoke", () => {
     }
   });
 
+  test("shows the v0.22 maturity matrix through commercial docs search", async ({ page }) => {
+    await page.goto("/");
+
+    for (const term of ["maturity", "commercial", "Table", "Upload"]) {
+      await page.getByLabel("搜索组件").fill(term);
+      await expect(page.getByRole("button", { name: /Component Maturity|组件成熟度/ })).toBeVisible();
+    }
+
+    await page.getByRole("button", { name: /Component Maturity|组件成熟度/ }).click();
+    await expect(page.locator("h1")).toHaveText(/Component Maturity|组件成熟度/);
+    const matrix = page.locator(".docs-maturity");
+    await expect(matrix).toBeVisible();
+    await expect(matrix.getByText("Table", { exact: true })).toBeVisible();
+    await expect(matrix.getByText("Form", { exact: true })).toBeVisible();
+    await expect(matrix.getByText("Upload", { exact: true })).toBeVisible();
+    await expect(matrix.getByText("Select / Cascader / TreeSelect")).toBeVisible();
+    await expect(matrix.getByText("Date and time panels", { exact: true })).toBeVisible();
+    await expect(matrix.getByText(/v0.22 重点|v0.22 focus/).first()).toBeVisible();
+    await expectNoPageOverflow(page);
+  });
+
   test("supports selection and scheduling workflow docs", async ({ page }) => {
     await page.goto("/");
 

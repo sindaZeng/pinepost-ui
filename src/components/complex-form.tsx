@@ -238,23 +238,18 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
           type="button"
         >
           <span data-placeholder={!displayValue}>{displayValue || placeholder}</span>
-          {clearable && displayValue ? (
-            <span
-              aria-label="Clear"
-              className="pinepost-picker-trigger__clear"
-              onClick={(event) => {
-                event.stopPropagation();
-                commit([], []);
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              x
-            </span>
-          ) : (
-            <span aria-hidden="true">v</span>
-          )}
+          <span aria-hidden="true">v</span>
         </button>
+        {clearable && displayValue && (
+          <button
+            aria-label="Clear"
+            className="pinepost-picker-trigger__clear"
+            onClick={() => commit([], [])}
+            type="button"
+          >
+            x
+          </button>
+        )}
         {open && (
           <div className="pinepost-cascader__panel">
             {filterable && (
@@ -570,6 +565,7 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
     ref
   ) => {
     const triggerRef = React.useRef<HTMLButtonElement>(null);
+    const rootRef = React.useRef<HTMLDivElement>(null);
     const [open, setOpen] = React.useState(false);
     const [treeData, setTreeData] = React.useState(data);
     const [expanded, setExpanded] = React.useState(() => new Set(defaultExpanded));
@@ -606,6 +602,19 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
     }
 
     React.useEffect(() => setTreeData(data), [data]);
+
+    React.useEffect(() => {
+      if (!open) return;
+
+      function onPointerDown(event: PointerEvent) {
+        const target = event.target as Node;
+        if (rootRef.current?.contains(target)) return;
+        setOpenState(false);
+      }
+
+      document.addEventListener("pointerdown", onPointerDown);
+      return () => document.removeEventListener("pointerdown", onPointerDown);
+    }, [open]);
 
     function applyChildren(nodes: TreeSelectOption[], value: string, children: TreeSelectOption[]): TreeSelectOption[] {
       return nodes.map((node) => {
@@ -677,32 +686,37 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
     }));
 
     return (
-      <div className={cn("pinepost-tree-select", className)} data-open={open} {...props}>
+      <div ref={rootRef} className={cn("pinepost-tree-select", className)} data-open={open} {...props}>
         <button
           ref={triggerRef}
           aria-expanded={open}
           className="pinepost-picker-trigger"
           onClick={() => setOpenState(!open)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setOpenState(true);
+            }
+            if (event.key === "Escape") {
+              event.preventDefault();
+              setOpenState(false);
+            }
+          }}
           type="button"
         >
           <span data-placeholder={!selectedLabels}>{selectedLabels || placeholder}</span>
-          {clearable && selectedLabels ? (
-            <span
-              aria-label="Clear"
-              className="pinepost-picker-trigger__clear"
-              onClick={(event) => {
-                event.stopPropagation();
-                commit(multiple ? [] : "");
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              x
-            </span>
-          ) : (
-            <span aria-hidden="true">v</span>
-          )}
+          <span aria-hidden="true">v</span>
         </button>
+        {clearable && selectedLabels && (
+          <button
+            aria-label="Clear"
+            className="pinepost-picker-trigger__clear"
+            onClick={() => commit(multiple ? [] : "")}
+            type="button"
+          >
+            x
+          </button>
+        )}
         {open && (
           <div className="pinepost-tree-select__panel">
             {filterable && (
@@ -811,23 +825,13 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
       <div className={cn("pinepost-virtual-select", className)} {...props}>
         <button ref={triggerRef} className="pinepost-picker-trigger" onClick={() => setOpen(!open)} type="button">
           <span data-placeholder={!displayValue}>{displayValue || placeholder}</span>
-          {clearable && selectedValues.length > 0 ? (
-            <span
-              aria-label="Clear"
-              className="pinepost-picker-trigger__clear"
-              onClick={(event) => {
-                event.stopPropagation();
-                clear();
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              x
-            </span>
-          ) : (
-            <span aria-hidden="true">v</span>
-          )}
+          <span aria-hidden="true">v</span>
         </button>
+        {clearable && selectedValues.length > 0 && (
+          <button aria-label="Clear" className="pinepost-picker-trigger__clear" onClick={clear} type="button">
+            x
+          </button>
+        )}
         {open && (
           <div className="pinepost-virtual-select__panel">
             {filterable && (

@@ -53,10 +53,10 @@ describe("Pinepost UI v0.8 pack", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "17" }));
+    await user.click(screen.getByRole("button", { name: "2026-05-17" }));
     expect(onValueChange).toHaveBeenLastCalledWith([new Date(2026, 4, 17), undefined]);
 
-    await user.click(screen.getByRole("button", { name: "19" }));
+    await user.click(screen.getByRole("button", { name: "2026-05-19" }));
     expect(onValueChange).toHaveBeenLastCalledWith([new Date(2026, 4, 17), new Date(2026, 4, 19)]);
 
     await user.click(screen.getByRole("button", { name: "Festival week" }));

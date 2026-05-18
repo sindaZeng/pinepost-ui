@@ -973,13 +973,13 @@ export function createGuideCatalogDocs(context: DemoCatalogContext): DocItem[] {
       id: "coverage",
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
-      description: zh ? "公开展示 Pinepost 自己的组件成熟度，不包含外部对比说明。" : "Public Pinepost-only component maturity map.",
-      preview: <div className="docs-roadmap"><Tag>Stable</Tag><span>Button, Card, Input, Tabs, Theme collections, Recipe Gallery state recipes, segmented Form/Table demos</span><Tag variant="parcel">Beta</Tag><span>Recipe Bundles, Table presets, Cascader multi-select, Date/time presets, Upload and selection playgrounds, visual baselines</span><Tag variant="sky">Planned</Tag><span>{zh ? "更多分段示例、深层选择无障碍、发布检查自动化" : "More segmented examples, deep selection accessibility, release checklist automation"}</span></div>,
-      code: code(["Stable: production-ready basics, theme collections, stateful recipes, and segmented core demos", "Beta: recipe bundles, table presets, multi-route selection, scheduling presets, and visual checks", "Planned: more segmented examples and future refinements"]),
+      description: zh ? "公开展示 Pinepost 自己的覆盖计划；详细成熟度见 Component Maturity 矩阵。" : "Public Pinepost-only coverage plan; use the Component Maturity matrix for depth status.",
+      preview: <div className="docs-roadmap"><Tag>Focus</Tag><span>{zh ? "Component Maturity 矩阵跟踪 Table、Form、Upload、Select/Cascader/TreeSelect 和日期时间。" : "Component Maturity tracks Table, Form, Upload, Select/Cascader/TreeSelect, and date/time."}</span><Tag variant="parcel">Maintain</Tag><span>{zh ? "主题、配方包、导航、反馈和基础展示组件维持现有覆盖。" : "Theme, recipe bundle, navigation, feedback, and basic display coverage are maintained."}</span><Tag variant="sky">Hold</Tag><span>{zh ? "展示类组件本轮保持非重点，避免平均扩张。" : "Display components stay non-focus in this pass to avoid broad shallow expansion."}</span></div>,
+      code: code(["Focus: Component Maturity tracks Table, Form, Upload, Select/Cascader/TreeSelect, and date/time", "Maintain: theme, recipes, navigation, feedback, and basic display coverage", "Hold: display components remain non-focus during v0.22"]),
       api: [
-        { prop: "Stable", type: "status", defaultValue: "-", description: zh ? "可优先用于业务。" : "Ready for product use." },
-        { prop: "Beta", type: "status", defaultValue: "-", description: zh ? "API 已可用，继续打磨边界。" : "Usable API with active refinement." },
-        { prop: "Planned", type: "status", defaultValue: "-", description: zh ? "后续增强。" : "Future enhancement." }
+        { prop: "Focus", type: "status", defaultValue: "-", description: zh ? "v0.22 优先深挖的组件。" : "Components deepened first in v0.22." },
+        { prop: "Maintain", type: "status", defaultValue: "-", description: zh ? "继续维护现有文档与 API。" : "Existing docs and APIs remain maintained." },
+        { prop: "Hold", type: "status", defaultValue: "-", description: zh ? "本轮暂不平均投入。" : "No broad investment in this pass." }
       ]
     }
 

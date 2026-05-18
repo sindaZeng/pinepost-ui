@@ -81,6 +81,7 @@ export interface TableRef<T> {
   clearSort: () => void;
   getExpandedRows: () => T[];
   getColumnOrder: () => string[];
+  getSelectionKeys: () => React.Key[];
   getSelectionRows: () => T[];
   getSortState: () => TableSortState<T> | undefined;
   getViewPreset: () => string | undefined;
@@ -105,6 +106,7 @@ export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
   defaultColumnWidths?: TableColumnWidthMap;
   defaultExpandedRowKeys?: React.Key[];
   defaultHiddenColumns?: Array<keyof T | string>;
+  defaultSelectedRowKeys?: React.Key[];
   defaultViewPreset?: string;
   density?: TableDensity;
   editable?: boolean;
@@ -124,13 +126,14 @@ export interface TableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
   onExpandChange?: (expandedKeys: React.Key[]) => void;
   onFilterClear?: (key?: string) => void;
   onRowClick?: (row: T, index: number) => void;
-  onSelectionChange?: (rows: T[]) => void;
+  onSelectionChange?: (rows: T[], keys: React.Key[]) => void;
   onSortChange?: (state?: TableSortState<T>) => void;
   onViewPresetChange?: (key: string, preset: TableViewPreset<T>) => void;
   renderExpandedRow?: (row: T, index: number) => React.ReactNode;
   rowKey?: keyof T | ((row: T, index: number) => React.Key);
   resizableColumns?: boolean;
   selectable?: boolean;
+  selectedRowKeys?: React.Key[];
   sortState?: TableSortState<T>;
   summary?: Partial<Record<string, React.ReactNode>> | ((rows: T[]) => Partial<Record<string, React.ReactNode>>);
   viewPreset?: string;
@@ -444,6 +447,7 @@ function TableInner<T extends object>({
   defaultColumnWidths = {},
   defaultExpandedRowKeys = [],
   defaultHiddenColumns = [],
+  defaultSelectedRowKeys = [],
   defaultViewPreset,
   density = "comfortable",
   editable,
@@ -470,6 +474,7 @@ function TableInner<T extends object>({
   rowKey,
   resizableColumns,
   selectable,
+  selectedRowKeys,
   sortState,
   summary,
   viewPreset,
@@ -480,7 +485,7 @@ function TableInner<T extends object>({
 }: TableProps<T>, ref: React.ForwardedRef<TableRef<T>>) {
   const initialPresetKey = viewPreset ?? readStoredViewPreset(viewStorageKey) ?? defaultViewPreset;
   const initialPreset = findTablePreset(viewPresets, initialPresetKey);
-  const [selectedKeys, setSelectedKeys] = React.useState<React.Key[]>([]);
+  const [internalSelectedKeys, setInternalSelectedKeys] = React.useState<React.Key[]>(defaultSelectedRowKeys);
   const [currentRowKey, setCurrentRowKey] = React.useState<React.Key | undefined>();
   const [editingCell, setEditingCell] = React.useState<{ key: keyof T | string; rowKey: React.Key } | null>(null);
   const [editDraft, setEditDraft] = React.useState("");
@@ -496,6 +501,7 @@ function TableInner<T extends object>({
   const activeColumnWidths = columnWidths ?? internalColumnWidths;
   const activeColumnOrder = normalizeColumnOrder(columns, columnOrder ?? internalColumnOrder);
   const activeHiddenColumns = hiddenColumns?.map(String) ?? internalHiddenColumns;
+  const activeSelectedKeys = selectedRowKeys ?? internalSelectedKeys;
   const activeViewPresetKey = viewPreset ?? internalViewPreset;
   const hiddenColumnSet = React.useMemo(() => new Set(activeHiddenColumns), [activeHiddenColumns]);
   const orderedColumnTree = React.useMemo(() => orderColumnTree(columns, activeColumnOrder), [columns, activeColumnOrder]);
@@ -526,9 +532,32 @@ function TableInner<T extends object>({
     return [...filteredData].sort((left, right) => compare(left, right) * direction);
   }, [activeSort, filteredData, leafColumns]);
 
+  function rowsForKeys(keys: React.Key[]) {
+    return data.filter((row, index) => keys.includes(getRowKey(row, index)));
+  }
+
+  function visibleRowKeys() {
+    return visibleData.map((row) => {
+      const rowIndex = data.indexOf(row);
+      return getRowKey(row, rowIndex >= 0 ? rowIndex : data.length);
+    });
+  }
+
   function commitSelection(nextKeys: React.Key[]) {
-    setSelectedKeys(nextKeys);
-    onSelectionChange?.(data.filter((row, index) => nextKeys.includes(getRowKey(row, index))));
+    if (selectedRowKeys === undefined) setInternalSelectedKeys(nextKeys);
+    onSelectionChange?.(rowsForKeys(nextKeys), nextKeys);
+  }
+
+  function toggleAllVisibleRows(selected?: boolean) {
+    const keys = visibleRowKeys();
+    const allSelected = keys.length > 0 && keys.every((key) => activeSelectedKeys.includes(key));
+    const nextSelected = selected ?? !allSelected;
+    const keySet = new Set(activeSelectedKeys);
+    keys.forEach((key) => {
+      if (nextSelected) keySet.add(key);
+      else keySet.delete(key);
+    });
+    commitSelection(Array.from(keySet));
   }
 
   function setSort(nextSort?: TableSortState<T>) {
@@ -617,7 +646,8 @@ function TableInner<T extends object>({
     clearSort: () => setSort(undefined),
     getExpandedRows: () => data.filter((row, index) => activeExpandedKeys.includes(getRowKey(row, index))),
     getColumnOrder: () => activeColumnOrder,
-    getSelectionRows: () => data.filter((row, index) => selectedKeys.includes(getRowKey(row, index))),
+    getSelectionKeys: () => activeSelectedKeys,
+    getSelectionRows: () => rowsForKeys(activeSelectedKeys),
     getSortState: () => activeSort,
     getViewPreset: () => activeViewPresetKey,
     getVisibleColumns: () => leafColumns,
@@ -637,10 +667,10 @@ function TableInner<T extends object>({
     toggleRowSelection: (row, selected) => {
       const rowIndex = data.indexOf(row);
       const key = getRowKey(row, rowIndex >= 0 ? rowIndex : data.length);
-      const nextSelected = selected ?? !selectedKeys.includes(key);
-      commitSelection(nextSelected ? Array.from(new Set([...selectedKeys, key])) : selectedKeys.filter((item) => item !== key));
+      const nextSelected = selected ?? !activeSelectedKeys.includes(key);
+      commitSelection(nextSelected ? Array.from(new Set([...activeSelectedKeys, key])) : activeSelectedKeys.filter((item) => item !== key));
     }
-  }), [activeColumnOrder, activeColumnWidths, activeExpandedKeys, activeHiddenColumns, activeSort, activeViewPresetKey, columnOrder, columns, data, leafColumns, onColumnOrderChange, onCurrentChange, selectedKeys, viewPresets]);
+  }), [activeColumnOrder, activeColumnWidths, activeExpandedKeys, activeHiddenColumns, activeSelectedKeys, activeSort, activeViewPresetKey, columnOrder, columns, data, leafColumns, onColumnOrderChange, onCurrentChange, selectedRowKeys, viewPresets]);
 
   React.useEffect(() => {
     if (viewPreset === undefined || controlledViewPresetRef.current === viewPreset) return;
@@ -650,6 +680,8 @@ function TableInner<T extends object>({
 
   const extraColumnCount = (selectable ? 1 : 0) + (renderExpandedRow ? 1 : 0);
   const summaryValues = typeof summary === "function" ? summary(visibleData) : summary;
+  const currentVisibleRowKeys = visibleRowKeys();
+  const allVisibleRowsSelected = currentVisibleRowKeys.length > 0 && currentVisibleRowKeys.every((key) => activeSelectedKeys.includes(key));
 
   function renderHeaderCell(column: TableColumn<T>, columnIndex: number, spanProps?: { colSpan?: number; rowSpan?: number }) {
     const fixed = column.fixed;
@@ -686,6 +718,20 @@ function TableInner<T extends object>({
             </span>
           )}
         </span>
+      </th>
+    );
+  }
+
+  function renderSelectionHeader(rowSpan?: number) {
+    return (
+      <th aria-label="Selection" rowSpan={rowSpan}>
+        <input
+          aria-label="Select all rows"
+          checked={allVisibleRowsSelected}
+          disabled={currentVisibleRowKeys.length === 0}
+          onChange={(event) => toggleAllVisibleRows(event.currentTarget.checked)}
+          type="checkbox"
+        />
       </th>
     );
   }
@@ -729,7 +775,7 @@ function TableInner<T extends object>({
             <>
               <tr>
                 {renderExpandedRow && <th aria-label="Expand rows" rowSpan={2} />}
-                {selectable && <th aria-label="Selection" rowSpan={2} />}
+                {selectable && renderSelectionHeader(2)}
                 {visibleColumnTree.map((column) =>
                   column.children?.length
                     ? renderHeaderCell(column, -1, { colSpan: leafCount(column) })
@@ -745,7 +791,7 @@ function TableInner<T extends object>({
           ) : (
             <tr>
               {renderExpandedRow && <th aria-label="Expand rows" />}
-              {selectable && <th aria-label="Selection" />}
+              {selectable && renderSelectionHeader()}
               {leafColumns.map((column, columnIndex) => renderHeaderCell(column, columnIndex))}
             </tr>
           )}
@@ -758,7 +804,7 @@ function TableInner<T extends object>({
           ) : visibleData.length > 0 ? (
             visibleData.map((row, index) => {
               const key = getRowKey(row, data.indexOf(row));
-              const selected = selectedKeys.includes(key);
+              const selected = activeSelectedKeys.includes(key);
               const expanded = activeExpandedKeys.includes(key);
               const labelBase = String(getCellValue(row, leafColumns[0]?.key ?? "") ?? key);
 
@@ -796,8 +842,8 @@ function TableInner<T extends object>({
                           checked={selected}
                           onChange={(event) => {
                             const nextKeys = event.currentTarget.checked
-                              ? Array.from(new Set([...selectedKeys, key]))
-                              : selectedKeys.filter((item) => item !== key);
+                              ? Array.from(new Set([...activeSelectedKeys, key]))
+                              : activeSelectedKeys.filter((item) => item !== key);
                             commitSelection(nextKeys);
                           }}
                           onClick={(event) => event.stopPropagation()}

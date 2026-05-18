@@ -362,9 +362,18 @@ export function createSelectionExamples(context: DemoContext) {
       {
         id: "groups",
         title: zh ? "分组选项" : "Grouped options",
-        description: zh ? "用 group 字段把选项按业务上下文分层。" : "Use group to organize options by product context.",
-        preview: <Select options={[{ value: "daily", label: zh ? "日常路线" : "Daily routes", group: zh ? "运营" : "Ops" }, { value: "event", label: zh ? "活动路线" : "Campaign routes", group: zh ? "活动" : "Campaign" }]} placeholder={zh ? "选择场景" : "Choose scenario"} />,
-        code: code(['<Select options={[{ value: "daily", label: "日常路线", group: "运营" }]} />'])
+        description: zh ? "用 group 字段把选项按业务上下文分层，未分组项也会正常保留。" : "Use group to organize options by product context; ungrouped options stay visible too.",
+        preview: (
+          <Select
+            options={[
+              { value: "daily", label: zh ? "日常路线" : "Daily routes", group: zh ? "运营" : "Ops" },
+              { value: "event", label: zh ? "活动路线" : "Campaign routes", group: zh ? "活动" : "Campaign" },
+              { value: "loose", label: zh ? "临时路线" : "Loose route" }
+            ]}
+            placeholder={zh ? "选择场景" : "Choose scenario"}
+          />
+        ),
+        code: code(['<Select options={[{ value: "daily", label: "日常路线", group: "运营" }, { value: "loose", label: "临时路线" }]} />'])
       },
       {
         id: "remote",

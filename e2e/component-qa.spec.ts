@@ -41,16 +41,26 @@ test.describe("Pinepost component QA hardening", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Upload 上传" }).click();
 
-    await page.locator("main input[type=file]").first().setInputFiles({
-      name: "route-manifest.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from("route qa")
-    });
-    await expect(page.locator(".pinepost-upload__list strong", { hasText: "route-manifest.txt" })).toBeVisible();
-    await expect(page.locator(".pinepost-upload__list").getByText("ready", { exact: true })).toBeVisible();
+    const example = page.getByRole("region", { name: /手动上传队列|Manual upload queue/ });
+    const uploadList = example.locator(".pinepost-upload__list");
+    await example.locator("input[type=file]").first().setInputFiles([
+      {
+        name: "route-manifest.txt",
+        mimeType: "text/plain",
+        buffer: Buffer.from("route qa")
+      },
+      {
+        name: "route-window.txt",
+        mimeType: "text/plain",
+        buffer: Buffer.from("window qa")
+      }
+    ]);
+    await expect(uploadList.locator("strong", { hasText: "route-manifest.txt" })).toBeVisible();
+    await expect(uploadList.locator("strong", { hasText: "route-window.txt" })).toBeVisible();
+    await expect(uploadList.getByText("ready", { exact: true })).toHaveCount(2);
 
-    await page.getByRole("button", { name: /^(开始上传|Start upload)$/ }).click();
-    await expect(page.locator(".pinepost-upload__list").getByText("success", { exact: true })).toBeVisible();
+    await example.getByRole("button", { name: /^(开始上传|Start upload)$/ }).click();
+    await expect(uploadList.getByText("success", { exact: true })).toHaveCount(2);
   });
 
   test("validates the Form segmented submit example against visible fields", async ({ page }) => {
@@ -105,6 +115,14 @@ test.describe("Pinepost component QA hardening", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Table 表格" }).click();
 
+    const selectionExample = page.getByRole("region", { name: /排序与选择|Sorting and selection/ });
+    await selectionExample.getByRole("checkbox", { name: "Select all rows" }).check();
+    const selectedRows = selectionExample.locator("tbody input[type=checkbox]");
+    await expect(selectedRows).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
+      await expect(selectedRows.nth(index)).toBeChecked();
+    }
+
     const filterExample = page.getByRole("region", { name: /筛选与清空|Filters and reset/ });
     const playground = page.getByRole("region", { name: /高级 Playground|Advanced Playground/ });
     await expect(filterExample.getByText(/状态：就绪|Status: Ready/).first()).toBeVisible();
@@ -149,8 +167,30 @@ test.describe("Pinepost component QA hardening", () => {
 
     await page.getByRole("button", { name: "DatePickerPanel 日期面板" }).click();
     const dateGrid = page.locator(".docs-preview-surface .pinepost-date-panel__grid").first();
-    await dateGrid.getByRole("button", { name: "18", exact: true }).click();
-    await expect(dateGrid.getByRole("button", { name: "18", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await dateGrid.getByRole("button", { name: "2026-05-18" }).click();
+    await expect(dateGrid.getByRole("button", { name: "2026-05-18" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("keeps mixed Select groups visible and TreeSelect dismissal aligned", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Select 选择器" }).click();
+    const groupedSelect = page.getByRole("region", { name: /分组选项|Grouped options/ });
+    await groupedSelect.getByRole("combobox", { name: /选择场景|Choose scenario/ }).click();
+    await expect(groupedSelect.getByRole("option", { name: /临时路线|Loose route/ })).toBeVisible();
+
+    await page.getByRole("button", { name: "TreeSelect 树形选择" }).click();
+    const treeExample = page.getByRole("region", { name: /树形多选|Tree multiple selection/ });
+    const treeTrigger = treeExample.locator(".pinepost-picker-trigger").first();
+    await treeTrigger.click();
+    await expect(treeExample.locator(".pinepost-tree-select__panel")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(treeExample.locator(".pinepost-tree-select__panel")).toHaveCount(0);
+
+    await treeTrigger.click();
+    await expect(treeExample.locator(".pinepost-tree-select__panel")).toBeVisible();
+    await page.locator("main h1").click();
+    await expect(treeExample.locator(".pinepost-tree-select__panel")).toHaveCount(0);
   });
 
   test("opens and dismisses overlay and feedback docs previews", async ({ page }) => {

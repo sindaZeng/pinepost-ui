@@ -8,7 +8,7 @@ export interface VirtualizedTableProps<T> extends React.HTMLAttributes<HTMLDivEl
   data: T[];
   height?: number;
   onRowClick?: (row: T, index: number) => void;
-  onSelectionChange?: (rows: T[]) => void;
+  onSelectionChange?: (rows: T[], keys: React.Key[]) => void;
   onSortChange?: (state?: TableSortState<T>) => void;
   rowHeight?: number;
   rowKey?: keyof T | ((row: T, index: number) => React.Key);
@@ -67,7 +67,7 @@ function VirtualizedTableInner<T extends object>({
 
   function commitSelection(nextKeys: React.Key[]) {
     setSelectedKeys(nextKeys);
-    onSelectionChange?.(data.filter((row, index) => nextKeys.includes(getRowKey(row, index))));
+    onSelectionChange?.(data.filter((row, index) => nextKeys.includes(getRowKey(row, index))), nextKeys);
   }
 
   function setSort(nextSort?: TableSortState<T>) {
@@ -87,6 +87,7 @@ function VirtualizedTableInner<T extends object>({
     clearSort: () => setSort(undefined),
     getExpandedRows: () => [],
     getColumnOrder: () => columns.map((column) => String(column.key)),
+    getSelectionKeys: () => selectedKeys,
     getSelectionRows: () => data.filter((row, index) => selectedKeys.includes(getRowKey(row, index))),
     getSortState: () => activeSort,
     getViewPreset: () => undefined,
