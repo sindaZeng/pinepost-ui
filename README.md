@@ -126,6 +126,9 @@ example navigation, copyable code, API tables, and advanced playgrounds. Table,
 Form, Upload, Select, Cascader, TreeSelect, Tree, and date/time panels now show
 separate product scenarios instead of one crowded combined demo.
 
+The v0.21 boundary records the verified segmented demo architecture split as a
+release-line checkpoint before the next maturity pass.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, segmented usage examples, an advanced playground where useful,
 copyable recipes, and an API table.

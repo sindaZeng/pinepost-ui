@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.21.0
+
+- Recorded the verified v0.21 boundary for the segmented demo architecture split before starting the v0.22 maturity pass.
+- Documented the catalog split across demo-owned example modules instead of adding more unrelated logic to the main demo entry.
+- Kept the release line focused on closing the existing demo architecture work, package metadata, and verification notes rather than adding new component breadth.
+
 ## 0.20.0
 
 - Added a rebuilt demo catalog with segmented examples, example navigation, copyable code, API tables, and advanced playground sections.
