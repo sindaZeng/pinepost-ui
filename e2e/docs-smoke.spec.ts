@@ -77,6 +77,22 @@ test.describe("Pinepost docs smoke", () => {
     await expectNoPageOverflow(page);
   });
 
+  test("finds and renders the Commercial Pressure Lab", async ({ page }) => {
+    await page.goto("/");
+
+    for (const term of ["pressure", "commercial", "server table", "dynamic form", "controlled upload"]) {
+      await page.getByLabel("搜索组件").fill(term);
+      await expect(page.getByRole("button", { name: /Commercial Pressure Lab|商用压力场/ })).toBeVisible();
+    }
+
+    await page.getByRole("button", { name: /Commercial Pressure Lab|商用压力场/ }).click();
+    await expect(page.locator("h1")).toHaveText(/Commercial Pressure Lab|商用压力场/);
+    await expect(page.getByRole("region", { name: /Server Table|服务端表格/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Dynamic Form|动态表单/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Controlled Upload Queue|受控上传队列/ })).toBeVisible();
+    await expectNoPageOverflow(page);
+  });
+
   test("supports selection and scheduling workflow docs", async ({ page }) => {
     await page.goto("/");
 

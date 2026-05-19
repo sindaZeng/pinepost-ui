@@ -45,7 +45,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       zh: "高密数据与操作"
     },
     level: "commercial",
-    score: 86,
+    score: 88,
     focus: true,
     signals: [
       { en: "Segmented examples cover filtering, sorting, selection, expansion, summaries, settings, and views.", zh: "分段示例覆盖筛选、排序、选择、展开、汇总、列设置和视图。" },
@@ -56,8 +56,8 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Very large grids need more keyboard and viewport checks.", zh: "超大表格还需要更多键盘与视口检查。" }
     ],
     nextActions: [
-      { en: "Keep hardening controlled table state before adding more display components.", zh: "继续先打磨受控表格状态，再扩展更多展示组件。" },
-      { en: "Add server-side recipes after selection and settings stay stable.", zh: "选择与列设置稳定后，再加入服务端配方。" }
+      { en: "Use the Commercial Pressure Lab to keep server-style selection and bulk actions honest.", zh: "用 Commercial Pressure Lab 持续约束服务端选择和批量操作。" },
+      { en: "Keep controlled table state stable before adding more display components.", zh: "继续先稳定受控表格状态，再扩展更多展示组件。" }
     ]
   },
   {
@@ -68,7 +68,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       zh: "校验与提交流程"
     },
     level: "commercial",
-    score: 84,
+    score: 87,
     focus: true,
     signals: [
       { en: "Submit states, async validation, field focus, and failure flows are covered in product examples.", zh: "业务示例已覆盖提交状态、异步校验、字段聚焦和失败流程。" },
@@ -79,7 +79,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Nested object naming is intentionally kept conservative for now.", zh: "嵌套对象命名本轮保持保守。" }
     ],
     nextActions: [
-      { en: "Deepen field grouping and dynamic form recipes.", zh: "深化字段分组和动态表单配方。" },
+      { en: "Use the Commercial Pressure Lab dynamic form recipe to keep server errors field-level.", zh: "用 Commercial Pressure Lab 的动态表单配方保持服务端错误字段级可见。" },
       { en: "Keep accessibility checks close to validation behavior.", zh: "让无障碍检查紧贴校验行为。" }
     ]
   },
@@ -91,7 +91,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       zh: "队列生命周期与文件操作"
     },
     level: "active",
-    score: 78,
+    score: 83,
     focus: true,
     signals: [
       { en: "Custom request, retry, queue methods, drag input, and hidden list mode are documented.", zh: "已记录自定义请求、重试、队列方法、拖拽输入和隐藏列表模式。" },
@@ -102,7 +102,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Progress recipes need a deeper controlled queue example.", zh: "进度配方需要更深入的受控队列示例。" }
     ],
     nextActions: [
-      { en: "Add controlled queue examples before adding larger upload features.", zh: "先补受控队列示例，再扩展更大的上传能力。" },
+      { en: "Use the Commercial Pressure Lab controlled queue before adding larger upload features.", zh: "先用 Commercial Pressure Lab 的受控队列压实基础，再扩展更大的上传能力。" },
       { en: "Keep status transitions test-backed.", zh: "继续用测试约束状态流转。" }
     ]
   },

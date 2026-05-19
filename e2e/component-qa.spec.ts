@@ -157,6 +157,39 @@ test.describe("Pinepost component QA hardening", () => {
     }
   });
 
+  test("supports Commercial Pressure Lab interactions", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /Commercial Pressure Lab|商用压力场/ }).click();
+
+    const serverTable = page.getByRole("region", { name: /Server Table|服务端表格/ });
+    await serverTable.getByRole("checkbox", { name: "Select all rows" }).check();
+    await expect(serverTable.getByText(/2 selected keys|已选择 2 个键/)).toBeVisible();
+    await serverTable.getByRole("button", { name: /Page 2|第 2 页/ }).click();
+    await expect(serverTable.getByText(/Page 2 loaded|第 2 页已加载/)).toBeVisible();
+    await serverTable.getByRole("checkbox", { name: "Select all rows" }).check();
+    await expect(serverTable.getByText(/4 selected keys|已选择 4 个键/)).toBeVisible();
+    await serverTable.getByRole("button", { name: /Run bulk action|执行批量操作/ }).click();
+    await expect(serverTable.getByText(/Bulk action queued for 4 keys|已为 4 个键创建批量操作/)).toBeVisible();
+
+    const dynamicForm = page.getByRole("region", { name: /Dynamic Form|动态表单/ });
+    await dynamicForm.getByRole("button", { name: /Add stop|添加站点/ }).click();
+    await dynamicForm.getByRole("button", { name: /Simulate server errors|模拟服务端错误/ }).click();
+    await expect(dynamicForm.getByRole("alert").filter({ hasText: /already assigned|已被分配/ })).toBeVisible();
+    await dynamicForm.getByRole("button", { name: /Clear server errors|清除服务端错误/ }).click();
+    await expect(dynamicForm.getByRole("alert").filter({ hasText: /already assigned|已被分配/ })).toHaveCount(0);
+
+    const uploadQueue = page.getByRole("region", { name: /Controlled Upload Queue|受控上传队列/ });
+    await uploadQueue.locator("input[type=file]").setInputFiles([
+      { name: "route-ready.csv", mimeType: "text/csv", buffer: Buffer.from("ready") },
+      { name: "route-retry.csv", mimeType: "text/csv", buffer: Buffer.from("retry") }
+    ]);
+    await uploadQueue.getByRole("button", { name: /Start queue|开始队列/ }).click();
+    await expect(uploadQueue.getByText("success", { exact: true })).toHaveCount(1);
+    await expect(uploadQueue.getByText("error", { exact: true })).toHaveCount(1);
+    await uploadQueue.getByRole("button", { name: /Retry route-retry.csv|重试 route-retry.csv/ }).click();
+    await expect(uploadQueue.getByText("success", { exact: true })).toHaveCount(2);
+  });
+
   test("keeps picker panel docs previews controlled by visible user choices", async ({ page }) => {
     await page.goto("/");
 

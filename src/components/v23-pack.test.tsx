@@ -98,6 +98,7 @@ describe("Pinepost UI v0.23 commercial pressure", () => {
     const uploadRef = React.createRef<UploadRef>();
     const queueSnapshots: UploadFile[][] = [];
     const attempts = new Map<string, number>();
+    const lastQueue = () => queueSnapshots[queueSnapshots.length - 1] ?? [];
 
     function ControlledUpload() {
       const [fileList, setFileList] = React.useState<UploadFile[]>([]);
@@ -133,27 +134,27 @@ describe("Pinepost UI v0.23 commercial pressure", () => {
       new File(["b"], "retry.csv", { type: "text/csv" })
     ]);
 
-    expect(queueSnapshots.at(-1)?.map((file) => file.status)).toEqual(["ready", "ready"]);
+    expect(lastQueue().map((file) => file.status)).toEqual(["ready", "ready"]);
 
     await act(async () => uploadRef.current?.submit());
-    expect(queueSnapshots.at(-1)?.map((file) => [file.name, file.status])).toEqual([
+    expect(lastQueue().map((file) => [file.name, file.status])).toEqual([
       ["ready.csv", "success"],
       ["retry.csv", "error"]
     ]);
 
     await user.click(screen.getByRole("button", { name: "Retry retry.csv" }));
-    expect(queueSnapshots.at(-1)?.map((file) => [file.name, file.status])).toEqual([
+    expect(lastQueue().map((file) => [file.name, file.status])).toEqual([
       ["ready.csv", "success"],
       ["retry.csv", "ready"]
     ]);
 
     await act(async () => uploadRef.current?.submit());
-    expect(queueSnapshots.at(-1)?.map((file) => [file.name, file.status])).toEqual([
+    expect(lastQueue().map((file) => [file.name, file.status])).toEqual([
       ["ready.csv", "success"],
       ["retry.csv", "success"]
     ]);
 
     await user.click(screen.getByRole("button", { name: "Remove ready.csv" }));
-    expect(queueSnapshots.at(-1)?.map((file) => file.name)).toEqual(["retry.csv"]);
+    expect(lastQueue().map((file) => file.name)).toEqual(["retry.csv"]);
   });
 });

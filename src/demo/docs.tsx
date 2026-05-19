@@ -8,6 +8,7 @@ import { createSelectionCatalogDocs } from "./examples/catalog-selection";
 import { createDataCatalogDocs } from "./examples/catalog-data";
 import { createSurfaceCatalogDocs } from "./examples/catalog-surface";
 import { createMaturityCatalogDocs } from "./examples/catalog-maturity";
+import { createCommercialPressureLabDocs } from "./examples/commercial-pressure-lab";
 import { createGuideCatalogDocs } from "./examples/catalog-guide";
 
 export function createDemoDocs(context: DemoContext): DocItem[] {
@@ -29,6 +30,7 @@ export function createDemoDocs(context: DemoContext): DocItem[] {
     ...createDataCatalogDocs(catalogContext),
     ...createSurfaceCatalogDocs(catalogContext),
     ...createMaturityCatalogDocs(catalogContext),
+    ...createCommercialPressureLabDocs(catalogContext),
     ...createGuideCatalogDocs(catalogContext)
   ];
 }
