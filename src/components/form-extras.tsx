@@ -20,6 +20,7 @@ export interface FormRef {
   isSubmitting: () => boolean;
   resetFields: (names?: string | string[]) => void;
   scrollToField: (name: string) => void;
+  setFieldsError: (errors: FormValidationErrors) => void;
   validate: () => Promise<boolean>;
   validateField: (name: string) => Promise<boolean>;
 }
@@ -174,6 +175,17 @@ export const Form = React.forwardRef<FormRef, FormProps>(
       return Object.keys(nextErrors).length === 0;
     }, [rules, validateFields]);
 
+    const setFieldsError = React.useCallback((nextErrors: FormValidationErrors) => {
+      setErrors((current) => {
+        const merged = { ...current };
+        Object.entries(nextErrors).forEach(([name, message]) => {
+          if (message === undefined || message === null) delete merged[name];
+          else merged[name] = message;
+        });
+        return merged;
+      });
+    }, []);
+
     React.useImperativeHandle(ref, () => ({
       clearValidate,
       getFieldError: (name) => errors[name],
@@ -191,9 +203,10 @@ export const Form = React.forwardRef<FormRef, FormProps>(
         });
       },
       scrollToField: (name) => fieldsRef.current.get(name)?.scrollIntoView({ block: "center", behavior: "smooth" }),
+      setFieldsError,
       validate,
       validateField
-    }), [clearValidate, errors, model, submitError, submitting, validate, validateField, validating]);
+    }), [clearValidate, errors, model, setFieldsError, submitError, submitting, validate, validateField, validating]);
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
       onSubmit?.(event);
@@ -504,6 +517,7 @@ export interface UploadProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
   onDrop?: (files: File[]) => void;
   onError?: (error: unknown, file: UploadFile, fileList: UploadFile[]) => void;
   onExceed?: (files: File[], fileList: UploadFile[]) => void;
+  onFileListChange?: (fileList: UploadFile[]) => void;
   onFilesChange?: (files: File[]) => void;
   onPreview?: (file: UploadFile) => void;
   onProgress?: (percent: number, file: UploadFile, fileList: UploadFile[]) => void;
@@ -544,6 +558,7 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
       onDrop,
       onError,
       onExceed,
+      onFileListChange,
       onFilesChange,
       onPreview,
       onProgress,
@@ -571,6 +586,7 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
     function setFiles(nextFiles: UploadFile[]) {
       fileListRef.current = nextFiles;
       if (fileList === undefined) setInternalFileList(nextFiles);
+      onFileListChange?.(nextFiles);
     }
 
     async function addFiles(files: File[]) {
@@ -716,7 +732,7 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
                       {file.status === "uploading" ? ` ${file.percent}%` : ""}
                     </span>
                     {file.status === "error" && (
-                      <button type="button" onClick={() => retryFile(file.uid)}>
+                      <button aria-label={`Retry ${file.name}`} type="button" onClick={() => retryFile(file.uid)}>
                         Retry
                       </button>
                     )}
