@@ -166,7 +166,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Theme collections, recipe bundle helpers, and locale provider behavior are documented.", zh: "主题集合、配方包助手和语言 Provider 行为已写入文档。" }
     ],
     currentGaps: [
-      { en: "Not part of the v0.22 five-component hardening pass.", zh: "不属于 v0.22 五个重点件的硬化范围。" }
+      { en: "Maintained while v0.23 pressure focuses on heavy workflows.", zh: "v0.23 压力场聚焦重型工作流期间保持维护。" }
     ],
     nextActions: [
       { en: "Maintain current coverage while heavy form and data surfaces mature.", zh: "在重型表单与数据组件成熟期间保持现有覆盖。" }
@@ -209,7 +209,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Advanced composition patterns are deferred.", zh: "高级组合模式延后。" }
     ],
     nextActions: [
-      { en: "Maintain API stability and avoid scope creep during v0.22.", zh: "v0.22 期间保持 API 稳定，避免范围膨胀。" }
+      { en: "Maintain API stability and avoid scope creep during v0.23.", zh: "v0.23 期间保持 API 稳定，避免范围膨胀。" }
     ]
   }
 ];

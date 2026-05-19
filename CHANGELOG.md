@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.23.0
+
+- Added the Commercial Pressure Lab docs page for server-style Table workflows, dynamic Form server errors, and controlled Upload queues.
+- Added `FormRef.setFieldsError()` for mapping server validation failures back onto fields.
+- Added Upload `onFileListChange` so controlled queues can receive every status transition as a complete file list.
+- Strengthened Table, Form, and Upload maturity signals while keeping broad display component polish out of scope.
+
 ## 0.22.0
 
 - Added a demo-owned Component Maturity matrix with levels, scores, focus flags, current gaps, and next actions for commercial-depth planning.

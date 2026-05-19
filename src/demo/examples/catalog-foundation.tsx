@@ -609,6 +609,7 @@ export function createFoundationCatalogDocs(context: DemoCatalogContext): DocIte
         { prop: "onFinish / onFinishFailed", type: "(model) => void | Promise<void>", defaultValue: "-", description: zh ? "校验通过或失败后的提交回调。" : "Submit callbacks after validation." },
         { prop: "submittingMessage / submitErrorMessage", type: "ReactNode", defaultValue: "-", description: zh ? "提交中和提交错误提示。" : "Submitting and submit error messages." },
         { prop: "validate / validateField / isFieldValidating", type: "FormRef methods", defaultValue: "-", description: zh ? "命令式校验和校验中状态读取。" : "Imperative validation and validating-state lookup." },
+        { prop: "setFieldsError / getFieldsError", type: "FormRef methods", defaultValue: "-", description: zh ? "回填或读取字段级服务端错误。" : "Sets or reads field-level server errors." },
         { prop: "isSubmitting / getSubmitError", type: "FormRef methods", defaultValue: "-", description: zh ? "读取提交状态和提交错误。" : "Reads submit state and submit error." }
       ]
     },
@@ -764,6 +765,7 @@ export function createFoundationCatalogDocs(context: DemoCatalogContext): DocIte
           rows: [
             { prop: "onDrop", type: "(files: File[]) => void", defaultValue: "-", description: zh ? "拖拽投放后触发。" : "Fires after a drop." },
             { prop: "onChange", type: "(file, fileList) => void", defaultValue: "-", description: zh ? "文件加入队列。" : "File enters the queue." },
+            { prop: "onFileListChange", type: "(fileList) => void", defaultValue: "-", description: zh ? "受控队列收到完整文件列表。" : "Controlled queues receive the complete file list." },
             { prop: "onRemove / onPreview", type: "(file, fileList?) => void", defaultValue: "-", description: zh ? "移除或预览文件。" : "Remove or preview a file." },
             { prop: "onRetry", type: "(file, fileList) => void", defaultValue: "-", description: zh ? "文件被重置为 ready 后触发。" : "Fires after a file is reset to ready." },
             { prop: "onExceed", type: "(files, fileList) => void", defaultValue: "-", description: zh ? "超过限制时触发。" : "Fires when the limit is exceeded." },

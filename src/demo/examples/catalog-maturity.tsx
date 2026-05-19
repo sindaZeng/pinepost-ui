@@ -39,7 +39,7 @@ function MaturitySummary({ items, zh }: { items: ComponentMaturityItem[]; zh: bo
   return (
     <div className="docs-maturity__summary" aria-label={zh ? "成熟度概览" : "Maturity summary"}>
       <div>
-        <span>{zh ? "v0.22 重点件" : "v0.22 focus"}</span>
+        <span>{zh ? "v0.23 压力重点" : "v0.23 pressure focus"}</span>
         <strong>{focusItems.length}</strong>
         <p>{zh ? "Table、Form、Upload、选择器、日期时间" : "Table, Form, Upload, selection, and date/time"}</p>
       </div>
@@ -93,7 +93,7 @@ function MaturityMatrix({ zh }: { zh: boolean }) {
                   </div>
                 </td>
                 <td>
-                  <Tag variant={item.focus ? "leaf" : "sky"}>{item.focus ? (zh ? "v0.22 重点" : "v0.22 focus") : (zh ? "保持" : "Hold")}</Tag>
+                  <Tag variant={item.focus ? "leaf" : "sky"}>{item.focus ? (zh ? "v0.23 重点" : "v0.23 focus") : (zh ? "保持" : "Hold")}</Tag>
                 </td>
                 <td>
                   <MaturityList items={item.signals} zh={zh} />
@@ -111,8 +111,8 @@ function MaturityMatrix({ zh }: { zh: boolean }) {
       </div>
       <p className="docs-maturity__note">
         {zh
-          ? "v0.22 只加深五个商用关键大件；其它展示类组件维持非重点状态，避免用浅覆盖稀释重型表单和数据组件的可信度。"
-          : "v0.22 deepens five commercial-critical surfaces only; other display components stay in the non-focus queue so shallow breadth does not dilute heavy form and data confidence."}
+          ? "v0.23 继续压实 Table、Form 和 Upload 的商用场景；其它展示类组件维持非重点状态，避免用浅覆盖稀释重型表单和数据组件的可信度。"
+          : "v0.23 keeps pressure on Table, Form, and Upload commercial workflows; other display components stay in the non-focus queue so shallow breadth does not dilute heavy form and data confidence."}
       </p>
     </div>
   );
@@ -127,8 +127,8 @@ export function createMaturityCatalogDocs(context: DemoCatalogContext): DocItem[
       group: labels.groups.guide,
       title: zh ? "Component Maturity 组件成熟度" : "Component Maturity",
       description: zh
-        ? "v0.22 的公开成熟度矩阵：优先深化 Table、Form、Upload、Select/Cascader/TreeSelect、日期时间，而不是继续扩充浅组件。"
-        : "The v0.22 public maturity matrix: deepen Table, Form, Upload, Select/Cascader/TreeSelect, and date/time before adding shallow breadth.",
+        ? "v0.23 的公开成熟度矩阵：继续压实 Table、Form、Upload，并保持其它组件的优先级透明。"
+        : "The v0.23 public maturity matrix: keep pressure on Table, Form, and Upload while keeping other component priorities visible.",
       searchText:
         "maturity commercial component matrix Table Form Upload Select Cascader TreeSelect DateTime date time 成熟度 商用 表格 表单 上传 选择器 日期时间",
       preview: <MaturityMatrix zh={zh} />,
@@ -158,7 +158,7 @@ export function createMaturityCatalogDocs(context: DemoCatalogContext): DocItem[
               prop: "focus",
               type: "boolean",
               defaultValue: "false",
-              description: zh ? "是否属于 v0.22 深挖重点。" : "Whether the component is part of the v0.22 hardening focus."
+              description: zh ? "是否属于当前深挖重点。" : "Whether the component is part of the current hardening focus."
             },
             {
               prop: "currentGaps",

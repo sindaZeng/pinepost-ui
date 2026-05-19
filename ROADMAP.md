@@ -4,14 +4,14 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 
 ## Near Term
 
-- Continue adding richer segmented examples for lower-frequency component pages.
-- Expand visual baseline review with more component detail pages and product states.
-- Add more screen reader affordances for deep selection workflows.
+- Deepen date/time disabled scheduling recipes after the Table, Form, and Upload pressure pass.
+- Keep display-oriented components queued until heavy workflow maturity is stronger.
+- Expand visual baseline review around commercial pressure states before adding broad component polish.
 
 ## Mid Term
 
 - Add saved bundle handoff examples for commerce launches and learning flows.
-- Add package release checklist automation around GitHub release creation.
+- Continue package release checklist automation around GitHub release creation and npm verification.
 - Add more copyable recipes for commerce launches and learning-app flows.
 
 ## Release Policy
