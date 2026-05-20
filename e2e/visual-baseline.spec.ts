@@ -53,4 +53,33 @@ test.describe("Pinepost docs visual baselines", () => {
     await attachMainScreenshot(page, "upload-main", testInfo);
     await expectNoPageOverflow(page);
   });
+
+  test("captures disabled scheduling states without overflow", async ({ page }, testInfo) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "DateRangePickerPanel 日期范围面板" }).click();
+    await expect(page.locator("h1")).toHaveText("DateRangePickerPanel 日期范围面板");
+    const blockedDateExample = page.getByRole("region", { name: /运营封锁日|Blocked dispatch day/ });
+    await expect(blockedDateExample).toBeVisible();
+    await expect(blockedDateExample.getByRole("button", { name: "2026-05-20" })).toBeDisabled();
+    await blockedDateExample.getByRole("button", { name: "2026-05-18" }).click();
+    await blockedDateExample.getByRole("button", { name: "2026-05-22" }).click();
+    await expect(blockedDateExample.getByText(/2026年5月18日 至 未选择|May 18, 2026 to Open/)).toBeVisible();
+    await blockedDateExample.getByRole("button", { name: /开放窗口|Open window/ }).click();
+    await expect(blockedDateExample.getByText(/2026年5月12日 至 2026年5月14日|May 12, 2026 to May 14, 2026/)).toBeVisible();
+    await attachMainScreenshot(page, "date-range-disabled-scheduling-main", testInfo);
+    await expectNoPageOverflow(page);
+
+    await page.getByRole("button", { name: "TimeRangePickerPanel 时间范围面板" }).click();
+    await expect(page.locator("h1")).toHaveText("TimeRangePickerPanel 时间范围面板");
+    const closedTimeExample = page.getByRole("region", { name: /关闭时段|Closed time window/ });
+    await expect(closedTimeExample).toBeVisible();
+    await expect(closedTimeExample.getByRole("button", { name: "12:00" }).first()).toBeDisabled();
+    await closedTimeExample.getByRole("button", { name: /午间窗口|Lunch window/ }).click();
+    await expect(closedTimeExample.getByText(/^未定$|^Open$/)).toBeVisible();
+    await closedTimeExample.getByRole("button", { name: /上午窗口|Morning window/ }).click();
+    await expect(closedTimeExample.getByText(/09:00 至 11:00|09:00 to 11:00/)).toBeVisible();
+    await attachMainScreenshot(page, "time-range-disabled-scheduling-main", testInfo);
+    await expectNoPageOverflow(page);
+  });
 });
