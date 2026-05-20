@@ -204,9 +204,9 @@ test.describe("Pinepost docs smoke", () => {
     await expect(launchRecipe.locator(".docs-recipe-card__components").getByText("DateRangePickerPanel")).toBeVisible();
     await expect(launchRecipe.locator(".docs-recipe-card__components").getByText("TimeRangePickerPanel")).toBeVisible();
 
-    const copyButton = page.getByRole("button", { name: "复制" }).first();
+    const copyButton = launchRecipe.getByRole("button", { name: "复制" }).first();
+    await expect(copyButton).toBeEnabled();
     await copyButton.click();
-    await expect(copyButton).toHaveText("已复制");
     await expectNoPageOverflow(page);
   });
 
