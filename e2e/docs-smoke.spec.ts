@@ -59,7 +59,7 @@ test.describe("Pinepost docs smoke", () => {
   test("shows the maturity matrix through commercial docs search", async ({ page }) => {
     await page.goto("/");
 
-    for (const term of ["maturity", "commercial", "Table", "Upload"]) {
+    for (const term of ["maturity", "commercial", "Table", "Upload", "handoff", "workflow"]) {
       await page.getByLabel("搜索组件").fill(term);
       await expect(page.getByRole("button", { name: /Component Maturity|组件成熟度/ })).toBeVisible();
     }
@@ -73,14 +73,14 @@ test.describe("Pinepost docs smoke", () => {
     await expect(matrix.getByText("Upload", { exact: true })).toBeVisible();
     await expect(matrix.getByText("Select / Cascader / TreeSelect")).toBeVisible();
     await expect(matrix.getByText("Date and time panels", { exact: true })).toBeVisible();
-    await expect(matrix.getByText(/v0.24 重点|v0.24 focus|v0.24 排期重点|v0.24 scheduling focus/).first()).toBeVisible();
+    await expect(matrix.getByText(/v0.25 重点|v0.25 focus|v0.25 工作流交接重点|v0.25 workflow handoff focus/).first()).toBeVisible();
     await expectNoPageOverflow(page);
   });
 
   test("finds and renders the Commercial Pressure Lab", async ({ page }) => {
     await page.goto("/");
 
-    for (const term of ["pressure", "commercial", "server table", "dynamic form", "controlled upload"]) {
+    for (const term of ["pressure", "commercial", "server table", "dynamic form", "controlled upload", "workflow handoff", "field list", "full list change"]) {
       await page.getByLabel("搜索组件").fill(term);
       await expect(page.getByRole("button", { name: /Commercial Pressure Lab|商用压力场/ })).toBeVisible();
     }
@@ -90,6 +90,7 @@ test.describe("Pinepost docs smoke", () => {
     await expect(page.getByRole("region", { name: /Server Table|服务端表格/ })).toBeVisible();
     await expect(page.getByRole("region", { name: /Dynamic Form|动态表单/ })).toBeVisible();
     await expect(page.getByRole("region", { name: /Controlled Upload Queue|受控上传队列/ })).toBeVisible();
+    await expect(page.getByText(/v0.25 focus|v0.25 重点/).first()).toBeVisible();
     await expectNoPageOverflow(page);
   });
 

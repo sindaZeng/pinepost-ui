@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.25.0
+
+- Expanded the Commercial Pressure Lab into a v0.25 workflow handoff pass for Table, Form, and Upload.
+- Added server Table loading, page-error, cross-page selected-key, and bulk-action handoff coverage.
+- Added dynamic Form field-list coverage for add/remove behavior, first-error focus, and field-level server errors.
+- Added controlled Upload queue coverage for visible progress, retry, clear, and complete file-list transitions.
+- Updated the maturity matrix around the v0.25 commercial workflow handoff focus without adding new component breadth.
+
 ## 0.24.0
 
 - Hardened DateRangePickerPanel so ranges crossing disabled dates are not committed.

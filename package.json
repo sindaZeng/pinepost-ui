@@ -1,6 +1,6 @@
 {
   "name": "pinepost-ui",
-  "version": "0.24.0",
+  "version": "0.25.0",
   "description": "A playful forest-post themed React component library.",
   "type": "module",
   "license": "Apache-2.0",

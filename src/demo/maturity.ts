@@ -45,18 +45,18 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       zh: "高密数据与操作"
     },
     level: "commercial",
-    score: 88,
+    score: 90,
     focus: true,
     signals: [
       { en: "Segmented examples cover filtering, sorting, selection, expansion, summaries, settings, and views.", zh: "分段示例覆盖筛选、排序、选择、展开、汇总、列设置和视图。" },
-      { en: "Controlled row selection now exposes selected keys and select-all behavior.", zh: "受控行选择现在暴露选择键，并支持全选行为。" }
+      { en: "The pressure lab now keeps selected keys visible across pagination, loading, errors, and bulk actions.", zh: "压力场现在让选择键跨分页、加载、错误和批量操作保持可见。" }
     ],
     currentGaps: [
-      { en: "Server data recipes still need a deeper pagination and loading story.", zh: "服务端数据配方仍需要更深的分页与加载说明。" },
-      { en: "Very large grids need more keyboard and viewport checks.", zh: "超大表格还需要更多键盘与视口检查。" }
+      { en: "Very large server grids still need more keyboard and viewport checks.", zh: "超大服务端表格还需要更多键盘与视口检查。" },
+      { en: "Virtualized server data remains outside this handoff pass.", zh: "虚拟化服务端数据仍不放入本轮交接范围。" }
     ],
     nextActions: [
-      { en: "Use the Commercial Pressure Lab to keep server-style selection and bulk actions honest.", zh: "用 Commercial Pressure Lab 持续约束服务端选择和批量操作。" },
+      { en: "Keep the Commercial Pressure Lab as the handoff check for server-style selection and bulk actions.", zh: "把 Commercial Pressure Lab 继续作为服务端选择和批量操作交接检查。" },
       { en: "Keep controlled table state stable before adding more display components.", zh: "继续先稳定受控表格状态，再扩展更多展示组件。" }
     ]
   },
@@ -68,18 +68,18 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       zh: "校验与提交流程"
     },
     level: "commercial",
-    score: 87,
+    score: 89,
     focus: true,
     signals: [
       { en: "Submit states, async validation, field focus, and failure flows are covered in product examples.", zh: "业务示例已覆盖提交状态、异步校验、字段聚焦和失败流程。" },
-      { en: "Field errors are now available from the ref and forwarded to failed submits.", zh: "字段错误现在可从 ref 读取，并传给提交失败回调。" }
+      { en: "Dynamic stop fields now show add, remove, first-error focus, and server field-error handoff.", zh: "动态站点字段现在展示新增、移除、第一个错误聚焦和服务端字段错误交接。" }
     ],
     currentGaps: [
-      { en: "Dynamic field arrays need a dedicated recipe before they are presented as mature.", zh: "动态字段数组需要专门配方后才适合标为成熟。" },
-      { en: "Nested object naming is intentionally kept conservative for now.", zh: "嵌套对象命名本轮保持保守。" }
+      { en: "Nested object naming remains conservative until more product recipes need it.", zh: "嵌套对象命名会保持保守，直到更多业务配方需要它。" },
+      { en: "Field-list helpers remain demo-owned instead of becoming runtime API.", zh: "字段列表助手仍由 demo 持有，不提升为运行时 API。" }
     ],
     nextActions: [
-      { en: "Use the Commercial Pressure Lab dynamic form recipe to keep server errors field-level.", zh: "用 Commercial Pressure Lab 的动态表单配方保持服务端错误字段级可见。" },
+      { en: "Keep dynamic field handoff examples focused on visible errors and focus recovery.", zh: "让动态字段交接示例继续聚焦可见错误和焦点恢复。" },
       { en: "Keep accessibility checks close to validation behavior.", zh: "让无障碍检查紧贴校验行为。" }
     ]
   },
@@ -90,19 +90,19 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       en: "Queue lifecycle and file actions",
       zh: "队列生命周期与文件操作"
     },
-    level: "active",
-    score: 83,
+    level: "commercial",
+    score: 86,
     focus: true,
     signals: [
       { en: "Custom request, retry, queue methods, drag input, and hidden list mode are documented.", zh: "已记录自定义请求、重试、队列方法、拖拽输入和隐藏列表模式。" },
-      { en: "Multi-file submit now keeps every successful file successful.", zh: "多文件提交现在会保留每个成功文件的成功状态。" }
+      { en: "Controlled queue examples now expose progress, retry, clear, and complete file-list transitions.", zh: "受控队列示例现在暴露进度、重试、清空和完整文件列表流转。" }
     ],
     currentGaps: [
       { en: "Chunked upload and resumable upload are not in scope yet.", zh: "分片上传和断点续传尚不在本轮范围内。" },
       { en: "Progress recipes need a deeper controlled queue example.", zh: "进度配方需要更深入的受控队列示例。" }
     ],
     nextActions: [
-      { en: "Use the Commercial Pressure Lab controlled queue before adding larger upload features.", zh: "先用 Commercial Pressure Lab 的受控队列压实基础，再扩展更大的上传能力。" },
+      { en: "Keep controlled queue transitions test-backed before larger upload features.", zh: "在扩展更大上传功能前，继续用测试约束受控队列流转。" },
       { en: "Keep status transitions test-backed.", zh: "继续用测试约束状态流转。" }
     ]
   },
@@ -115,7 +115,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     },
     level: "active",
     score: 80,
-    focus: true,
+    focus: false,
     signals: [
       { en: "Single, multiple, grouped, lazy, and tree-shaped selection flows have dedicated examples.", zh: "单选、多选、分组、懒加载和树形选择已有独立示例。" },
       { en: "Clear controls now use native button semantics across deep pickers.", zh: "深层选择器的清除控件现在使用原生按钮语义。" }
@@ -125,7 +125,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Large mixed option sets need more documented guidance.", zh: "大型混合选项集仍需要更多说明。" }
     ],
     nextActions: [
-      { en: "Keep keyboard, dismissal, and grouped rendering behavior consistent.", zh: "持续统一键盘、关闭和分组渲染行为。" },
+      { en: "Keep keyboard, dismissal, and grouped rendering behavior stable while v0.25 focuses on workflow handoff.", zh: "v0.25 聚焦工作流交接期间，保持键盘、关闭和分组渲染行为稳定。" },
       { en: "Prefer fewer but deeper selection examples.", zh: "选择器示例保持少而深。" }
     ]
   },
@@ -138,7 +138,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     },
     level: "active",
     score: 84,
-    focus: true,
+    focus: false,
     signals: [
       { en: "Date, date range, time, time range, and date-time panels are documented with scheduling presets.", zh: "日期、日期范围、时间、时间范围和日期时间面板已配排期预设说明。" },
       { en: "Disabled date ranges and disabled time shortcuts now have product recipes and tests.", zh: "禁用日期范围和禁用时间快捷项已有业务示例和测试。" }
@@ -148,7 +148,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Cross-month scheduling and recurrence workflows remain queued.", zh: "跨月排期和重复规则工作流仍在队列中。" }
     ],
     nextActions: [
-      { en: "Watch visual baselines for disabled scheduling states before adding calendar breadth.", zh: "扩大日历范围前，先观察禁用排期状态的视觉基线。" },
+      { en: "Keep disabled scheduling baselines stable while v0.25 focuses on Table, Form, and Upload handoff.", zh: "v0.25 聚焦 Table、Form 和 Upload 交接期间，保持禁用排期基线稳定。" },
       { en: "Keep panel accessibility labels explicit.", zh: "保持面板无障碍标签明确。" }
     ]
   },
@@ -166,7 +166,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Theme collections, recipe bundle helpers, and locale provider behavior are documented.", zh: "主题集合、配方包助手和语言 Provider 行为已写入文档。" }
     ],
     currentGaps: [
-      { en: "Maintained while v0.24 pressure focuses on disabled scheduling workflows.", zh: "v0.24 压力场聚焦禁用排期工作流期间保持维护。" }
+      { en: "Maintained while v0.25 pressure focuses on commercial workflow handoff.", zh: "v0.25 压力场聚焦商用工作流交接期间保持维护。" }
     ],
     nextActions: [
       { en: "Maintain current coverage while heavy form and data surfaces mature.", zh: "在重型表单与数据组件成熟期间保持现有覆盖。" }
@@ -209,7 +209,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Advanced composition patterns are deferred.", zh: "高级组合模式延后。" }
     ],
     nextActions: [
-      { en: "Maintain API stability and avoid scope creep during v0.24.", zh: "v0.24 期间保持 API 稳定，避免范围膨胀。" }
+      { en: "Maintain API stability and avoid scope creep during v0.25.", zh: "v0.25 期间保持 API 稳定，避免范围膨胀。" }
     ]
   }
 ];

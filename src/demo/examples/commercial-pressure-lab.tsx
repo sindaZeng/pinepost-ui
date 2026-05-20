@@ -30,6 +30,8 @@ type StopRow = {
   window: string;
 };
 
+type ServerLoadState = "idle" | "loading" | "error";
+
 const pageOneRows: ServerRoute[] = [
   { count: 12, id: "a7", route: "A7", status: "Ready" },
   { count: 8, id: "b4", route: "B4", status: "Ready" }
@@ -49,17 +51,40 @@ const serverColumns: Array<TableColumn<ServerRoute>> = [
 function ServerTablePressure({ zh }: { zh: boolean }) {
   const [page, setPage] = React.useState(1);
   const [selectedRowKeys, setSelectedRowKeys] = React.useState<React.Key[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  const [loadState, setLoadState] = React.useState<ServerLoadState>("idle");
   const [status, setStatus] = React.useState("");
+  const [statusVariant, setStatusVariant] = React.useState<"info" | "success" | "warning">("info");
   const rows = page === 1 ? pageOneRows : pageTwoRows;
+  const loading = loadState === "loading";
 
-  function switchPage(nextPage: number) {
-    setLoading(true);
+  function switchPage(nextPage: number, mode: "success" | "error" = "success") {
+    setLoadState("loading");
+    setStatusVariant("info");
+    setStatus(zh ? `正在加载第 ${nextPage} 页服务端数据。` : `Loading page ${nextPage} from server.`);
     window.setTimeout(() => {
+      if (mode === "error") {
+        setLoadState("error");
+        setStatusVariant("warning");
+        setStatus(zh ? `服务端分页失败，保留 ${selectedRowKeys.length} 个选择键。` : `Server page failed. ${selectedRowKeys.length} selected keys kept.`);
+        return;
+      }
+
       setPage(nextPage);
-      setLoading(false);
+      setLoadState("idle");
+      setStatusVariant("success");
       setStatus(zh ? `第 ${nextPage} 页已加载。` : `Page ${nextPage} loaded.`);
-    }, 80);
+    }, 180);
+  }
+
+  function runBulkAction() {
+    if (loading) {
+      setStatusVariant("warning");
+      setStatus(zh ? "批量操作等待服务端数据。" : "Bulk action waits for server rows.");
+      return;
+    }
+
+    setStatusVariant("success");
+    setStatus(zh ? `已为 ${selectedRowKeys.length} 个键创建批量操作。` : `Bulk action queued for ${selectedRowKeys.length} keys.`);
   }
 
   return (
@@ -74,10 +99,18 @@ function ServerTablePressure({ zh }: { zh: boolean }) {
         <Button
           size="sm"
           variant="parcel"
-          onClick={() => setStatus(zh ? `已为 ${selectedRowKeys.length} 个键创建批量操作。` : `Bulk action queued for ${selectedRowKeys.length} keys.`)}
+          onClick={runBulkAction}
         >
           {zh ? "执行批量操作" : "Run bulk action"}
         </Button>
+        <Button size="sm" variant="stamp" onClick={() => switchPage(page, "error")}>
+          {zh ? "模拟分页错误" : "Simulate page error"}
+        </Button>
+        {loadState === "error" ? (
+          <Button size="sm" variant="soft" onClick={() => switchPage(page)}>
+            {zh ? `重试第 ${page} 页` : `Retry page ${page}`}
+          </Button>
+        ) : null}
         <Button size="sm" variant="soft" onClick={() => setSelectedRowKeys([])}>
           {zh ? "清空选择" : "Clear selection"}
         </Button>
@@ -85,7 +118,7 @@ function ServerTablePressure({ zh }: { zh: boolean }) {
       <p className="docs-pressure-lab__status">
         {zh ? `已选择 ${selectedRowKeys.length} 个键` : `${selectedRowKeys.length} selected keys`}
       </p>
-      {status ? <Alert title={status} variant={status.includes("Bulk") || status.includes("批量") ? "success" : "info"} /> : null}
+      {status ? <Alert title={status} variant={statusVariant} /> : null}
       <Table
         rowKey="id"
         selectable
@@ -94,7 +127,8 @@ function ServerTablePressure({ zh }: { zh: boolean }) {
         loading={loading}
         loadingText={zh ? "正在加载服务端数据..." : "Loading server rows..."}
         columns={serverColumns}
-        data={rows}
+        data={loadState === "error" ? [] : rows}
+        emptyText={zh ? "服务端分页需要重试。" : "Server page needs retry."}
       />
     </div>
   );
@@ -130,17 +164,32 @@ function DynamicFormPressure({ zh }: { zh: boolean }) {
     formRef.current?.setFieldsError({ [`stops.${index}.${key}`]: undefined });
   }
 
+  function clearStopErrors(rows: StopRow[]) {
+    const cleared: Record<string, undefined> = {};
+    rows.forEach((_, index) => {
+      cleared[`stops.${index}.desk`] = undefined;
+      cleared[`stops.${index}.window`] = undefined;
+    });
+    formRef.current?.setFieldsError(cleared);
+  }
+
+  function focusFirstError(errors: Record<string, React.ReactNode>) {
+    const firstName = Object.keys(errors)[0];
+    const match = /^stops\.(\d+)\.(desk|window)$/.exec(firstName);
+    if (!match) return;
+    const [, index, key] = match;
+    window.setTimeout(() => document.getElementById(`pressure-stop-${index}-${key}`)?.focus(), 0);
+  }
+
   function addStop() {
     setStops((current) => [...current, { id: `stop-${current.length + 1}`, desk: "", window: "11:00" }]);
     setStatus(zh ? "已添加站点。" : "Stop added.");
   }
 
   function removeStop(index: number) {
-    formRef.current?.setFieldsError({
-      [`stops.${index}.desk`]: undefined,
-      [`stops.${index}.window`]: undefined
-    });
+    clearStopErrors(stops);
     setStops((current) => current.filter((_, stopIndex) => stopIndex !== index));
+    setStatus(zh ? "已移除站点。" : "Stop removed.");
   }
 
   function simulateServerErrors() {
@@ -152,12 +201,7 @@ function DynamicFormPressure({ zh }: { zh: boolean }) {
   }
 
   function clearServerErrors() {
-    const cleared: Record<string, undefined> = {};
-    stops.forEach((_, index) => {
-      cleared[`stops.${index}.desk`] = undefined;
-      cleared[`stops.${index}.window`] = undefined;
-    });
-    formRef.current?.setFieldsError(cleared);
+    clearStopErrors(stops);
     setStatus(zh ? "服务端错误已清除。" : "Server errors cleared.");
   }
 
@@ -169,8 +213,14 @@ function DynamicFormPressure({ zh }: { zh: boolean }) {
         rules={rules}
         validateTrigger={["blur", "submit"]}
         onFinish={() => setStatus(zh ? "动态站点已保存。" : "Dynamic stops saved.")}
-        onFinishFailed={() => setStatus(zh ? "请先修正动态字段。" : "Fix dynamic fields first.")}
+        onFinishFailed={(_, errors) => {
+          focusFirstError(errors);
+          setStatus(zh ? "请先修正动态字段，已聚焦第一个错误。" : "Fix dynamic fields first; focused the first error.");
+        }}
       >
+        <p className="docs-pressure-lab__status">
+          {zh ? `${stops.length} 个动态站点` : `${stops.length} dynamic ${stops.length === 1 ? "stop" : "stops"}`}
+        </p>
         <div className="docs-pressure-lab__grid">
           {stops.map((stop, index) => (
             <div className="docs-pressure-lab__row" key={stop.id}>
@@ -205,10 +255,26 @@ function ControlledUploadPressure({ zh }: { zh: boolean }) {
   const attemptsRef = React.useRef(new Map<string, number>());
   const [fileList, setFileList] = React.useState<UploadFile[]>([]);
   const [status, setStatus] = React.useState(zh ? "等待文件。" : "Waiting for files.");
+  const [listChangeCount, setListChangeCount] = React.useState(0);
+  const [lastProgress, setLastProgress] = React.useState("");
+  const [lastSnapshot, setLastSnapshot] = React.useState(zh ? "空队列" : "Empty queue");
 
   async function submitQueue() {
     await uploadRef.current?.submit();
     setStatus(zh ? "队列已处理。" : "Queue processed.");
+  }
+
+  function handleFileListChange(nextFileList: UploadFile[]) {
+    setFileList(nextFileList);
+    setListChangeCount((count) => count + 1);
+    setLastSnapshot(nextFileList.length > 0 ? nextFileList.map((file) => `${file.name}: ${file.status}`).join(", ") : (zh ? "空队列" : "Empty queue"));
+  }
+
+  function clearQueue() {
+    attemptsRef.current.clear();
+    uploadRef.current?.clearFiles();
+    setLastProgress("");
+    setStatus(zh ? "队列已清空。" : "Queue cleared.");
   }
 
   return (
@@ -220,7 +286,8 @@ function ControlledUploadPressure({ zh }: { zh: boolean }) {
         label={zh ? "选择压力文件" : "Upload pressure files"}
         description={zh ? "route-retry.csv 第一次会失败，可单独重试。" : "route-retry.csv fails once and can retry alone."}
         fileList={fileList}
-        onFileListChange={setFileList}
+        onFileListChange={handleFileListChange}
+        onProgress={(percent, file) => setLastProgress(zh ? `最近进度：${file.name} ${percent}%` : `Last progress: ${file.name} ${percent}%`)}
         customRequest={({ file, onError, onProgress, onSuccess }) => {
           const attempts = attemptsRef.current.get(file.name) ?? 0;
           attemptsRef.current.set(file.name, attempts + 1);
@@ -235,6 +302,7 @@ function ControlledUploadPressure({ zh }: { zh: boolean }) {
           <div className="docs-pressure-lab__queue">
             <strong>{file.name}</strong>
             <Badge variant={file.status === "error" ? "stamp" : file.status === "success" ? "sky" : "leaf"}>{file.status}</Badge>
+            <span>{file.percent}%</span>
             {file.status === "error" ? (
               <Button
                 size="sm"
@@ -256,8 +324,14 @@ function ControlledUploadPressure({ zh }: { zh: boolean }) {
       />
       <div className="docs-pressure-lab__toolbar">
         <Button size="sm" onClick={() => void submitQueue()}>{zh ? "开始队列" : "Start queue"}</Button>
-        <Button size="sm" variant="soft" onClick={() => uploadRef.current?.clearFiles()}>{zh ? "清空队列" : "Clear queue"}</Button>
+        <Button size="sm" variant="soft" onClick={clearQueue}>{zh ? "清空队列" : "Clear queue"}</Button>
       </div>
+      <p className="docs-pressure-lab__status">
+        {zh ? `受控队列：${fileList.length} 个文件` : `Controlled queue: ${fileList.length} ${fileList.length === 1 ? "file" : "files"}`}
+      </p>
+      <p className="docs-pressure-lab__status">{zh ? `完整列表变更：${listChangeCount}` : `Full list changes: ${listChangeCount}`}</p>
+      {lastProgress ? <p className="docs-pressure-lab__status">{lastProgress}</p> : null}
+      <p className="docs-pressure-lab__status">{lastSnapshot}</p>
       <p className="docs-pressure-lab__status">{status}</p>
     </div>
   );
@@ -268,7 +342,7 @@ function createPressureExamples(zh: boolean): DocExample[] {
     {
       id: "server-table",
       title: zh ? "Server Table 服务端表格" : "Server Table",
-      description: zh ? "用受控 selectedRowKeys 演示跨页选择、加载和批量操作。" : "Controlled selectedRowKeys show cross-page selection, loading, and bulk actions.",
+      description: zh ? "用受控 selectedRowKeys 演示跨页选择、加载、分页错误和批量操作交接。" : "Controlled selectedRowKeys show cross-page selection, loading, page errors, and bulk-action handoff.",
       preview: <ServerTablePressure zh={zh} />,
       code: code([
         "const [selectedRowKeys, setSelectedRowKeys] = React.useState<React.Key[]>([]);",
@@ -285,7 +359,7 @@ function createPressureExamples(zh: boolean): DocExample[] {
     {
       id: "dynamic-form",
       title: zh ? "Dynamic Form 动态表单" : "Dynamic Form",
-      description: zh ? "动态字段由业务状态管理，服务端字段错误通过 setFieldsError 回填。" : "Product state owns dynamic fields while setFieldsError maps server failures back to fields.",
+      description: zh ? "动态字段由业务状态管理，提交失败聚焦第一个错误，服务端字段错误通过 setFieldsError 回填。" : "Product state owns dynamic fields, failed submits focus the first error, and setFieldsError maps server failures back to fields.",
       preview: <DynamicFormPressure zh={zh} />,
       code: code([
         "const formRef = React.useRef<FormRef>(null);",
@@ -297,7 +371,7 @@ function createPressureExamples(zh: boolean): DocExample[] {
     {
       id: "controlled-upload-queue",
       title: zh ? "Controlled Upload Queue 受控上传队列" : "Controlled Upload Queue",
-      description: zh ? "受控 fileList 通过 onFileListChange 接收完整队列，失败项可以单独重试。" : "Controlled fileList receives complete queues through onFileListChange; failed files can retry alone.",
+      description: zh ? "受控 fileList 通过 onFileListChange 接收完整队列，进度、重试和清空状态都保持可见。" : "Controlled fileList receives complete queues through onFileListChange, with visible progress, retry, and clear states.",
       preview: <ControlledUploadPressure zh={zh} />,
       code: code([
         "const [fileList, setFileList] = React.useState<UploadFile[]>([]);",
@@ -321,14 +395,14 @@ export function createCommercialPressureLabDocs(context: DemoContext): DocItem[]
       group: labels.groups.guide,
       title: zh ? "Commercial Pressure Lab 商用压力场" : "Commercial Pressure Lab",
       description: zh
-        ? "v0.23 压力页：把 Table、Form 和 Upload 放进服务端数据、动态字段和受控队列的真实后台场景。"
-        : "The v0.23 pressure page puts Table, Form, and Upload into server data, dynamic field, and controlled queue workflows.",
+        ? "v0.25 重点工作流交接页：把 Table、Form 和 Upload 放进服务端数据、动态字段和受控队列的真实后台场景。"
+        : "The v0.25 focus workflow handoff page puts Table, Form, and Upload into server data, dynamic field, and controlled queue workflows.",
       searchText:
-        "pressure commercial server table dynamic form controlled upload queue batch pagination 商用 压力 服务端 表格 动态 表单 受控 上传 队列",
+        "pressure commercial workflow handoff server table loading error dynamic form field list controlled upload full list change queue batch pagination 商用 压力 工作流 交接 服务端 表格 加载 错误 动态 表单 字段列表 受控 上传 完整列表 队列",
       preview: (
         <Space className="docs-pressure-lab__intro" direction="vertical">
-          <Badge variant="leaf">{zh ? "v0.23 重点" : "v0.23 focus"}</Badge>
-          <p>{zh ? "少加组件，多压重型工作流。" : "Fewer new components; deeper pressure on heavy workflows."}</p>
+          <Badge variant="leaf">{zh ? "v0.25 重点" : "v0.25 focus"}</Badge>
+          <p>{zh ? "少加组件，多压重型工作流交接。" : "Fewer new components; deeper pressure on heavy workflow handoffs."}</p>
         </Space>
       ),
       examples,
@@ -338,9 +412,9 @@ export function createCommercialPressureLabDocs(context: DemoContext): DocItem[]
         "Upload: controlled fileList + onFileListChange"
       ]),
       api: [
-        { prop: "Table selectedRowKeys", type: "React.Key[]", defaultValue: "[]", description: zh ? "跨服务端分页保存选择键。" : "Persists selected keys across server pages." },
-        { prop: "FormRef.setFieldsError", type: "(errors) => void", defaultValue: "-", description: zh ? "把服务端字段错误回填到字段。" : "Maps server field errors back onto fields." },
-        { prop: "Upload.onFileListChange", type: "(fileList) => void", defaultValue: "-", description: zh ? "受控队列接收完整文件列表。" : "Controlled queues receive the complete file list." }
+        { prop: "Table selectedRowKeys", type: "React.Key[]", defaultValue: "[]", description: zh ? "跨服务端分页、加载和错误状态保存选择键。" : "Persists selected keys across server pages, loading, and error states." },
+        { prop: "FormRef.setFieldsError", type: "(errors) => void", defaultValue: "-", description: zh ? "把服务端字段错误回填到动态字段。" : "Maps server field errors back onto dynamic fields." },
+        { prop: "Upload.onFileListChange", type: "(fileList) => void", defaultValue: "-", description: zh ? "受控队列接收完整文件列表和状态流转。" : "Controlled queues receive the complete file list and status transitions." }
       ]
     }
   ];

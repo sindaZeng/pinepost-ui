@@ -165,13 +165,31 @@ test.describe("Pinepost component QA hardening", () => {
     await serverTable.getByRole("checkbox", { name: "Select all rows" }).check();
     await expect(serverTable.getByText(/2 selected keys|已选择 2 个键/)).toBeVisible();
     await serverTable.getByRole("button", { name: /Page 2|第 2 页/ }).click();
+    await expect(serverTable.getByText(/Loading page 2 from server|正在加载第 2 页服务端数据/)).toBeVisible();
+    await serverTable.getByRole("button", { name: /Run bulk action|执行批量操作/ }).click();
+    await expect(serverTable.getByText(/Bulk action waits for server rows|批量操作等待服务端数据/)).toBeVisible();
     await expect(serverTable.getByText(/Page 2 loaded|第 2 页已加载/)).toBeVisible();
     await serverTable.getByRole("checkbox", { name: "Select all rows" }).check();
+    await expect(serverTable.getByText(/4 selected keys|已选择 4 个键/)).toBeVisible();
+    await serverTable.getByRole("button", { name: /Simulate page error|模拟分页错误/ }).click();
+    await expect(serverTable.getByText(/Server page failed. 4 selected keys kept|服务端分页失败，保留 4 个选择键/)).toBeVisible();
+    await serverTable.getByRole("button", { name: /Retry page 2|重试第 2 页/ }).click();
+    await expect(serverTable.getByText(/Page 2 loaded|第 2 页已加载/)).toBeVisible();
     await expect(serverTable.getByText(/4 selected keys|已选择 4 个键/)).toBeVisible();
     await serverTable.getByRole("button", { name: /Run bulk action|执行批量操作/ }).click();
     await expect(serverTable.getByText(/Bulk action queued for 4 keys|已为 4 个键创建批量操作/)).toBeVisible();
 
     const dynamicForm = page.getByRole("region", { name: /Dynamic Form|动态表单/ });
+    await dynamicForm.getByRole("button", { name: /Add stop|添加站点/ }).click();
+    await expect(dynamicForm.getByText(/2 dynamic stops|2 个动态站点/)).toBeVisible();
+    await dynamicForm.getByLabel(/Stop 2 desk|站点 2 桌台/).fill("Cedar desk");
+    await dynamicForm.getByLabel(/Stop 2 window|站点 2 窗口/).fill("");
+    await dynamicForm.getByRole("button", { name: /Submit dynamic form|提交动态表单/ }).click();
+    await expect(dynamicForm.getByRole("alert").filter({ hasText: /Window is required|请填写窗口/ })).toBeVisible();
+    await expect(dynamicForm.getByLabel(/Stop 2 window|站点 2 窗口/)).toBeFocused();
+    await dynamicForm.getByRole("button", { name: /Remove stop 2|移除站点 2/ }).click();
+    await expect(dynamicForm.getByText(/1 dynamic stop|1 个动态站点/)).toBeVisible();
+    await expect(dynamicForm.getByRole("alert").filter({ hasText: /Window is required|请填写窗口/ })).toHaveCount(0);
     await dynamicForm.getByRole("button", { name: /Add stop|添加站点/ }).click();
     await dynamicForm.getByRole("button", { name: /Simulate server errors|模拟服务端错误/ }).click();
     await expect(dynamicForm.getByRole("alert").filter({ hasText: /already assigned|已被分配/ })).toBeVisible();
@@ -183,11 +201,20 @@ test.describe("Pinepost component QA hardening", () => {
       { name: "route-ready.csv", mimeType: "text/csv", buffer: Buffer.from("ready") },
       { name: "route-retry.csv", mimeType: "text/csv", buffer: Buffer.from("retry") }
     ]);
+    await expect(uploadQueue.getByText(/Controlled queue: 2 files|受控队列：2 个文件/)).toBeVisible();
+    await expect(uploadQueue.getByText(/Full list changes: 1|完整列表变更：1/)).toBeVisible();
     await uploadQueue.getByRole("button", { name: /Start queue|开始队列/ }).click();
     await expect(uploadQueue.getByText("success", { exact: true })).toHaveCount(1);
     await expect(uploadQueue.getByText("error", { exact: true })).toHaveCount(1);
+    await expect(uploadQueue.getByText(/Last progress: route-retry.csv 64%|最近进度：route-retry.csv 64%/)).toBeVisible();
+    await expect(uploadQueue.getByText(/route-ready.csv: success/)).toBeVisible();
+    await expect(uploadQueue.getByText(/route-retry.csv: error/)).toBeVisible();
     await uploadQueue.getByRole("button", { name: /Retry route-retry.csv|重试 route-retry.csv/ }).click();
     await expect(uploadQueue.getByText("success", { exact: true })).toHaveCount(2);
+    await expect(uploadQueue.getByText(/route-retry.csv: success/)).toBeVisible();
+    await uploadQueue.getByRole("button", { name: /Clear queue|清空队列/ }).click();
+    await expect(uploadQueue.getByText(/Controlled queue: 0 files|受控队列：0 个文件/)).toBeVisible();
+    await expect(uploadQueue.getByText(/Queue cleared|队列已清空/)).toBeVisible();
   });
 
   test("keeps picker panel docs previews controlled by visible user choices", async ({ page }) => {

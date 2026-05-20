@@ -141,6 +141,11 @@ The v0.24 scheduling pass hardens disabled date and time windows so
 DateRangePickerPanel and TimeRangePickerPanel shortcuts follow the same
 constraints as manual selections.
 
+The v0.25 workflow handoff pass expands the Commercial Pressure Lab with
+server Table loading and page-error states, dynamic Form field-list focus and
+server errors, and controlled Upload progress, retry, clear, and complete
+file-list transitions.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, segmented usage examples, an advanced playground where useful,
 copyable recipes, and an API table.

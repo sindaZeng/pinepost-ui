@@ -4,9 +4,9 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 
 ## Near Term
 
-- Expand visual baseline review around the v0.24 disabled scheduling pressure states.
+- Keep the v0.25 Commercial Pressure Lab as the handoff check for server Table, dynamic Form, and controlled Upload workflows.
 - Keep display-oriented components queued until heavy workflow maturity is stronger.
-- Deepen saved bundle handoff examples after the scheduling pass stays stable.
+- Deepen saved bundle handoff examples after the Table/Form/Upload workflow pass stays stable.
 
 ## Mid Term
 
