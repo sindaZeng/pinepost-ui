@@ -326,6 +326,49 @@ export function createSelectionExamples(context: DemoContext) {
     routeTreeData
   } = context;
 
+  function BlockedDateRangeExample() {
+    const [blockedRange, setBlockedRange] = React.useState<[Date | undefined, Date | undefined]>([undefined, undefined]);
+    const blockedDay = new Date(2026, 4, 20);
+
+    return (
+      <Space direction="vertical">
+        <DateRangePickerPanel
+          month={new Date(2026, 4, 1)}
+          value={blockedRange}
+          onValueChange={setBlockedRange}
+          disabledDate={(date) => date.getFullYear() === blockedDay.getFullYear() && date.getMonth() === blockedDay.getMonth() && date.getDate() === blockedDay.getDate()}
+          shortcuts={[
+            { key: "open-window", label: zh ? "开放窗口" : "Open window", value: [new Date(2026, 4, 12), new Date(2026, 4, 14)] },
+            { key: "blocked-window", label: zh ? "跨封锁日" : "Blocked window", value: [new Date(2026, 4, 18), new Date(2026, 4, 22)] }
+          ]}
+        />
+        <Tag>{formatPinepostDateRange(blockedRange, { fallback: zh ? "未选择" : "Open", locale })}</Tag>
+      </Space>
+    );
+  }
+
+  function BlockedTimeRangeExample() {
+    const [blockedTimeRange, setBlockedTimeRange] = React.useState<[string | undefined, string | undefined]>([undefined, undefined]);
+
+    return (
+      <Space direction="vertical">
+        <TimeRangePickerPanel
+          value={blockedTimeRange}
+          onValueChange={setBlockedTimeRange}
+          start="09:00"
+          end="14:00"
+          step="01:00"
+          disabledTime={(time) => time === "12:00"}
+          shortcuts={[
+            { key: "lunch", label: zh ? "午间窗口" : "Lunch window", value: ["12:00", "13:00"] },
+            { key: "morning", label: zh ? "上午窗口" : "Morning window", value: ["09:00", "11:00"] }
+          ]}
+        />
+        <Tag>{formatPinepostTimeRange(blockedTimeRange, { fallback: zh ? "未定" : "Open", locale })}</Tag>
+      </Space>
+    );
+  }
+
   function renderSelectExamples(): DocExample[] {
     return [
       {
@@ -531,6 +574,24 @@ export function createSelectionExamples(context: DemoContext) {
         description: zh ? "disabledDate 可以屏蔽不可排期的日期。" : "disabledDate blocks dates that cannot be scheduled.",
         preview: <DateRangePickerPanel disabledDate={(date) => date < new Date(2026, 4, 1)} />,
         code: code(["<DateRangePickerPanel disabledDate={(date) => date < minDate} />"])
+      },
+      {
+        id: "blocked-dispatch-day",
+        title: zh ? "运营封锁日" : "Blocked dispatch day",
+        description: zh ? "如果范围跨过封锁日，日期范围不会写入业务筛选。" : "If a range crosses a blocked day, it is not written into the product filter.",
+        preview: <BlockedDateRangeExample />,
+        code: code([
+          "<DateRangePickerPanel",
+          "  value={range}",
+          "  onValueChange={setRange}",
+          "  month={new Date(2026, 4, 1)}",
+          "  disabledDate={(date) => sameDay(date, blockedDay)}",
+          "  shortcuts={[",
+          "    { label: '开放窗口', value: [new Date(2026, 4, 12), new Date(2026, 4, 14)] },",
+          "    { label: '跨封锁日', value: [new Date(2026, 4, 18), new Date(2026, 4, 22)] }",
+          "  ]}",
+          "/>"
+        ])
       }
     ];
   }
@@ -565,6 +626,23 @@ export function createSelectionExamples(context: DemoContext) {
         description: zh ? "start、end 和 step 控制可选时间粒度。" : "start, end, and step control selectable time granularity.",
         preview: <TimeRangePickerPanel start="08:00" end="12:00" step="01:00" />,
         code: code(['<TimeRangePickerPanel start="08:00" end="12:00" step="01:00" />'])
+      },
+      {
+        id: "blocked-time-window",
+        title: zh ? "关闭时段" : "Closed time window",
+        description: zh ? "disabledTime 同时限制手动时间点和快捷时段。" : "disabledTime applies to both manual time buttons and shortcut windows.",
+        preview: <BlockedTimeRangeExample />,
+        code: code([
+          "<TimeRangePickerPanel",
+          "  value={timeRange}",
+          "  onValueChange={setTimeRange}",
+          "  disabledTime={(time) => time === '12:00'}",
+          "  shortcuts={[",
+          "    { label: '午间窗口', value: ['12:00', '13:00'] },",
+          "    { label: '上午窗口', value: ['09:00', '11:00'] }",
+          "  ]}",
+          "/>"
+        ])
       }
     ];
   }

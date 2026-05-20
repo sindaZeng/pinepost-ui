@@ -73,7 +73,7 @@ test.describe("Pinepost docs smoke", () => {
     await expect(matrix.getByText("Upload", { exact: true })).toBeVisible();
     await expect(matrix.getByText("Select / Cascader / TreeSelect")).toBeVisible();
     await expect(matrix.getByText("Date and time panels", { exact: true })).toBeVisible();
-    await expect(matrix.getByText(/v0.23 重点|v0.23 focus|v0.23 压力重点|v0.23 pressure focus/).first()).toBeVisible();
+    await expect(matrix.getByText(/v0.24 重点|v0.24 focus|v0.24 排期重点|v0.24 scheduling focus/).first()).toBeVisible();
     await expectNoPageOverflow(page);
   });
 
@@ -106,11 +106,26 @@ test.describe("Pinepost docs smoke", () => {
     await page.getByRole("button", { name: "DateRangePickerPanel 日期范围面板" }).click();
     await expect(page.getByRole("region", { name: /排期快捷预设|Scheduling shortcuts/ })).toBeVisible();
     await expect(page.getByText("createPinepostDateRangePresets").first()).toBeVisible();
+    const blockedDateExample = page.getByRole("region", { name: /运营封锁日|Blocked dispatch day/ });
+    await expect(blockedDateExample).toBeVisible();
+    await expect(blockedDateExample.getByRole("button", { name: "2026-05-20" })).toBeDisabled();
+    await blockedDateExample.getByRole("button", { name: "2026-05-18" }).click();
+    await blockedDateExample.getByRole("button", { name: "2026-05-22" }).click();
+    await expect(blockedDateExample.getByText(/2026年5月18日 至 未选择|May 18, 2026 to Open/)).toBeVisible();
+    await blockedDateExample.getByRole("button", { name: /开放窗口|Open window/ }).click();
+    await expect(blockedDateExample.getByText(/2026年5月12日 至 2026年5月14日|May 12, 2026 to May 14, 2026/)).toBeVisible();
     await expectNoPageOverflow(page);
 
     await page.getByRole("button", { name: "TimeRangePickerPanel 时间范围面板" }).click();
     await expect(page.getByRole("region", { name: /常用时间段|Common time ranges/ })).toBeVisible();
     await expect(page.getByText("createPinepostTimeRangePresets").first()).toBeVisible();
+    const closedTimeExample = page.getByRole("region", { name: /关闭时段|Closed time window/ });
+    await expect(closedTimeExample).toBeVisible();
+    await expect(closedTimeExample.getByRole("button", { name: "12:00" }).first()).toBeDisabled();
+    await closedTimeExample.getByRole("button", { name: /午间窗口|Lunch window/ }).click();
+    await expect(closedTimeExample.getByText(/^未定$|^Open$/)).toBeVisible();
+    await closedTimeExample.getByRole("button", { name: /上午窗口|Morning window/ }).click();
+    await expect(closedTimeExample.getByText(/09:00 至 11:00|09:00 to 11:00/)).toBeVisible();
     await expectNoPageOverflow(page);
   });
 

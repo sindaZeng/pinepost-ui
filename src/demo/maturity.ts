@@ -137,18 +137,18 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       zh: "排期与配送窗口"
     },
     level: "active",
-    score: 79,
+    score: 84,
     focus: true,
     signals: [
       { en: "Date, date range, time, time range, and date-time panels are documented with scheduling presets.", zh: "日期、日期范围、时间、时间范围和日期时间面板已配排期预设说明。" },
-      { en: "Day buttons now expose stable date labels and DateTime forwards root props correctly.", zh: "日期按钮现在暴露稳定日期标签，DateTime 正确透传根属性。" }
+      { en: "Disabled date ranges and disabled time shortcuts now have product recipes and tests.", zh: "禁用日期范围和禁用时间快捷项已有业务示例和测试。" }
     ],
     currentGaps: [
       { en: "Timezone-specific workflows are intentionally outside this pass.", zh: "时区专属工作流暂不放入本轮。" },
-      { en: "More disabled date and time combinations need product recipes.", zh: "更多禁用日期与禁用时间组合需要业务配方。" }
+      { en: "Cross-month scheduling and recurrence workflows remain queued.", zh: "跨月排期和重复规则工作流仍在队列中。" }
     ],
     nextActions: [
-      { en: "Strengthen disabled scheduling examples before adding calendar breadth.", zh: "先强化禁用排期示例，再扩大日历范围。" },
+      { en: "Watch visual baselines for disabled scheduling states before adding calendar breadth.", zh: "扩大日历范围前，先观察禁用排期状态的视觉基线。" },
       { en: "Keep panel accessibility labels explicit.", zh: "保持面板无障碍标签明确。" }
     ]
   },
@@ -166,7 +166,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Theme collections, recipe bundle helpers, and locale provider behavior are documented.", zh: "主题集合、配方包助手和语言 Provider 行为已写入文档。" }
     ],
     currentGaps: [
-      { en: "Maintained while v0.23 pressure focuses on heavy workflows.", zh: "v0.23 压力场聚焦重型工作流期间保持维护。" }
+      { en: "Maintained while v0.24 pressure focuses on disabled scheduling workflows.", zh: "v0.24 压力场聚焦禁用排期工作流期间保持维护。" }
     ],
     nextActions: [
       { en: "Maintain current coverage while heavy form and data surfaces mature.", zh: "在重型表单与数据组件成熟期间保持现有覆盖。" }
@@ -209,7 +209,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Advanced composition patterns are deferred.", zh: "高级组合模式延后。" }
     ],
     nextActions: [
-      { en: "Maintain API stability and avoid scope creep during v0.23.", zh: "v0.23 期间保持 API 稳定，避免范围膨胀。" }
+      { en: "Maintain API stability and avoid scope creep during v0.24.", zh: "v0.24 期间保持 API 稳定，避免范围膨胀。" }
     ]
   }
 ];

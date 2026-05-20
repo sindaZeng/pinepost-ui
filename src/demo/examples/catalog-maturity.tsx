@@ -39,7 +39,7 @@ function MaturitySummary({ items, zh }: { items: ComponentMaturityItem[]; zh: bo
   return (
     <div className="docs-maturity__summary" aria-label={zh ? "成熟度概览" : "Maturity summary"}>
       <div>
-        <span>{zh ? "v0.23 压力重点" : "v0.23 pressure focus"}</span>
+        <span>{zh ? "v0.24 排期重点" : "v0.24 scheduling focus"}</span>
         <strong>{focusItems.length}</strong>
         <p>{zh ? "Table、Form、Upload、选择器、日期时间" : "Table, Form, Upload, selection, and date/time"}</p>
       </div>
@@ -93,7 +93,7 @@ function MaturityMatrix({ zh }: { zh: boolean }) {
                   </div>
                 </td>
                 <td>
-                  <Tag variant={item.focus ? "leaf" : "sky"}>{item.focus ? (zh ? "v0.23 重点" : "v0.23 focus") : (zh ? "保持" : "Hold")}</Tag>
+                  <Tag variant={item.focus ? "leaf" : "sky"}>{item.focus ? (zh ? "v0.24 重点" : "v0.24 focus") : (zh ? "保持" : "Hold")}</Tag>
                 </td>
                 <td>
                   <MaturityList items={item.signals} zh={zh} />
@@ -111,8 +111,8 @@ function MaturityMatrix({ zh }: { zh: boolean }) {
       </div>
       <p className="docs-maturity__note">
         {zh
-          ? "v0.23 继续压实 Table、Form 和 Upload 的商用场景；其它展示类组件维持非重点状态，避免用浅覆盖稀释重型表单和数据组件的可信度。"
-          : "v0.23 keeps pressure on Table, Form, and Upload commercial workflows; other display components stay in the non-focus queue so shallow breadth does not dilute heavy form and data confidence."}
+          ? "v0.24 把压力推进到日期和时间排期边界；其它展示类组件维持非重点状态，避免用浅覆盖稀释重型表单、数据和排期组件的可信度。"
+          : "v0.24 moves pressure into date and time scheduling boundaries; other display components stay in the non-focus queue so shallow breadth does not dilute heavy form, data, and scheduling confidence."}
       </p>
     </div>
   );
@@ -127,8 +127,8 @@ export function createMaturityCatalogDocs(context: DemoCatalogContext): DocItem[
       group: labels.groups.guide,
       title: zh ? "Component Maturity 组件成熟度" : "Component Maturity",
       description: zh
-        ? "v0.23 的公开成熟度矩阵：继续压实 Table、Form、Upload，并保持其它组件的优先级透明。"
-        : "The v0.23 public maturity matrix: keep pressure on Table, Form, and Upload while keeping other component priorities visible.",
+        ? "v0.24 的公开成熟度矩阵：继续压实日期时间排期边界，并保持其它组件的优先级透明。"
+        : "The v0.24 public maturity matrix: keep pressure on date/time scheduling boundaries while keeping other component priorities visible.",
       searchText:
         "maturity commercial component matrix Table Form Upload Select Cascader TreeSelect DateTime date time 成熟度 商用 表格 表单 上传 选择器 日期时间",
       preview: <MaturityMatrix zh={zh} />,

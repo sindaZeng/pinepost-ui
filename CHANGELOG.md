@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.0
+
+- Hardened DateRangePickerPanel so ranges crossing disabled dates are not committed.
+- Hardened TimeRangePickerPanel so shortcut ranges follow the same disabled time rules as manual selection.
+- Added disabled scheduling examples for blocked dispatch days and closed time windows.
+- Updated the maturity matrix around the v0.24 date/time scheduling pressure pass without broadening component scope.
+
 ## 0.23.0
 
 - Added the Commercial Pressure Lab docs page for server-style Table workflows, dynamic Form server errors, and controlled Upload queues.

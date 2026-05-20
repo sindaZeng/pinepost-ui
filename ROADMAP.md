@@ -4,9 +4,9 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 
 ## Near Term
 
-- Deepen date/time disabled scheduling recipes after the Table, Form, and Upload pressure pass.
+- Expand visual baseline review around the v0.24 disabled scheduling pressure states.
 - Keep display-oriented components queued until heavy workflow maturity is stronger.
-- Expand visual baseline review around commercial pressure states before adding broad component polish.
+- Deepen saved bundle handoff examples after the scheduling pass stays stable.
 
 ## Mid Term
 

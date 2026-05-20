@@ -235,6 +235,27 @@ function dateInRange(date: Date, range: DateRangeValue) {
   return date.getTime() > start.getTime() && date.getTime() < end.getTime();
 }
 
+function rangeHasDisabledDate(range: DateRangeValue, disabledDate?: (date: Date) => boolean) {
+  const [start, end] = range;
+  if (!disabledDate) return false;
+  if (!start && !end) return false;
+  if (start && disabledDate(start)) return true;
+  if (end && disabledDate(end)) return true;
+  if (!start || !end) return false;
+
+  const rangeStart = start.getTime() <= end.getTime() ? start : end;
+  const rangeEnd = start.getTime() <= end.getTime() ? end : start;
+  const current = startOfDay(rangeStart);
+  const last = startOfDay(rangeEnd);
+
+  while (current.getTime() <= last.getTime()) {
+    if (disabledDate(current)) return true;
+    current.setDate(current.getDate() + 1);
+  }
+
+  return false;
+}
+
 export const DateRangePickerPanel = React.forwardRef<HTMLDivElement, DateRangePickerPanelProps>(
   (
     {
@@ -258,7 +279,7 @@ export const DateRangePickerPanel = React.forwardRef<HTMLDivElement, DateRangePi
     const weekdays = weekStartsOn === 1 ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     function commit(nextValue: DateRangeValue) {
-      if (nextValue.some((date) => date && disabledDate?.(date))) return;
+      if (rangeHasDisabledDate(nextValue, disabledDate)) return;
       if (value === undefined) setInternalValue(nextValue);
       onValueChange?.(nextValue);
     }
@@ -437,6 +458,7 @@ export const TimeRangePickerPanel = React.forwardRef<HTMLDivElement, TimeRangePi
     const currentValue = value ?? internalValue;
 
     function commit(nextValue: TimeRangeValue) {
+      if (nextValue.some((time) => time && disabledTime?.(time))) return;
       if (value === undefined) setInternalValue(nextValue);
       onValueChange?.(nextValue);
     }
