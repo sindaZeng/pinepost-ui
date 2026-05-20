@@ -615,6 +615,14 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
       return nextList;
     }
 
+    function currentFile(uid: string, fallback: UploadFile): UploadFile {
+      for (const queuedFile of fileListRef.current) {
+        if (queuedFile.uid === uid) return queuedFile;
+      }
+
+      return fallback;
+    }
+
     async function submit() {
       abortRef.current = new AbortController();
       const readyFiles = fileListRef.current.filter((file) => file.status === "ready" && file.raw);
@@ -629,17 +637,17 @@ export const Upload = React.forwardRef<UploadRef, UploadProps>(
             file: uploading,
             signal: abortRef.current.signal,
             onError: (error) => {
-              const errored = { ...uploading, error, status: "error" as const };
+              const errored = { ...currentFile(uploading.uid, uploading), error, status: "error" as const };
               const nextList = replaceFile(errored);
               onError?.(error, errored, nextList);
             },
             onProgress: (percent) => {
-              const progressed = { ...uploading, percent, status: "uploading" as const };
+              const progressed = { ...currentFile(uploading.uid, uploading), percent, status: "uploading" as const };
               const nextList = replaceFile(progressed);
               onProgress?.(percent, progressed, nextList);
             },
             onSuccess: (response) => {
-              const succeeded = { ...uploading, percent: 100, response, status: "success" as const };
+              const succeeded = { ...currentFile(uploading.uid, uploading), percent: 100, response, status: "success" as const };
               const nextList = replaceFile(succeeded);
               onSuccess?.(response, succeeded, nextList);
             }

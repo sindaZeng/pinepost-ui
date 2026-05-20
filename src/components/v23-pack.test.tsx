@@ -137,9 +137,9 @@ describe("Pinepost UI v0.23 commercial pressure", () => {
     expect(lastQueue().map((file) => file.status)).toEqual(["ready", "ready"]);
 
     await act(async () => uploadRef.current?.submit());
-    expect(lastQueue().map((file) => [file.name, file.status])).toEqual([
-      ["ready.csv", "success"],
-      ["retry.csv", "error"]
+    expect(lastQueue().map((file) => [file.name, file.status, file.percent])).toEqual([
+      ["ready.csv", "success", 100],
+      ["retry.csv", "error", 60]
     ]);
 
     await user.click(screen.getByRole("button", { name: "Retry retry.csv" }));

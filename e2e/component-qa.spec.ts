@@ -217,6 +217,25 @@ test.describe("Pinepost component QA hardening", () => {
     await expect(uploadQueue.getByText(/Queue cleared|队列已清空/)).toBeVisible();
   });
 
+  test("keeps Commercial Pressure Lab server request state current during rapid interactions", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /Commercial Pressure Lab|商用压力场/ }).click();
+
+    const serverTable = page.getByRole("region", { name: /Server Table|服务端表格/ });
+    await serverTable.getByRole("checkbox", { name: "Select all rows" }).check();
+    await serverTable.getByRole("button", { name: /Simulate page error|模拟分页错误/ }).click();
+    await serverTable.getByRole("button", { name: /Clear selection|清空选择/ }).click();
+    await expect(serverTable.getByText(/0 selected keys|已选择 0 个键/)).toBeVisible();
+    await expect(serverTable.getByText(/Server page failed. 0 selected keys kept|服务端分页失败，保留 0 个选择键/)).toBeVisible();
+
+    await serverTable.getByRole("button", { name: /Retry page 1|重试第 1 页/ }).click();
+    await expect(serverTable.getByText(/Page 1 loaded|第 1 页已加载/)).toBeVisible();
+    await serverTable.getByRole("button", { name: /Page 2|第 2 页/ }).click();
+    await serverTable.getByRole("button", { name: /Simulate page error|模拟分页错误/ }).click();
+    await expect(serverTable.getByRole("button", { name: /Retry page 1|重试第 1 页/ })).toBeVisible();
+    await expect(serverTable.getByRole("button", { name: /Retry page 2|重试第 2 页/ })).toHaveCount(0);
+  });
+
   test("keeps picker panel docs previews controlled by visible user choices", async ({ page }) => {
     await page.goto("/");
 

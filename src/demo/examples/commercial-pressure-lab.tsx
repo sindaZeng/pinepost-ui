@@ -54,18 +54,38 @@ function ServerTablePressure({ zh }: { zh: boolean }) {
   const [loadState, setLoadState] = React.useState<ServerLoadState>("idle");
   const [status, setStatus] = React.useState("");
   const [statusVariant, setStatusVariant] = React.useState<"info" | "success" | "warning">("info");
+  const requestIdRef = React.useRef(0);
+  const selectedRowKeysRef = React.useRef<React.Key[]>([]);
+  const serverLoadTimeoutRef = React.useRef<number | null>(null);
   const rows = page === 1 ? pageOneRows : pageTwoRows;
   const loading = loadState === "loading";
 
+  React.useEffect(() => () => {
+    if (serverLoadTimeoutRef.current !== null) window.clearTimeout(serverLoadTimeoutRef.current);
+  }, []);
+
+  function updateSelectedRowKeys(nextKeys: React.Key[]) {
+    selectedRowKeysRef.current = nextKeys;
+    setSelectedRowKeys(nextKeys);
+  }
+
   function switchPage(nextPage: number, mode: "success" | "error" = "success") {
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
+    if (serverLoadTimeoutRef.current !== null) window.clearTimeout(serverLoadTimeoutRef.current);
+
     setLoadState("loading");
     setStatusVariant("info");
     setStatus(zh ? `正在加载第 ${nextPage} 页服务端数据。` : `Loading page ${nextPage} from server.`);
-    window.setTimeout(() => {
+    serverLoadTimeoutRef.current = window.setTimeout(() => {
+      if (requestIdRef.current !== requestId) return;
+      serverLoadTimeoutRef.current = null;
+
       if (mode === "error") {
+        const selectedCount = selectedRowKeysRef.current.length;
         setLoadState("error");
         setStatusVariant("warning");
-        setStatus(zh ? `服务端分页失败，保留 ${selectedRowKeys.length} 个选择键。` : `Server page failed. ${selectedRowKeys.length} selected keys kept.`);
+        setStatus(zh ? `服务端分页失败，保留 ${selectedCount} 个选择键。` : `Server page failed. ${selectedCount} selected keys kept.`);
         return;
       }
 
@@ -111,7 +131,7 @@ function ServerTablePressure({ zh }: { zh: boolean }) {
             {zh ? `重试第 ${page} 页` : `Retry page ${page}`}
           </Button>
         ) : null}
-        <Button size="sm" variant="soft" onClick={() => setSelectedRowKeys([])}>
+        <Button size="sm" variant="soft" onClick={() => updateSelectedRowKeys([])}>
           {zh ? "清空选择" : "Clear selection"}
         </Button>
       </div>
@@ -123,7 +143,7 @@ function ServerTablePressure({ zh }: { zh: boolean }) {
         rowKey="id"
         selectable
         selectedRowKeys={selectedRowKeys}
-        onSelectionChange={(_, keys) => setSelectedRowKeys(keys)}
+        onSelectionChange={(_, keys) => updateSelectedRowKeys(keys)}
         loading={loading}
         loadingText={zh ? "正在加载服务端数据..." : "Loading server rows..."}
         columns={serverColumns}
