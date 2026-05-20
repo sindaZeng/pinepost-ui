@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 async function expectNoPageOverflow(page: Page) {
   const metrics = await page.evaluate(() => ({
@@ -18,6 +18,16 @@ async function attachMainScreenshot(page: Page, name: string, testInfo: Paramete
   const screenshot = await main.screenshot({ animations: "disabled" });
   expect(screenshot.byteLength).toBeGreaterThan(12000);
   await testInfo.attach(name, { body: screenshot, contentType: "image/png" });
+}
+
+async function attachExampleScreenshot(example: Locator, name: string, testInfo: Parameters<Parameters<typeof test>[1]>[1]) {
+  await expect(example).toBeVisible();
+  const box = await example.boundingBox();
+  expect(box?.width ?? 0).toBeGreaterThan(300);
+  expect(box?.height ?? 0).toBeGreaterThan(280);
+  const screenshot = await example.screenshot({ animations: "disabled" });
+  expect(screenshot.byteLength).toBeGreaterThan(8000);
+  await testInfo.attach(`${name}-example`, { body: screenshot, contentType: "image/png" });
 }
 
 test.describe("Pinepost docs visual baselines", () => {
@@ -67,6 +77,7 @@ test.describe("Pinepost docs visual baselines", () => {
     await expect(blockedDateExample.getByText(/2026年5月18日 至 未选择|May 18, 2026 to Open/)).toBeVisible();
     await blockedDateExample.getByRole("button", { name: /开放窗口|Open window/ }).click();
     await expect(blockedDateExample.getByText(/2026年5月12日 至 2026年5月14日|May 12, 2026 to May 14, 2026/)).toBeVisible();
+    await attachExampleScreenshot(blockedDateExample, "blocked-dispatch-day", testInfo);
     await attachMainScreenshot(page, "date-range-disabled-scheduling-main", testInfo);
     await expectNoPageOverflow(page);
 
@@ -79,6 +90,7 @@ test.describe("Pinepost docs visual baselines", () => {
     await expect(closedTimeExample.getByText(/^未定$|^Open$/)).toBeVisible();
     await closedTimeExample.getByRole("button", { name: /上午窗口|Morning window/ }).click();
     await expect(closedTimeExample.getByText(/09:00 至 11:00|09:00 to 11:00/)).toBeVisible();
+    await attachExampleScreenshot(closedTimeExample, "closed-time-window", testInfo);
     await attachMainScreenshot(page, "time-range-disabled-scheduling-main", testInfo);
     await expectNoPageOverflow(page);
   });
