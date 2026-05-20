@@ -974,10 +974,10 @@ export function createGuideCatalogDocs(context: DemoCatalogContext): DocItem[] {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的覆盖计划；详细成熟度见 Component Maturity 矩阵。" : "Public Pinepost-only coverage plan; use the Component Maturity matrix for depth status.",
-      preview: <div className="docs-roadmap"><Tag>Focus</Tag><span>{zh ? "Component Maturity 矩阵跟踪 Table、Form、Upload、Select/Cascader/TreeSelect 和日期时间。" : "Component Maturity tracks Table, Form, Upload, Select/Cascader/TreeSelect, and date/time."}</span><Tag variant="parcel">Maintain</Tag><span>{zh ? "主题、配方包、导航、反馈和基础展示组件维持现有覆盖。" : "Theme, recipe bundle, navigation, feedback, and basic display coverage are maintained."}</span><Tag variant="sky">Hold</Tag><span>{zh ? "展示类组件本轮保持非重点，避免平均扩张。" : "Display components stay non-focus in this pass to avoid broad shallow expansion."}</span></div>,
-      code: code(["Focus: Component Maturity tracks Table, Form, Upload, Select/Cascader/TreeSelect, and date/time", "Maintain: theme, recipes, navigation, feedback, and basic display coverage", "Hold: display components remain non-focus during v0.22"]),
+      preview: <div className="docs-roadmap"><Tag>Focus</Tag><span>{zh ? "v0.26 聚焦 Recipe Bundle 的保存、导入、恢复和应用交接。" : "v0.26 focuses Recipe Bundle save, import, recovery, and apply handoff."}</span><Tag variant="parcel">Maintain</Tag><span>{zh ? "Table、Form、Upload 压力场继续作为重型工作流回归基线。" : "Table, Form, and Upload pressure workflows remain regression baselines."}</span><Tag variant="sky">Hold</Tag><span>{zh ? "展示类组件本轮保持非重点，避免平均扩张。" : "Display components stay non-focus in this pass to avoid broad shallow expansion."}</span></div>,
+      code: code(["Focus: Recipe Bundle saved workflow handoff", "Maintain: Table, Form, and Upload pressure workflow baselines", "Hold: display components remain non-focus during v0.26"]),
       api: [
-        { prop: "Focus", type: "status", defaultValue: "-", description: zh ? "v0.22 优先深挖的组件。" : "Components deepened first in v0.22." },
+        { prop: "Focus", type: "status", defaultValue: "-", description: zh ? "v0.26 优先深挖的已保存交接工作流。" : "Saved handoff workflow deepened first in v0.26." },
         { prop: "Maintain", type: "status", defaultValue: "-", description: zh ? "继续维护现有文档与 API。" : "Existing docs and APIs remain maintained." },
         { prop: "Hold", type: "status", defaultValue: "-", description: zh ? "本轮暂不平均投入。" : "No broad investment in this pass." }
       ]

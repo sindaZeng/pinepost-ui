@@ -236,6 +236,33 @@ test.describe("Pinepost component QA hardening", () => {
     await expect(serverTable.getByRole("button", { name: /Retry page 2|重试第 2 页/ })).toHaveCount(0);
   });
 
+  test("supports Recipe Gallery bundle handoff import, apply, and recovery", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /业务模板|Recipe Gallery/ }).click();
+
+    const bundleBuilder = page.locator(".docs-bundle-builder");
+    await expect(bundleBuilder.getByText(/v0.26 Bundle handoff|v0.26 配方包交接/)).toBeVisible();
+
+    await bundleBuilder.getByRole("button", { name: /Use commerce handoff|填入商业交接包/ }).click();
+    const importPreview = bundleBuilder.locator(".docs-bundle-builder__preview");
+    await expect(importPreview.getByText(/Bundle ready|配方包可用/)).toBeVisible();
+    await expect(importPreview.getByText(/Campaign launch|活动发布页/)).toBeVisible();
+    await expect(importPreview.getByText(/Campaign card|活动商品卡/)).toBeVisible();
+    await bundleBuilder.getByRole("button", { name: /Apply imported bundle|应用导入配方包/ }).click();
+    await expect(bundleBuilder.getByText(/Bundle applied: 2 recipes|已应用配方包：2 个模板/)).toBeVisible();
+    await expect(bundleBuilder.locator("button[aria-pressed='true']")).toHaveCount(2);
+
+    await bundleBuilder.getByRole("button", { name: /Use damaged handoff|填入损坏交接包/ }).click();
+    await expect(importPreview.getByText(/Import needs attention|导入需要处理/)).toBeVisible();
+    await expect(importPreview.getByText(/Bundle needs a valid name, id, and recipe references|配方包需要有效名称、ID 和模板引用/)).toBeVisible();
+    await expect(bundleBuilder.getByRole("button", { name: /Apply imported bundle|应用导入配方包/ })).toBeDisabled();
+
+    await bundleBuilder.getByRole("button", { name: /Use learning handoff|填入学习交接包/ }).click();
+    await expect(importPreview.getByText(/Bundle ready|配方包可用/)).toBeVisible();
+    await expect(importPreview.getByText(/Learning task|学习任务页/)).toBeVisible();
+    await expect(importPreview.getByText(/Schedule locale|排期 locale/)).toBeVisible();
+  });
+
   test("keeps picker panel docs previews controlled by visible user choices", async ({ page }) => {
     await page.goto("/");
 

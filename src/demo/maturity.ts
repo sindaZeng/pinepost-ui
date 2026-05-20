@@ -46,7 +46,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     },
     level: "commercial",
     score: 90,
-    focus: true,
+    focus: false,
     signals: [
       { en: "Segmented examples cover filtering, sorting, selection, expansion, summaries, settings, and views.", zh: "分段示例覆盖筛选、排序、选择、展开、汇总、列设置和视图。" },
       { en: "The pressure lab now keeps selected keys visible across pagination, loading, errors, and bulk actions.", zh: "压力场现在让选择键跨分页、加载、错误和批量操作保持可见。" }
@@ -56,8 +56,8 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Virtualized server data remains outside this handoff pass.", zh: "虚拟化服务端数据仍不放入本轮交接范围。" }
     ],
     nextActions: [
-      { en: "Keep the Commercial Pressure Lab as the handoff check for server-style selection and bulk actions.", zh: "把 Commercial Pressure Lab 继续作为服务端选择和批量操作交接检查。" },
-      { en: "Keep controlled table state stable before adding more display components.", zh: "继续先稳定受控表格状态，再扩展更多展示组件。" }
+      { en: "Keep the Commercial Pressure Lab as the regression check for server-style selection and bulk actions.", zh: "把 Commercial Pressure Lab 继续作为服务端选择和批量操作回归检查。" },
+      { en: "Keep controlled table state stable while v0.26 focuses on saved bundle handoff.", zh: "v0.26 聚焦已保存配方包交接期间，保持受控表格状态稳定。" }
     ]
   },
   {
@@ -69,7 +69,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     },
     level: "commercial",
     score: 89,
-    focus: true,
+    focus: false,
     signals: [
       { en: "Submit states, async validation, field focus, and failure flows are covered in product examples.", zh: "业务示例已覆盖提交状态、异步校验、字段聚焦和失败流程。" },
       { en: "Dynamic stop fields now show add, remove, first-error focus, and server field-error handoff.", zh: "动态站点字段现在展示新增、移除、第一个错误聚焦和服务端字段错误交接。" }
@@ -79,7 +79,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Field-list helpers remain demo-owned instead of becoming runtime API.", zh: "字段列表助手仍由 demo 持有，不提升为运行时 API。" }
     ],
     nextActions: [
-      { en: "Keep dynamic field handoff examples focused on visible errors and focus recovery.", zh: "让动态字段交接示例继续聚焦可见错误和焦点恢复。" },
+      { en: "Keep dynamic field handoff examples as regression coverage for visible errors and focus recovery.", zh: "让动态字段交接示例继续作为可见错误和焦点恢复的回归覆盖。" },
       { en: "Keep accessibility checks close to validation behavior.", zh: "让无障碍检查紧贴校验行为。" }
     ]
   },
@@ -92,7 +92,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     },
     level: "commercial",
     score: 86,
-    focus: true,
+    focus: false,
     signals: [
       { en: "Custom request, retry, queue methods, drag input, and hidden list mode are documented.", zh: "已记录自定义请求、重试、队列方法、拖拽输入和隐藏列表模式。" },
       { en: "Controlled queue examples now expose progress, retry, clear, and complete file-list transitions.", zh: "受控队列示例现在暴露进度、重试、清空和完整文件列表流转。" }
@@ -102,7 +102,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Progress recipes need a deeper controlled queue example.", zh: "进度配方需要更深入的受控队列示例。" }
     ],
     nextActions: [
-      { en: "Keep controlled queue transitions test-backed before larger upload features.", zh: "在扩展更大上传功能前，继续用测试约束受控队列流转。" },
+      { en: "Keep controlled queue transitions test-backed while saved bundle workflows deepen.", zh: "已保存配方包工作流加深期间，继续用测试约束受控队列流转。" },
       { en: "Keep status transitions test-backed.", zh: "继续用测试约束状态流转。" }
     ]
   },
@@ -125,7 +125,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Large mixed option sets need more documented guidance.", zh: "大型混合选项集仍需要更多说明。" }
     ],
     nextActions: [
-      { en: "Keep keyboard, dismissal, and grouped rendering behavior stable while v0.25 focuses on workflow handoff.", zh: "v0.25 聚焦工作流交接期间，保持键盘、关闭和分组渲染行为稳定。" },
+      { en: "Keep keyboard, dismissal, and grouped rendering behavior stable while v0.26 focuses on bundle handoff.", zh: "v0.26 聚焦配方包交接期间，保持键盘、关闭和分组渲染行为稳定。" },
       { en: "Prefer fewer but deeper selection examples.", zh: "选择器示例保持少而深。" }
     ]
   },
@@ -148,7 +148,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Cross-month scheduling and recurrence workflows remain queued.", zh: "跨月排期和重复规则工作流仍在队列中。" }
     ],
     nextActions: [
-      { en: "Keep disabled scheduling baselines stable while v0.25 focuses on Table, Form, and Upload handoff.", zh: "v0.25 聚焦 Table、Form 和 Upload 交接期间，保持禁用排期基线稳定。" },
+      { en: "Keep disabled scheduling baselines stable while v0.26 focuses on saved bundle handoff.", zh: "v0.26 聚焦已保存配方包交接期间，保持禁用排期基线稳定。" },
       { en: "Keep panel accessibility labels explicit.", zh: "保持面板无障碍标签明确。" }
     ]
   },
@@ -159,17 +159,20 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       en: "Application shell support",
       zh: "应用壳层支持"
     },
-    level: "solid",
-    score: 82,
-    focus: false,
+    level: "active",
+    score: 86,
+    focus: true,
     signals: [
-      { en: "Theme collections, recipe bundle helpers, and locale provider behavior are documented.", zh: "主题集合、配方包助手和语言 Provider 行为已写入文档。" }
+      { en: "Theme collections, recipe bundle helpers, and locale provider behavior are documented.", zh: "主题集合、配方包助手和语言 Provider 行为已写入文档。" },
+      { en: "Recipe Gallery now applies commerce and learning bundle imports with previewed recipes, themes, table views, schedules, and locale.", zh: "Recipe Gallery 现在可以应用商业与学习配方包导入，并预览模板、主题、表格视图、排期和语言。" }
     ],
     currentGaps: [
-      { en: "Maintained while v0.25 pressure focuses on commercial workflow handoff.", zh: "v0.25 压力场聚焦商用工作流交接期间保持维护。" }
+      { en: "Cross-team ownership notes remain demo-owned rather than runtime API.", zh: "跨团队归属说明仍由 demo 持有，不提升为运行时 API。" },
+      { en: "Bundle compatibility stays on version 1 until more saved workflow formats exist.", zh: "配方包兼容性在更多保存工作流格式出现前保持 version 1。" }
     ],
     nextActions: [
-      { en: "Maintain current coverage while heavy form and data surfaces mature.", zh: "在重型表单与数据组件成熟期间保持现有覆盖。" }
+      { en: "Keep bundle import, damaged JSON recovery, and apply-to-builder behavior under Playwright coverage.", zh: "继续用 Playwright 覆盖配方包导入、损坏 JSON 恢复和应用到构建器行为。" },
+      { en: "Use Recipe Gallery as the v0.26 saved workflow handoff check.", zh: "把 Recipe Gallery 作为 v0.26 已保存工作流交接检查。" }
     ]
   },
   {
@@ -209,7 +212,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Advanced composition patterns are deferred.", zh: "高级组合模式延后。" }
     ],
     nextActions: [
-      { en: "Maintain API stability and avoid scope creep during v0.25.", zh: "v0.25 期间保持 API 稳定，避免范围膨胀。" }
+      { en: "Maintain API stability and avoid scope creep during v0.26.", zh: "v0.26 期间保持 API 稳定，避免范围膨胀。" }
     ]
   }
 ];

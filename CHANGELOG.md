@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.26.0
+
+- Added a v0.26 Recipe Gallery bundle handoff flow for commerce launch and learning workflow imports.
+- Added import apply, damaged bundle recovery, and full handoff metadata previews for recipe bundles.
+- Tightened recipe bundle parsing so imports with no recipe references report a validation issue while preserving previewable metadata.
+- Updated maturity, roadmap, README, docs search, and Playwright coverage around the saved bundle handoff focus.
+
 ## 0.25.1
 
 - Fixed Upload controlled queue progress so error and success transitions preserve the latest visible percent.

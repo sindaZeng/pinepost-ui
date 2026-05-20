@@ -265,11 +265,20 @@ export function parsePinepostRecipeBundle(input: string): PinepostRecipeBundlePa
   const issues: PinepostRecipeBundleValidationIssue[] = [];
   const rawName = normalizeText(raw.name);
   const rawId = normalizeText(raw.id);
+  const recipeIds = uniqueTextList(raw.recipeIds);
   if (!rawId || !rawName) {
     issues.push({
       code: "invalid-bundle",
       field: "id",
       message: "Recipe bundle needs an id and name.",
+      source: "bundle"
+    });
+  }
+  if (!recipeIds.length) {
+    issues.push({
+      code: "invalid-bundle",
+      field: "recipeIds",
+      message: "Recipe bundle needs at least one recipe reference.",
       source: "bundle"
     });
   }
@@ -301,7 +310,7 @@ export function parsePinepostRecipeBundle(input: string): PinepostRecipeBundlePa
     description: normalizeText(raw.description),
     id: rawId,
     name: rawName,
-    recipeIds: uniqueTextList(raw.recipeIds),
+    recipeIds,
     schedule,
     tableViewPresets: tableViewPresets?.value,
     themeCollection: themeCollection?.value

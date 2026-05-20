@@ -701,6 +701,7 @@ export function RecipeGalleryPanel({ labels, zh }: { labels: DemoLabels; zh: boo
   const [category, setCategory] = React.useState<RecipeCategory>("all");
   const [bundleRecipeIds, setBundleRecipeIds] = React.useState(["operations-table", "campaign-launch"]);
   const [bundleImportText, setBundleImportText] = React.useState("");
+  const [bundleApplyMessage, setBundleApplyMessage] = React.useState("");
   const recipeLocale = zh ? "zh-CN" : "en";
   const launchDateRangePresets = React.useMemo(() => createPinepostDateRangePresets({ locale: recipeLocale, referenceDate: new Date(2026, 4, 18) }), [recipeLocale]);
   const launchTimeRangePresets = React.useMemo(() => createPinepostTimeRangePresets({ locale: recipeLocale }), [recipeLocale]);
@@ -921,6 +922,7 @@ export function RecipeGalleryPanel({ labels, zh }: { labels: DemoLabels; zh: boo
   ];
   const filteredRecipes = category === "all" ? recipes : recipes.filter((recipe) => recipe.category === category);
   const selectedBundleRecipes = recipes.filter((recipe) => bundleRecipeIds.includes(recipe.id));
+  const recipeTitleById = new Map(recipes.map((recipe) => [recipe.id, recipe.title]));
   const bundleExport = React.useMemo(
     () =>
       createPinepostRecipeBundle({
@@ -965,15 +967,133 @@ export function RecipeGalleryPanel({ labels, zh }: { labels: DemoLabels; zh: boo
       }),
     [bundleRecipeIds, recipeLocale, zh]
   );
+  const commerceHandoffJson = React.useMemo(
+    () =>
+      stringifyPinepostRecipeBundle(
+        createPinepostRecipeBundle({
+          id: "commerce-launch-handoff",
+          name: zh ? "活动发布交接包" : "Commerce launch handoff",
+          description: zh ? "活动发布、商品卡、主题和运营表格视图交接。" : "Campaign launch, commerce card, theme, and operations table handoff.",
+          recipeIds: ["campaign-launch", "campaign-card"],
+          schedule: {
+            dateRangeKeys: ["this-week"],
+            locale: recipeLocale,
+            referenceDate: "2026-05-20",
+            timeRangeKeys: ["morning", "afternoon"]
+          },
+          tableViewPresets: createTableViewPresetExport({
+            activeKey: "commerce",
+            presets: [
+              {
+                key: "commerce",
+                label: zh ? "活动视图" : "Commerce launch",
+                columnOrder: ["route", "status", "count"],
+                hiddenColumns: [],
+                sortState: { key: "status", order: "asc" }
+              }
+            ]
+          }),
+          themeCollection: createPinepostThemeCollectionExport({
+            activeId: "commerce",
+            name: zh ? "活动交接主题" : "Commerce handoff theme",
+            themes: [
+              { baseTheme: "shop", id: "commerce", name: zh ? "活动页" : "Campaign page", tokens: { "--pinepost-paper": "#fff7e8", "--pinepost-parcel": "#d9873b" } }
+            ]
+          })
+        })
+      ),
+    [recipeLocale, zh]
+  );
+  const learningHandoffJson = React.useMemo(
+    () =>
+      stringifyPinepostRecipeBundle(
+        createPinepostRecipeBundle({
+          id: "learning-flow-handoff",
+          name: zh ? "学习流程交接包" : "Learning flow handoff",
+          description: zh ? "学习任务、客服队列、主题和轻量排期交接。" : "Learning task, support queue, theme, and light schedule handoff.",
+          recipeIds: ["learning-task", "support-queue"],
+          schedule: {
+            dateKeys: ["today", "tomorrow"],
+            locale: recipeLocale,
+            referenceDate: "2026-05-20",
+            timeRangeKeys: ["full-day"]
+          },
+          tableViewPresets: createTableViewPresetExport({
+            activeKey: "learning",
+            presets: [
+              {
+                key: "learning",
+                label: zh ? "学习复盘" : "Learning review",
+                columnOrder: ["name", "status"],
+                hiddenColumns: [],
+                sortState: { key: "status", order: "desc" }
+              }
+            ]
+          }),
+          themeCollection: createPinepostThemeCollectionExport({
+            activeId: "learning",
+            name: zh ? "学习交接主题" : "Learning handoff theme",
+            themes: [
+              { baseTheme: "calm", id: "learning", name: zh ? "学习台" : "Learning desk", tokens: { "--pinepost-paper": "#f7fbf0", "--pinepost-sky": "#5f9ab8" } }
+            ]
+          })
+        })
+      ),
+    [recipeLocale, zh]
+  );
+  const damagedHandoffJson = React.useMemo(
+    () =>
+      JSON.stringify(
+        {
+          id: "",
+          name: "",
+          recipeIds: [],
+          schedule: {
+            dateKeys: ["quarter"],
+            locale: "fr"
+          },
+          version: 1
+        },
+        null,
+        2
+      ),
+    []
+  );
   const bundleJsonText = React.useMemo(() => stringifyPinepostRecipeBundle(bundleExport), [bundleExport]);
   const bundleImportResult = React.useMemo(
     () => bundleImportText.trim() ? parsePinepostRecipeBundle(bundleImportText) : undefined,
     [bundleImportText]
   );
+  const importedRecipeIds = bundleImportResult?.value?.recipeIds ?? [];
+  const missingImportRecipeIds = importedRecipeIds.filter((id) => !recipeTitleById.has(id));
+  const importedRecipeTitles = importedRecipeIds.map((id) => recipeTitleById.get(id) ?? id);
+  const importIssueMessages = [
+    ...(bundleImportResult?.issues.map((issue) => describeBundleIssue(issue, zh)) ?? []),
+    ...missingImportRecipeIds.map((id) => zh ? `缺少模板：${id}` : `Missing recipe: ${id}`)
+  ];
+  const importNeedsAttention = importIssueMessages.length > 0;
+  const canApplyBundleImport = Boolean(bundleImportResult?.value && importedRecipeIds.length && !importNeedsAttention);
 
   function toggleBundleRecipe(id: string) {
     setBundleRecipeIds((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+    );
+    setBundleApplyMessage("");
+  }
+
+  function fillBundleImport(text: string) {
+    setBundleImportText(text);
+    setBundleApplyMessage("");
+  }
+
+  function applyImportedBundle() {
+    if (!canApplyBundleImport || !bundleImportResult?.value) return;
+    setBundleRecipeIds(bundleImportResult.value.recipeIds);
+    setCategory("all");
+    setBundleApplyMessage(
+      zh
+        ? `已应用配方包：${bundleImportResult.value.recipeIds.length} 个模板`
+        : `Bundle applied: ${bundleImportResult.value.recipeIds.length} recipes`
     );
   }
 
@@ -997,7 +1117,10 @@ export function RecipeGalleryPanel({ labels, zh }: { labels: DemoLabels; zh: boo
             <p>{zh ? "选择业务模板后，生成可导入导出的 Recipe Bundle JSON。" : "Select product recipes and generate portable Recipe Bundle JSON."}</p>
             <p><code>createPinepostRecipeBundle</code> / <code>parsePinepostRecipeBundle</code></p>
           </div>
-          <Tag variant="parcel">{zh ? "配置配方" : "Config recipe"}</Tag>
+          <Space>
+            <Tag variant="leaf">{zh ? "v0.26 配方包交接" : "v0.26 Bundle handoff"}</Tag>
+            <Tag variant="parcel">{zh ? "配置配方" : "Config recipe"}</Tag>
+          </Space>
         </div>
         <div className="docs-bundle-builder__recipes" aria-label={zh ? "选择模板" : "Select recipes"}>
           {recipes.map((recipe) => (
@@ -1028,6 +1151,10 @@ export function RecipeGalleryPanel({ labels, zh }: { labels: DemoLabels; zh: boo
             <span>{zh ? "排期" : "Schedule"}</span>
             <strong>{bundleExport.schedule?.dateRangeKeys?.length ?? 0}/{bundleExport.schedule?.timeRangeKeys?.length ?? 0}</strong>
           </div>
+          <div>
+            <span>{zh ? "当前模板" : "Current recipes"}</span>
+            <strong>{selectedBundleRecipes.map((recipe) => recipe.title).join(" / ") || "-"}</strong>
+          </div>
         </div>
         <CodeBlock codeText={bundleJsonText} label={zh ? "Recipe Bundle JSON" : "Recipe Bundle JSON"} labels={labels} />
         <div className="docs-bundle-builder__import">
@@ -1039,20 +1166,33 @@ export function RecipeGalleryPanel({ labels, zh }: { labels: DemoLabels; zh: boo
             aria-label={zh ? "Recipe Bundle JSON 输入" : "Recipe Bundle JSON input"}
             placeholder={zh ? "粘贴 Recipe Bundle JSON" : "Paste Recipe Bundle JSON"}
             value={bundleImportText}
-            onChange={(event) => setBundleImportText(event.target.value)}
+            onChange={(event) => fillBundleImport(event.target.value)}
           />
           <div className="docs-theme-studio__actions">
-            <Button size="sm" onClick={() => setBundleImportText(bundleJsonText)}>
+            <Button size="sm" onClick={() => fillBundleImport(bundleJsonText)}>
               {zh ? "填入配方包" : "Use bundle JSON"}
             </Button>
+            <Button size="sm" variant="soft" onClick={() => fillBundleImport(commerceHandoffJson)}>
+              {zh ? "填入商业交接包" : "Use commerce handoff"}
+            </Button>
+            <Button size="sm" variant="soft" onClick={() => fillBundleImport(learningHandoffJson)}>
+              {zh ? "填入学习交接包" : "Use learning handoff"}
+            </Button>
+            <Button size="sm" variant="soft" onClick={() => fillBundleImport(damagedHandoffJson)}>
+              {zh ? "填入损坏交接包" : "Use damaged handoff"}
+            </Button>
+            <Button disabled={!canApplyBundleImport} size="sm" variant="parcel" onClick={applyImportedBundle}>
+              {zh ? "应用导入配方包" : "Apply imported bundle"}
+            </Button>
           </div>
+          {bundleApplyMessage ? <div className="docs-theme-studio__message" role="status">{bundleApplyMessage}</div> : null}
           {bundleImportResult && (
             <div className="docs-bundle-builder__preview" role="status">
-              {bundleImportResult.issues.length > 0 ? (
+              {importNeedsAttention ? (
                 <Alert
                   variant="warning"
-                  title={zh ? "导入时已修正配置" : "Import adjusted"}
-                  description={bundleImportResult.issues.map((issue) => describeBundleIssue(issue, zh)).join(" ")}
+                  title={zh ? "导入需要处理" : "Import needs attention"}
+                  description={importIssueMessages.join(" ")}
                 />
               ) : (
                 <Alert
@@ -1063,6 +1203,7 @@ export function RecipeGalleryPanel({ labels, zh }: { labels: DemoLabels; zh: boo
               )}
               <div className="docs-bundle-builder__summary">
                 <div><span>{zh ? "模板" : "Recipes"}</span><strong>{bundleImportResult.value?.recipeIds.length ?? 0}</strong></div>
+                <div><span>{zh ? "模板名称" : "Recipe names"}</span><strong>{importedRecipeTitles.join(" / ") || "-"}</strong></div>
                 <div><span>{zh ? "主题" : "Themes"}</span><strong>{bundleImportResult.themeCollection?.value?.themes.length ?? 0}</strong></div>
                 <div><span>{zh ? "表格预设" : "Table presets"}</span><strong>{bundleImportResult.tableViewPresets?.value?.presets.length ?? 0}</strong></div>
                 <div><span>{zh ? "排期 locale" : "Schedule locale"}</span><strong>{bundleImportResult.value?.schedule?.locale ?? "-"}</strong></div>

@@ -162,6 +162,42 @@ describe("Pinepost UI v0.18 pack", () => {
     expect(parsed.value).toBeUndefined();
   });
 
+  it("reports missing recipe references while preserving importable handoff metadata", () => {
+    const parsed = parsePinepostRecipeBundle(
+      stringifyPinepostRecipeBundle(
+        createPinepostRecipeBundle({
+          id: "learning-handoff",
+          name: "Learning handoff",
+          recipeIds: [],
+          schedule: {
+            dateKeys: ["today"],
+            locale: "en",
+            referenceDate: "2026-05-20"
+          },
+          tableViewPresets,
+          themeCollection
+        })
+      )
+    );
+
+    expect(parsed.issues).toEqual([
+      {
+        code: "invalid-bundle",
+        field: "recipeIds",
+        message: "Recipe bundle needs at least one recipe reference.",
+        source: "bundle"
+      }
+    ]);
+    expect(parsed.value?.recipeIds).toEqual([]);
+    expect(parsed.themeCollection?.value?.activeId).toBe("campaign");
+    expect(parsed.tableViewPresets?.value?.activeKey).toBe("ops");
+    expect(parsed.value?.schedule).toEqual({
+      dateKeys: ["today"],
+      locale: "en",
+      referenceDate: "2026-05-20"
+    });
+  });
+
   it("rejects unknown schedule keys when creating recipe bundles", () => {
     expect(() =>
       createPinepostRecipeBundle({

@@ -59,7 +59,7 @@ test.describe("Pinepost docs smoke", () => {
   test("shows the maturity matrix through commercial docs search", async ({ page }) => {
     await page.goto("/");
 
-    for (const term of ["maturity", "commercial", "Table", "Upload", "handoff", "workflow"]) {
+    for (const term of ["maturity", "commercial", "Table", "Upload", "handoff", "workflow", "bundle handoff"]) {
       await page.getByLabel("搜索组件").fill(term);
       await expect(page.getByRole("button", { name: /Component Maturity|组件成熟度/ })).toBeVisible();
     }
@@ -71,9 +71,10 @@ test.describe("Pinepost docs smoke", () => {
     await expect(matrix.getByText("Table", { exact: true })).toBeVisible();
     await expect(matrix.getByText("Form", { exact: true })).toBeVisible();
     await expect(matrix.getByText("Upload", { exact: true })).toBeVisible();
+    await expect(matrix.getByText("Theme, Provider, Recipe Bundle", { exact: true })).toBeVisible();
     await expect(matrix.getByText("Select / Cascader / TreeSelect")).toBeVisible();
     await expect(matrix.getByText("Date and time panels", { exact: true })).toBeVisible();
-    await expect(matrix.getByText(/v0.25 重点|v0.25 focus|v0.25 工作流交接重点|v0.25 workflow handoff focus/).first()).toBeVisible();
+    await expect(matrix.getByText(/v0.26 重点|v0.26 focus|v0.26 配方包交接重点|v0.26 bundle handoff focus/).first()).toBeVisible();
     await expectNoPageOverflow(page);
   });
 
@@ -214,7 +215,7 @@ test.describe("Pinepost docs smoke", () => {
   test("finds Recipe Gallery through product workflow keywords", async ({ page }) => {
     await page.goto("/");
 
-    for (const term of ["loading", "上传", "dashboard", "commerce", "bundle", "配方包", "recipe bundle"]) {
+    for (const term of ["loading", "上传", "dashboard", "commerce", "bundle", "配方包", "recipe bundle", "bundle handoff", "import preview", "commerce launch", "learning flow"]) {
       await page.getByLabel("搜索组件").fill(term);
       await expect(page.getByRole("button", { name: /业务模板|Recipe Gallery/ })).toBeVisible();
     }

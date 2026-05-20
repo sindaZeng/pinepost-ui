@@ -39,9 +39,9 @@ function MaturitySummary({ items, zh }: { items: ComponentMaturityItem[]; zh: bo
   return (
     <div className="docs-maturity__summary" aria-label={zh ? "成熟度概览" : "Maturity summary"}>
       <div>
-        <span>{zh ? "v0.25 工作流交接重点" : "v0.25 workflow handoff focus"}</span>
+        <span>{zh ? "v0.26 配方包交接重点" : "v0.26 bundle handoff focus"}</span>
         <strong>{focusItems.length}</strong>
-        <p>{zh ? "Table、Form、Upload" : "Table, Form, and Upload"}</p>
+        <p>{zh ? "Recipe Bundle 与应用壳层" : "Recipe Bundle and app shell"}</p>
       </div>
       <div>
         <span>{zh ? "重点平均分" : "Focus average"}</span>
@@ -93,7 +93,7 @@ function MaturityMatrix({ zh }: { zh: boolean }) {
                   </div>
                 </td>
                 <td>
-                  <Tag variant={item.focus ? "leaf" : "sky"}>{item.focus ? (zh ? "v0.25 重点" : "v0.25 focus") : (zh ? "保持" : "Hold")}</Tag>
+                  <Tag variant={item.focus ? "leaf" : "sky"}>{item.focus ? (zh ? "v0.26 重点" : "v0.26 focus") : (zh ? "保持" : "Hold")}</Tag>
                 </td>
                 <td>
                   <MaturityList items={item.signals} zh={zh} />
@@ -111,8 +111,8 @@ function MaturityMatrix({ zh }: { zh: boolean }) {
       </div>
       <p className="docs-maturity__note">
         {zh
-          ? "v0.25 把压力推进到 Table、Form 和 Upload 的工作流交接；选择器、排期、展示类组件维持透明排队，避免用浅覆盖稀释重型后台可信度。"
-          : "v0.25 moves pressure into Table, Form, and Upload workflow handoffs; selection, scheduling, and display components stay transparent without shallow breadth diluting heavier product confidence."}
+          ? "v0.26 把压力推进到 Recipe Bundle 的保存、导入、恢复和应用交接；Table、Form、Upload 压力场继续作为重型工作流回归基线。"
+          : "v0.26 moves pressure into Recipe Bundle save, import, recovery, and apply handoff; the Table, Form, and Upload pressure lab remains the heavy workflow regression baseline."}
       </p>
     </div>
   );
@@ -127,10 +127,10 @@ export function createMaturityCatalogDocs(context: DemoCatalogContext): DocItem[
       group: labels.groups.guide,
       title: zh ? "Component Maturity 组件成熟度" : "Component Maturity",
       description: zh
-        ? "v0.25 的公开成熟度矩阵：继续压实 Table、Form 和 Upload 工作流交接，并保持其它组件的优先级透明。"
-        : "The v0.25 public maturity matrix: keep pressure on Table, Form, and Upload workflow handoffs while keeping other component priorities visible.",
+        ? "v0.26 的公开成熟度矩阵：继续压实 Recipe Bundle 已保存工作流交接，并保持其它组件的优先级透明。"
+        : "The v0.26 public maturity matrix: keep pressure on Recipe Bundle saved workflow handoff while keeping other component priorities visible.",
       searchText:
-        "maturity commercial workflow handoff component matrix Table Form Upload Select Cascader TreeSelect DateTime date time 成熟度 商用 工作流 交接 表格 表单 上传 选择器 日期时间",
+        "maturity commercial workflow handoff bundle handoff component matrix Recipe Bundle Theme Provider Table Form Upload Select Cascader TreeSelect DateTime date time 成熟度 商用 工作流 交接 配方包 主题 表格 表单 上传 选择器 日期时间",
       preview: <MaturityMatrix zh={zh} />,
       code: code([
         'import { componentMaturityMatrix } from "./maturity";',

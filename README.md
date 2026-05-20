@@ -146,6 +146,11 @@ server Table loading and page-error states, dynamic Form field-list focus and
 server errors, and controlled Upload progress, retry, clear, and complete
 file-list transitions.
 
+The v0.26 saved bundle handoff pass expands Recipe Gallery with commerce
+launch and learning workflow imports, damaged bundle recovery, apply-to-builder
+state, and full metadata previews for recipes, themes, table views, schedules,
+and locale.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, segmented usage examples, an advanced playground where useful,
 copyable recipes, and an API table.

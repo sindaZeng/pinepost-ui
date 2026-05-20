@@ -413,7 +413,7 @@ function App() {
         {
           id: "recipes",
           label: zh ? "业务模板" : "Recipe Gallery",
-          searchText: "业务模板 Recipe Gallery recipe bundle Bundle Builder 配方包 loading 上传 dashboard commerce upload form data learning preset 排期 scheduling 商业 学习"
+          searchText: "业务模板 Recipe Gallery recipe bundle Bundle Builder bundle handoff import preview commerce launch learning flow 配方包 交接 导入预览 loading 上传 dashboard commerce upload form data learning preset 排期 scheduling 商业 学习"
         },
         ...visibleDocs(labels.groups.guide)
       ]
@@ -451,8 +451,8 @@ function App() {
     recipes: {
       title: zh ? "Recipe Gallery 业务模板" : "Recipe Gallery",
       description: zh
-        ? "面向真实页面的组合模板，带预览、组件清单、配方包和可复制代码。"
-        : "Product-ready compositions with previews, component lists, recipe bundles, and copyable code."
+        ? "面向真实页面的组合模板，带预览、组件清单、v0.26 配方包交接和可复制代码。"
+        : "Product-ready compositions with previews, component lists, v0.26 bundle handoff, and copyable code."
     }
   };
   const selectedGuidePanel = selectedId in guidePanels ? guidePanels[selectedId as GuidePanelId] : guidePanels.theme;
