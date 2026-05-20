@@ -56,7 +56,7 @@ test.describe("Pinepost docs smoke", () => {
     }
   });
 
-  test("shows the v0.22 maturity matrix through commercial docs search", async ({ page }) => {
+  test("shows the maturity matrix through commercial docs search", async ({ page }) => {
     await page.goto("/");
 
     for (const term of ["maturity", "commercial", "Table", "Upload"]) {
@@ -73,7 +73,7 @@ test.describe("Pinepost docs smoke", () => {
     await expect(matrix.getByText("Upload", { exact: true })).toBeVisible();
     await expect(matrix.getByText("Select / Cascader / TreeSelect")).toBeVisible();
     await expect(matrix.getByText("Date and time panels", { exact: true })).toBeVisible();
-    await expect(matrix.getByText(/v0.22 重点|v0.22 focus/).first()).toBeVisible();
+    await expect(matrix.getByText(/v0.23 重点|v0.23 focus|v0.23 压力重点|v0.23 pressure focus/).first()).toBeVisible();
     await expectNoPageOverflow(page);
   });
 
