@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.1
+
+- Fixed Upload controlled queue progress so error and success transitions preserve the latest visible percent.
+- Fixed Commercial Pressure Lab server Table handoff state so rapid simulated requests and selection clears cannot show stale retry or selected-key copy.
+- Added regression coverage for Upload progress preservation and Commercial Pressure Lab rapid server interactions.
+
 ## 0.25.0
 
 - Expanded the Commercial Pressure Lab into a v0.25 workflow handoff pass for Table, Form, and Upload.
