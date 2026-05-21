@@ -57,6 +57,8 @@ function ServerTablePressure({ zh }: { zh: boolean }) {
   const [status, setStatus] = React.useState("");
   const [statusVariant, setStatusVariant] = React.useState<"info" | "success" | "warning">("info");
   const requestIdRef = React.useRef(0);
+  const requestedPageRef = React.useRef(page);
+  const [retryPage, setRetryPage] = React.useState(page);
   const selectedRowKeysRef = React.useRef<React.Key[]>([]);
   const serverLoadTimeoutRef = React.useRef<number | null>(null);
   const rows = page === 1 ? pageOneRows : pageTwoRows;
@@ -74,6 +76,8 @@ function ServerTablePressure({ zh }: { zh: boolean }) {
   function switchPage(nextPage: number, mode: "success" | "error" = "success") {
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
+    requestedPageRef.current = nextPage;
+    setRetryPage(nextPage);
     if (serverLoadTimeoutRef.current !== null) window.clearTimeout(serverLoadTimeoutRef.current);
 
     setLoadState("loading");
@@ -125,12 +129,12 @@ function ServerTablePressure({ zh }: { zh: boolean }) {
         >
           {zh ? "执行批量操作" : "Run bulk action"}
         </Button>
-        <Button size="sm" variant="stamp" onClick={() => switchPage(page, "error")}>
+        <Button size="sm" variant="stamp" onClick={() => switchPage(requestedPageRef.current, "error")}>
           {zh ? "模拟分页错误" : "Simulate page error"}
         </Button>
         {loadState === "error" ? (
-          <Button size="sm" variant="soft" onClick={() => switchPage(page)}>
-            {zh ? `重试第 ${page} 页` : `Retry page ${page}`}
+          <Button size="sm" variant="soft" onClick={() => switchPage(retryPage)}>
+            {zh ? `重试第 ${retryPage} 页` : `Retry page ${retryPage}`}
           </Button>
         ) : null}
         <Button size="sm" variant="soft" onClick={() => updateSelectedRowKeys([])}>

@@ -232,8 +232,8 @@ test.describe("Pinepost component QA hardening", () => {
     await expect(serverTable.getByText(/Page 1 loaded|第 1 页已加载/)).toBeVisible();
     await serverTable.getByRole("button", { name: /Page 2|第 2 页/ }).click();
     await serverTable.getByRole("button", { name: /Simulate page error|模拟分页错误/ }).click();
-    await expect(serverTable.getByRole("button", { name: /Retry page 1|重试第 1 页/ })).toBeVisible();
-    await expect(serverTable.getByRole("button", { name: /Retry page 2|重试第 2 页/ })).toHaveCount(0);
+    await expect(serverTable.getByRole("button", { name: /Retry page 2|重试第 2 页/ })).toBeVisible();
+    await expect(serverTable.getByRole("button", { name: /Retry page 1|重试第 1 页/ })).toHaveCount(0);
   });
 
   test("supports Recipe Gallery bundle handoff import, apply, and recovery", async ({ page }) => {

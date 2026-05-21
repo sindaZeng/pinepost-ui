@@ -4,6 +4,7 @@
 
 - Fixed filterable TreeSelect Escape handling so the panel closes from the filter input, returns focus to the trigger, and clears stale filter text before the next open.
 - Added ArrowLeft and filter-input Escape regression coverage for the v0.28 TreeSelect keyboard contract.
+- Stabilized the Commercial Pressure Lab requested-page retry state during rapid page and error interactions.
 
 ## 0.28.0
 
