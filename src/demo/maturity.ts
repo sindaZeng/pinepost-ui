@@ -57,7 +57,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     ],
     nextActions: [
       { en: "Keep the Commercial Pressure Lab as the regression check for server-style selection and bulk actions.", zh: "把 Commercial Pressure Lab 继续作为服务端选择和批量操作回归检查。" },
-      { en: "Keep controlled table state stable while v0.26 focuses on saved bundle handoff.", zh: "v0.26 聚焦已保存配方包交接期间，保持受控表格状态稳定。" }
+      { en: "Keep controlled table state stable while v0.27 focuses on team handoff previews.", zh: "v0.27 聚焦团队交接预览期间，保持受控表格状态稳定。" }
     ]
   },
   {
@@ -125,7 +125,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Large mixed option sets need more documented guidance.", zh: "大型混合选项集仍需要更多说明。" }
     ],
     nextActions: [
-      { en: "Keep keyboard, dismissal, and grouped rendering behavior stable while v0.26 focuses on bundle handoff.", zh: "v0.26 聚焦配方包交接期间，保持键盘、关闭和分组渲染行为稳定。" },
+      { en: "Keep keyboard, dismissal, and grouped rendering behavior stable while v0.27 focuses on team handoff previews.", zh: "v0.27 聚焦团队交接预览期间，保持键盘、关闭和分组渲染行为稳定。" },
       { en: "Prefer fewer but deeper selection examples.", zh: "选择器示例保持少而深。" }
     ]
   },
@@ -148,7 +148,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Cross-month scheduling and recurrence workflows remain queued.", zh: "跨月排期和重复规则工作流仍在队列中。" }
     ],
     nextActions: [
-      { en: "Keep disabled scheduling baselines stable while v0.26 focuses on saved bundle handoff.", zh: "v0.26 聚焦已保存配方包交接期间，保持禁用排期基线稳定。" },
+      { en: "Keep disabled scheduling baselines stable while v0.27 focuses on team handoff previews.", zh: "v0.27 聚焦团队交接预览期间，保持禁用排期基线稳定。" },
       { en: "Keep panel accessibility labels explicit.", zh: "保持面板无障碍标签明确。" }
     ]
   },
@@ -164,15 +164,15 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     focus: true,
     signals: [
       { en: "Theme collections, recipe bundle helpers, and locale provider behavior are documented.", zh: "主题集合、配方包助手和语言 Provider 行为已写入文档。" },
-      { en: "Recipe Gallery now applies commerce and learning bundle imports with previewed recipes, themes, table views, schedules, and locale.", zh: "Recipe Gallery 现在可以应用商业与学习配方包导入，并预览模板、主题、表格视图、排期和语言。" }
+      { en: "Recipe Gallery now applies commerce and learning bundle imports with previewed recipes, active themes, table presets, schedule counts, and locale.", zh: "Recipe Gallery 现在可以应用商业与学习配方包导入，并预览模板、当前主题、表格预设、排期数量和语言。" }
     ],
     currentGaps: [
       { en: "Cross-team ownership notes remain demo-owned rather than runtime API.", zh: "跨团队归属说明仍由 demo 持有，不提升为运行时 API。" },
       { en: "Bundle compatibility stays on version 1 until more saved workflow formats exist.", zh: "配方包兼容性在更多保存工作流格式出现前保持 version 1。" }
     ],
     nextActions: [
-      { en: "Keep bundle import, damaged JSON recovery, and apply-to-builder behavior under Playwright coverage.", zh: "继续用 Playwright 覆盖配方包导入、损坏 JSON 恢复和应用到构建器行为。" },
-      { en: "Use Recipe Gallery as the v0.26 saved workflow handoff check.", zh: "把 Recipe Gallery 作为 v0.26 已保存工作流交接检查。" }
+      { en: "Keep bundle import, damaged JSON recovery, richer previews, and apply-to-builder behavior under Playwright coverage.", zh: "继续用 Playwright 覆盖配方包导入、损坏 JSON 恢复、更完整预览和应用到构建器行为。" },
+      { en: "Use Recipe Gallery as the v0.27 team handoff check.", zh: "把 Recipe Gallery 作为 v0.27 团队交接检查。" }
     ]
   },
   {
@@ -212,7 +212,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Advanced composition patterns are deferred.", zh: "高级组合模式延后。" }
     ],
     nextActions: [
-      { en: "Maintain API stability and avoid scope creep during v0.26.", zh: "v0.26 期间保持 API 稳定，避免范围膨胀。" }
+      { en: "Maintain API stability and avoid scope creep during v0.27.", zh: "v0.27 期间保持 API 稳定，避免范围膨胀。" }
     ]
   }
 ];

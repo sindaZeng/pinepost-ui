@@ -974,10 +974,10 @@ export function createGuideCatalogDocs(context: DemoCatalogContext): DocItem[] {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的覆盖计划；详细成熟度见 Component Maturity 矩阵。" : "Public Pinepost-only coverage plan; use the Component Maturity matrix for depth status.",
-      preview: <div className="docs-roadmap"><Tag>Focus</Tag><span>{zh ? "v0.26 聚焦 Recipe Bundle 的保存、导入、恢复和应用交接。" : "v0.26 focuses Recipe Bundle save, import, recovery, and apply handoff."}</span><Tag variant="parcel">Maintain</Tag><span>{zh ? "Table、Form、Upload 压力场继续作为重型工作流回归基线。" : "Table, Form, and Upload pressure workflows remain regression baselines."}</span><Tag variant="sky">Hold</Tag><span>{zh ? "展示类组件本轮保持非重点，避免平均扩张。" : "Display components stay non-focus in this pass to avoid broad shallow expansion."}</span></div>,
-      code: code(["Focus: Recipe Bundle saved workflow handoff", "Maintain: Table, Form, and Upload pressure workflow baselines", "Hold: display components remain non-focus during v0.26"]),
+      preview: <div className="docs-roadmap"><Tag>Focus</Tag><span>{zh ? "v0.27 聚焦 Recipe Bundle 的团队交接预览。" : "v0.27 focuses Recipe Bundle team handoff previews."}</span><Tag variant="parcel">Maintain</Tag><span>{zh ? "Table、Form、Upload 压力场继续作为重型工作流回归基线。" : "Table, Form, and Upload pressure workflows remain regression baselines."}</span><Tag variant="sky">Hold</Tag><span>{zh ? "展示类组件本轮保持非重点，避免平均扩张。" : "Display components stay non-focus in this pass to avoid broad shallow expansion."}</span></div>,
+      code: code(["Focus: Recipe Bundle team workflow handoff", "Maintain: Table, Form, and Upload pressure workflow baselines", "Hold: display components remain non-focus during v0.27"]),
       api: [
-        { prop: "Focus", type: "status", defaultValue: "-", description: zh ? "v0.26 优先深挖的已保存交接工作流。" : "Saved handoff workflow deepened first in v0.26." },
+        { prop: "Focus", type: "status", defaultValue: "-", description: zh ? "v0.27 优先深挖的团队交接预览。" : "Team handoff previews deepen first in v0.27." },
         { prop: "Maintain", type: "status", defaultValue: "-", description: zh ? "继续维护现有文档与 API。" : "Existing docs and APIs remain maintained." },
         { prop: "Hold", type: "status", defaultValue: "-", description: zh ? "本轮暂不平均投入。" : "No broad investment in this pass." }
       ]

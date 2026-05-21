@@ -151,6 +151,10 @@ launch and learning workflow imports, damaged bundle recovery, apply-to-builder
 state, and full metadata previews for recipes, themes, table views, schedules,
 and locale.
 
+The v0.27 team handoff pass keeps Recipe Gallery focused on saved workflow
+depth: the demo now lives in a focused example module and import previews show
+the active theme, table preset, and schedule preset counts used by each bundle.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, segmented usage examples, an advanced playground where useful,
 copyable recipes, and an API table.

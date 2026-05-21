@@ -241,13 +241,17 @@ test.describe("Pinepost component QA hardening", () => {
     await page.getByRole("button", { name: /业务模板|Recipe Gallery/ }).click();
 
     const bundleBuilder = page.locator(".docs-bundle-builder");
-    await expect(bundleBuilder.getByText(/v0.26 Bundle handoff|v0.26 配方包交接/)).toBeVisible();
+    await expect(bundleBuilder.getByText(/v0.27 Team handoff|v0.27 团队交接/)).toBeVisible();
 
     await bundleBuilder.getByRole("button", { name: /Use commerce handoff|填入商业交接包/ }).click();
     const importPreview = bundleBuilder.locator(".docs-bundle-builder__preview");
     await expect(importPreview.getByText(/Bundle ready|配方包可用/)).toBeVisible();
     await expect(importPreview.getByText(/Campaign launch|活动发布页/)).toBeVisible();
     await expect(importPreview.getByText(/Campaign card|活动商品卡/)).toBeVisible();
+    await expect(importPreview.getByText(/Commerce handoff theme|活动交接主题/)).toBeVisible();
+    await expect(importPreview.getByText(/Commerce launch|活动视图/)).toBeVisible();
+    await expect(importPreview.getByText(/Schedule presets|排期预设/)).toBeVisible();
+    await expect(importPreview.getByText("1 / 2")).toBeVisible();
     await bundleBuilder.getByRole("button", { name: /Apply imported bundle|应用导入配方包/ }).click();
     await expect(bundleBuilder.getByText(/Bundle applied: 2 recipes|已应用配方包：2 个模板/)).toBeVisible();
     await expect(bundleBuilder.locator("button[aria-pressed='true']")).toHaveCount(2);
@@ -261,6 +265,12 @@ test.describe("Pinepost component QA hardening", () => {
     await expect(importPreview.getByText(/Bundle ready|配方包可用/)).toBeVisible();
     await expect(importPreview.getByText(/Learning task|学习任务页/)).toBeVisible();
     await expect(importPreview.getByText(/Schedule locale|排期 locale/)).toBeVisible();
+    await expect(importPreview.getByText(/Learning handoff theme|学习交接主题/)).toBeVisible();
+    await expect(importPreview.getByText(/Learning review|学习复盘/)).toBeVisible();
+    await expect(importPreview.getByText("2 / 1")).toBeVisible();
+    await bundleBuilder.getByRole("button", { name: /Apply imported bundle|应用导入配方包/ }).click();
+    await expect(bundleBuilder.getByText(/Bundle applied: 2 recipes|已应用配方包：2 个模板/)).toBeVisible();
+    await expect(bundleBuilder.locator("button[aria-pressed='true']")).toHaveCount(2);
   });
 
   test("keeps picker panel docs previews controlled by visible user choices", async ({ page }) => {

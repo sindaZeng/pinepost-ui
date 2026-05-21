@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.27.0
+
+- Added a focused Recipe Gallery example module so the guide shell stays easier to maintain.
+- Added v0.27 Recipe Gallery team handoff previews for active theme, table preset, and schedule preset details.
+- Kept damaged import recovery and apply-to-builder behavior covered while preserving the Recipe Bundle public API.
+- Updated maturity, roadmap, README, docs search, and Playwright coverage around the team handoff focus.
+
 ## 0.26.0
 
 - Added a v0.26 Recipe Gallery bundle handoff flow for commerce launch and learning workflow imports.
