@@ -309,6 +309,12 @@ test.describe("Pinepost component QA hardening", () => {
     await expect(treeExample.locator(".pinepost-tree-select__panel")).toHaveCount(0);
 
     await treeTrigger.click();
+    await treeExample.getByRole("textbox", { name: /Filter tree/ }).fill("雪松");
+    await page.keyboard.press("Escape");
+    await expect(treeExample.locator(".pinepost-tree-select__panel")).toHaveCount(0);
+    await expect(treeTrigger).toBeFocused();
+
+    await treeTrigger.click();
     await treeTrigger.press("ArrowDown");
     const routeGroup = treeExample.locator(".pinepost-tree-select__node").filter({ hasText: /路线分组|Route group/ }).first();
     const cedarDesk = treeExample.locator(".pinepost-tree-select__node").filter({ hasText: /雪松桌|Cedar desk/ }).first();

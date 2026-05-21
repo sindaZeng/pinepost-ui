@@ -112,4 +112,40 @@ describe("Pinepost UI v0.28 selection hardening", () => {
     expect(loadData).toHaveBeenCalledWith(expect.objectContaining({ value: "routes" }));
     expect(await screen.findByRole("button", { name: "North desk" })).toBeInTheDocument();
   });
+
+  it("collapses branches and returns to parent nodes with ArrowLeft", async () => {
+    const user = userEvent.setup();
+
+    render(<TreeSelect data={routeTree} defaultExpanded={["routes", "south"]} placeholder="Choose scope" />);
+
+    await user.click(screen.getByRole("button", { name: "Choose scope" }));
+    screen.getByRole("button", { name: "River desk" }).focus();
+
+    await user.keyboard("{ArrowLeft}");
+    expect(document.activeElement).toHaveTextContent("South branch");
+
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.queryByRole("button", { name: "River desk" })).not.toBeInTheDocument();
+    expect(document.activeElement).toHaveTextContent("South branch");
+  });
+
+  it("closes filterable TreeSelect from the filter input with Escape", async () => {
+    const user = userEvent.setup();
+
+    render(<TreeSelect filterable data={routeTree} placeholder="Choose scope" />);
+
+    const trigger = screen.getByRole("button", { name: "Choose scope" });
+    await user.click(trigger);
+    const filterInput = screen.getByRole("textbox", { name: "Filter tree" });
+    await user.type(filterInput, "North");
+    expect(screen.queryByRole("button", { name: "Loose desk" })).not.toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(document.querySelector(".pinepost-tree-select__panel")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+
+    await user.click(trigger);
+    expect(screen.getByRole("button", { name: "Loose desk" })).toBeInTheDocument();
+  });
 });

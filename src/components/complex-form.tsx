@@ -582,6 +582,7 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
       .join(", ");
 
     function setOpenState(nextOpen: boolean) {
+      if (!nextOpen) setQuery("");
       setOpen(nextOpen);
       onVisibleChange?.(nextOpen);
     }
@@ -814,6 +815,13 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
                 aria-label="Filter tree"
                 className="pinepost-cascader__filter"
                 onChange={(event) => setQuery(event.currentTarget.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    setOpenState(false);
+                    window.setTimeout(() => triggerRef.current?.focus(), 0);
+                  }
+                }}
                 placeholder="Filter"
                 value={query}
               />

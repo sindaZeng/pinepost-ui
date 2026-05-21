@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.28.1
+
+- Fixed filterable TreeSelect Escape handling so the panel closes from the filter input, returns focus to the trigger, and clears stale filter text before the next open.
+- Added ArrowLeft and filter-input Escape regression coverage for the v0.28 TreeSelect keyboard contract.
+
 ## 0.28.0
 
 - Hardened TreeSelect keyboard behavior across visible node movement, branch expansion, disabled-node skipping, leaf selection, multi-select toggling, lazy loading, and Escape dismissal.
