@@ -601,6 +601,19 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
       });
     }
 
+    function expandNode(node: TreeSelectOption) {
+      setExpanded((current) => new Set([...current, node.value]));
+      loadChildren(node);
+    }
+
+    function collapseNode(node: TreeSelectOption) {
+      setExpanded((current) => {
+        const next = new Set(current);
+        next.delete(node.value);
+        return next;
+      });
+    }
+
     React.useEffect(() => setTreeData(data), [data]);
 
     React.useEffect(() => {
@@ -640,7 +653,91 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
         });
     }
 
-    function renderNode(node: TreeSelectOption, level = 0): React.ReactNode {
+    function getFocusableTreeNodes() {
+      return Array.from(rootRef.current?.querySelectorAll<HTMLButtonElement>(".pinepost-tree-select__node:not(:disabled)") ?? []);
+    }
+
+    function focusTreeNode(button: HTMLButtonElement | undefined) {
+      button?.focus();
+    }
+
+    function focusTreeNodeByValue(value: string | undefined) {
+      if (!value) return;
+      focusTreeNode(getFocusableTreeNodes().find((button) => button.dataset.treeValue === value));
+    }
+
+    function focusFirstTreeNode() {
+      window.setTimeout(() => focusTreeNode(getFocusableTreeNodes()[0]), 0);
+    }
+
+    function moveTreeFocus(currentTarget: HTMLButtonElement, offset: number) {
+      const buttons = getFocusableTreeNodes();
+      if (buttons.length === 0) return;
+      const currentIndex = buttons.indexOf(currentTarget);
+      const nextIndex = currentIndex < 0 ? 0 : (currentIndex + offset + buttons.length) % buttons.length;
+      focusTreeNode(buttons[nextIndex]);
+    }
+
+    function activateNode(node: TreeSelectOption, hasChildren: boolean) {
+      onNodeClick?.(node);
+      if (hasChildren) {
+        toggleExpanded(node);
+        loadChildren(node);
+      } else if (multiple) {
+        const selected = selectedValues.includes(node.value);
+        const next = selected ? selectedValues.filter((item) => item !== node.value) : [...selectedValues, node.value];
+        commit(next);
+      } else {
+        commit(node.value);
+        setOpenState(false);
+        window.setTimeout(() => triggerRef.current?.focus(), 0);
+      }
+    }
+
+    function onNodeKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, node: TreeSelectOption, hasChildren: boolean, isOpen: boolean) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        moveTreeFocus(event.currentTarget, 1);
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        moveTreeFocus(event.currentTarget, -1);
+      }
+
+      if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        const buttons = getFocusableTreeNodes();
+        focusTreeNode(event.key === "Home" ? buttons[0] : buttons[buttons.length - 1]);
+      }
+
+      if (event.key === "ArrowRight" && hasChildren) {
+        event.preventDefault();
+        if (!isOpen) expandNode(node);
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        if (hasChildren && isOpen) {
+          collapseNode(node);
+          return;
+        }
+        focusTreeNodeByValue(event.currentTarget.dataset.treeParent);
+      }
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        activateNode(node, hasChildren);
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpenState(false);
+        window.setTimeout(() => triggerRef.current?.focus(), 0);
+      }
+    }
+
+    function renderNode(node: TreeSelectOption, level = 0, parentValue?: string): React.ReactNode {
       const hasChildren = Boolean(node.children?.length) || Boolean(lazy && !node.isLeaf);
       const isOpen = expanded.has(node.value);
       const selected = selectedValues.includes(node.value);
@@ -653,20 +750,11 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
           <button
             className="pinepost-tree-select__node"
             data-selected={selected}
+            data-tree-parent={parentValue}
+            data-tree-value={node.value}
             disabled={node.disabled}
-            onClick={() => {
-              onNodeClick?.(node);
-              if (hasChildren) {
-                toggleExpanded(node);
-                loadChildren(node);
-              } else if (multiple) {
-                const next = selected ? selectedValues.filter((item) => item !== node.value) : [...selectedValues, node.value];
-                commit(next);
-              } else {
-                commit(node.value);
-                setOpenState(false);
-              }
-            }}
+            onClick={() => activateNode(node, hasChildren)}
+            onKeyDown={(event) => onNodeKeyDown(event, node, hasChildren, isOpen)}
             style={{ "--pinepost-tree-level": level } as React.CSSProperties}
             type="button"
           >
@@ -674,7 +762,7 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
             {multiple && !hasChildren && <input readOnly checked={selected} tabIndex={-1} type="checkbox" />}
             {renderNodeContent ? renderNodeContent(node) : node.label}
           </button>
-          {hasChildren && (isOpen || query) && node.children?.map((child) => renderNode(child, level + 1))}
+          {hasChildren && (isOpen || query) && node.children?.map((child) => renderNode(child, level + 1, node.value))}
         </React.Fragment>
       );
     }
@@ -696,10 +784,12 @@ export const TreeSelect = React.forwardRef<TreeSelectRef, TreeSelectProps>(
             if (event.key === "ArrowDown") {
               event.preventDefault();
               setOpenState(true);
+              focusFirstTreeNode();
             }
             if (event.key === "Escape") {
               event.preventDefault();
               setOpenState(false);
+              window.setTimeout(() => triggerRef.current?.focus(), 0);
             }
           }}
           type="button"

@@ -39,9 +39,9 @@ function MaturitySummary({ items, zh }: { items: ComponentMaturityItem[]; zh: bo
   return (
     <div className="docs-maturity__summary" aria-label={zh ? "成熟度概览" : "Maturity summary"}>
       <div>
-        <span>{zh ? "v0.27 团队交接重点" : "v0.27 team handoff focus"}</span>
+        <span>{zh ? "v0.28 选择器重点" : "v0.28 selection focus"}</span>
         <strong>{focusItems.length}</strong>
-        <p>{zh ? "Recipe Bundle 与应用壳层" : "Recipe Bundle and app shell"}</p>
+        <p>{zh ? "TreeSelect 键盘契约" : "TreeSelect keyboard contract"}</p>
       </div>
       <div>
         <span>{zh ? "重点平均分" : "Focus average"}</span>
@@ -93,7 +93,7 @@ function MaturityMatrix({ zh }: { zh: boolean }) {
                   </div>
                 </td>
                 <td>
-                  <Tag variant={item.focus ? "leaf" : "sky"}>{item.focus ? (zh ? "v0.27 重点" : "v0.27 focus") : (zh ? "保持" : "Hold")}</Tag>
+                  <Tag variant={item.focus ? "leaf" : "sky"}>{item.focus ? (zh ? "v0.28 重点" : "v0.28 focus") : (zh ? "保持" : "Hold")}</Tag>
                 </td>
                 <td>
                   <MaturityList items={item.signals} zh={zh} />
@@ -111,8 +111,8 @@ function MaturityMatrix({ zh }: { zh: boolean }) {
       </div>
       <p className="docs-maturity__note">
         {zh
-          ? "v0.27 把压力推进到 Recipe Bundle 团队交接预览；Table、Form、Upload 压力场继续作为重型工作流回归基线。"
-          : "v0.27 moves pressure into Recipe Bundle team handoff previews; the Table, Form, and Upload pressure lab remains the heavy workflow regression baseline."}
+          ? "v0.28 把压力推进到 TreeSelect 键盘契约；Recipe Gallery 和 Table、Form、Upload 压力场继续作为工作流回归基线。"
+          : "v0.28 moves pressure into the TreeSelect keyboard contract; Recipe Gallery plus the Table, Form, and Upload pressure lab remain workflow regression baselines."}
       </p>
     </div>
   );
@@ -127,10 +127,10 @@ export function createMaturityCatalogDocs(context: DemoCatalogContext): DocItem[
       group: labels.groups.guide,
       title: zh ? "Component Maturity 组件成熟度" : "Component Maturity",
       description: zh
-        ? "v0.27 的公开成熟度矩阵：继续压实 Recipe Bundle 团队交接预览，并保持其它组件的优先级透明。"
-        : "The v0.27 public maturity matrix: keep pressure on Recipe Bundle team handoff previews while keeping other component priorities visible.",
+        ? "v0.28 的公开成熟度矩阵：继续压实 TreeSelect 键盘契约，并保持其它组件的优先级透明。"
+        : "The v0.28 public maturity matrix: keep pressure on the TreeSelect keyboard contract while keeping other component priorities visible.",
       searchText:
-        "maturity commercial workflow handoff bundle handoff team handoff component matrix Recipe Bundle Theme Provider Table Form Upload Select Cascader TreeSelect DateTime date time 成熟度 商用 工作流 交接 团队交接 配方包 主题 表格 表单 上传 选择器 日期时间",
+        "maturity commercial workflow handoff bundle handoff team handoff keyboard selection component matrix Recipe Bundle Theme Provider Table Form Upload Select Cascader TreeSelect DateTime date time 成熟度 商用 工作流 交接 团队交接 键盘 选择器 配方包 主题 表格 表单 上传 日期时间",
       preview: <MaturityMatrix zh={zh} />,
       code: code([
         'import { componentMaturityMatrix } from "./maturity";',

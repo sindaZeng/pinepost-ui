@@ -59,7 +59,7 @@ test.describe("Pinepost docs smoke", () => {
   test("shows the maturity matrix through commercial docs search", async ({ page }) => {
     await page.goto("/");
 
-    for (const term of ["maturity", "commercial", "Table", "Upload", "handoff", "workflow", "team handoff", "bundle handoff"]) {
+    for (const term of ["maturity", "commercial", "Table", "Upload", "handoff", "workflow", "team handoff", "bundle handoff", "keyboard", "selection"]) {
       await page.getByLabel("搜索组件").fill(term);
       await expect(page.getByRole("button", { name: /Component Maturity|组件成熟度/ })).toBeVisible();
     }
@@ -74,7 +74,7 @@ test.describe("Pinepost docs smoke", () => {
     await expect(matrix.getByText("Theme, Provider, Recipe Bundle", { exact: true })).toBeVisible();
     await expect(matrix.getByText("Select / Cascader / TreeSelect")).toBeVisible();
     await expect(matrix.getByText("Date and time panels", { exact: true })).toBeVisible();
-    await expect(matrix.getByText(/v0.27 重点|v0.27 focus|v0.27 团队交接重点|v0.27 team handoff focus/).first()).toBeVisible();
+    await expect(matrix.getByText(/v0.28 重点|v0.28 focus|v0.28 选择器重点|v0.28 selection focus/).first()).toBeVisible();
     await expectNoPageOverflow(page);
   });
 

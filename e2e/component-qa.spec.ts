@@ -287,7 +287,7 @@ test.describe("Pinepost component QA hardening", () => {
     await expect(dateGrid.getByRole("button", { name: "2026-05-18" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  test("keeps mixed Select groups visible and TreeSelect dismissal aligned", async ({ page }) => {
+  test("keeps mixed Select groups visible and TreeSelect keyboard behavior aligned", async ({ page }) => {
     await page.goto("/");
 
     await page.getByRole("button", { name: "Select 选择器" }).click();
@@ -307,6 +307,30 @@ test.describe("Pinepost component QA hardening", () => {
     await expect(treeExample.locator(".pinepost-tree-select__panel")).toBeVisible();
     await page.locator("main h1").click();
     await expect(treeExample.locator(".pinepost-tree-select__panel")).toHaveCount(0);
+
+    await treeTrigger.click();
+    await treeTrigger.press("ArrowDown");
+    const routeGroup = treeExample.locator(".pinepost-tree-select__node").filter({ hasText: /路线分组|Route group/ }).first();
+    const cedarDesk = treeExample.locator(".pinepost-tree-select__node").filter({ hasText: /雪松桌|Cedar desk/ }).first();
+    const dispatchTeam = treeExample.locator(".pinepost-tree-select__node").filter({ hasText: /调度组|Dispatch team/ }).first();
+    await expect(routeGroup).toBeFocused();
+
+    await page.keyboard.press("ArrowDown");
+    await expect(cedarDesk).toBeFocused();
+
+    await page.keyboard.press("End");
+    await expect(dispatchTeam).toBeFocused();
+    await expect(dispatchTeam).toHaveAttribute("data-selected", "true");
+
+    await page.keyboard.press("Space");
+    await expect(dispatchTeam).toHaveAttribute("data-selected", "false");
+
+    await page.keyboard.press("Space");
+    await expect(dispatchTeam).toHaveAttribute("data-selected", "true");
+
+    await page.keyboard.press("Escape");
+    await expect(treeExample.locator(".pinepost-tree-select__panel")).toHaveCount(0);
+    await expect(treeTrigger).toBeFocused();
   });
 
   test("opens and dismisses overlay and feedback docs previews", async ({ page }) => {

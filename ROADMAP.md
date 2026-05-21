@@ -4,9 +4,10 @@ Pinepost UI is moving toward a complete, commercial-friendly React component lib
 
 ## Near Term
 
-- Keep the v0.27 Recipe Gallery team handoff flow as the check for saved bundle import, apply, recovery, and metadata preview.
+- Keep the v0.28 TreeSelect keyboard contract as the check for deep picker movement, branch expansion, lazy loading, and dismissal.
+- Keep the v0.27 Recipe Gallery team handoff flow as the regression check for saved bundle import, apply, recovery, and metadata preview.
 - Keep the v0.25 Commercial Pressure Lab stable as the heavy Table, Form, and Upload regression baseline.
-- Keep display-oriented components queued until saved workflow handoff and heavy workflow maturity stay strong.
+- Keep display-oriented components queued until selection hardening, saved workflow handoff, and heavy workflow maturity stay strong.
 
 ## Mid Term
 

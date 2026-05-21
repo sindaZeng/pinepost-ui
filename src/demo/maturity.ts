@@ -57,7 +57,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     ],
     nextActions: [
       { en: "Keep the Commercial Pressure Lab as the regression check for server-style selection and bulk actions.", zh: "把 Commercial Pressure Lab 继续作为服务端选择和批量操作回归检查。" },
-      { en: "Keep controlled table state stable while v0.27 focuses on team handoff previews.", zh: "v0.27 聚焦团队交接预览期间，保持受控表格状态稳定。" }
+      { en: "Keep controlled table state stable while v0.28 focuses on selection keyboard behavior.", zh: "v0.28 聚焦选择器键盘行为期间，保持受控表格状态稳定。" }
     ]
   },
   {
@@ -114,19 +114,19 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       zh: "深层选择与层级选择"
     },
     level: "active",
-    score: 80,
-    focus: false,
+    score: 84,
+    focus: true,
     signals: [
       { en: "Single, multiple, grouped, lazy, and tree-shaped selection flows have dedicated examples.", zh: "单选、多选、分组、懒加载和树形选择已有独立示例。" },
-      { en: "Clear controls now use native button semantics across deep pickers.", zh: "深层选择器的清除控件现在使用原生按钮语义。" }
+      { en: "TreeSelect now has a test-backed keyboard contract for movement, branch expansion, leaf toggling, lazy loading, and Escape dismissal.", zh: "TreeSelect 现在用测试约束移动、分支展开、叶子切换、懒加载和 Escape 关闭。" }
     ],
     currentGaps: [
-      { en: "TreeSelect keyboard dismissal needed alignment with the other pickers.", zh: "TreeSelect 键盘关闭行为需要与其他选择器对齐。" },
-      { en: "Large mixed option sets need more documented guidance.", zh: "大型混合选项集仍需要更多说明。" }
+      { en: "Large mixed option sets still need more documented guidance.", zh: "大型混合选项集仍需要更多说明。" },
+      { en: "Virtualized selection guidance stays separate from this deep picker pass.", zh: "虚拟化选择指导仍与本轮深层选择器打磨分开。" }
     ],
     nextActions: [
-      { en: "Keep keyboard, dismissal, and grouped rendering behavior stable while v0.27 focuses on team handoff previews.", zh: "v0.27 聚焦团队交接预览期间，保持键盘、关闭和分组渲染行为稳定。" },
-      { en: "Prefer fewer but deeper selection examples.", zh: "选择器示例保持少而深。" }
+      { en: "Use the v0.28 TreeSelect keyboard contract as the deep selection regression check.", zh: "把 v0.28 TreeSelect 键盘契约作为深层选择回归检查。" },
+      { en: "Prefer fewer but deeper selection examples before broad display polish.", zh: "在展示类广泛打磨前，选择器示例保持少而深。" }
     ]
   },
   {
@@ -148,7 +148,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Cross-month scheduling and recurrence workflows remain queued.", zh: "跨月排期和重复规则工作流仍在队列中。" }
     ],
     nextActions: [
-      { en: "Keep disabled scheduling baselines stable while v0.27 focuses on team handoff previews.", zh: "v0.27 聚焦团队交接预览期间，保持禁用排期基线稳定。" },
+      { en: "Keep disabled scheduling baselines stable while v0.28 focuses on selection keyboard behavior.", zh: "v0.28 聚焦选择器键盘行为期间，保持禁用排期基线稳定。" },
       { en: "Keep panel accessibility labels explicit.", zh: "保持面板无障碍标签明确。" }
     ]
   },
@@ -161,7 +161,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     },
     level: "active",
     score: 86,
-    focus: true,
+    focus: false,
     signals: [
       { en: "Theme collections, recipe bundle helpers, and locale provider behavior are documented.", zh: "主题集合、配方包助手和语言 Provider 行为已写入文档。" },
       { en: "Recipe Gallery now applies commerce and learning bundle imports with previewed recipes, active themes, table presets, schedule counts, and locale.", zh: "Recipe Gallery 现在可以应用商业与学习配方包导入，并预览模板、当前主题、表格预设、排期数量和语言。" }
@@ -172,7 +172,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     ],
     nextActions: [
       { en: "Keep bundle import, damaged JSON recovery, richer previews, and apply-to-builder behavior under Playwright coverage.", zh: "继续用 Playwright 覆盖配方包导入、损坏 JSON 恢复、更完整预览和应用到构建器行为。" },
-      { en: "Use Recipe Gallery as the v0.27 team handoff check.", zh: "把 Recipe Gallery 作为 v0.27 团队交接检查。" }
+      { en: "Keep Recipe Gallery as the saved workflow handoff baseline while v0.28 focuses on selection.", zh: "v0.28 聚焦选择器期间，把 Recipe Gallery 继续作为已保存工作流交接基线。" }
     ]
   },
   {
@@ -212,7 +212,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Advanced composition patterns are deferred.", zh: "高级组合模式延后。" }
     ],
     nextActions: [
-      { en: "Maintain API stability and avoid scope creep during v0.27.", zh: "v0.27 期间保持 API 稳定，避免范围膨胀。" }
+      { en: "Maintain API stability and avoid scope creep during v0.28.", zh: "v0.28 期间保持 API 稳定，避免范围膨胀。" }
     ]
   }
 ];

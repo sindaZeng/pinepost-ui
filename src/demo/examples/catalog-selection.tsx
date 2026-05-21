@@ -487,7 +487,7 @@ export function createSelectionCatalogDocs(context: DemoCatalogContext): DocItem
       id: "tree-select",
       group: labels.groups.form,
       title: zh ? "TreeSelect 树形选择" : "TreeSelect",
-      description: zh ? "树结构选择器，支持单选、多选、筛选、懒加载、自定义节点和节点点击事件。" : "Tree selector with single or multiple selection, filtering, lazy loading, custom nodes, and node events.",
+      description: zh ? "树结构选择器，支持单选、多选、筛选、懒加载、自定义节点、节点事件和完整键盘契约。" : "Tree selector with single or multiple selection, filtering, lazy loading, custom nodes, node events, and a complete keyboard contract.",
       examples: renderTreeSelectExamples(),
       playground: renderTreeSelectWorkbench(),
       preview: (
@@ -577,6 +577,17 @@ export function createSelectionCatalogDocs(context: DemoCatalogContext): DocItem
           title: labels.methods,
           rows: [
             { prop: "focus / blur / clear", type: "TreeSelectRef", defaultValue: "-", description: zh ? "聚焦、失焦和清空。" : "Focus, blur, and clear." }
+          ]
+        },
+        {
+          title: labels.shortcuts,
+          rows: [
+            { prop: "ArrowUp / ArrowDown", type: "keyboard", defaultValue: "-", description: zh ? "在可见且未禁用的节点之间移动焦点。" : "Moves focus through visible enabled nodes." },
+            { prop: "Home / End", type: "keyboard", defaultValue: "-", description: zh ? "移动到第一个或最后一个可见节点。" : "Moves to the first or last visible node." },
+            { prop: "ArrowRight", type: "keyboard", defaultValue: "-", description: zh ? "展开分支，并可触发懒加载。" : "Expands a branch and can trigger lazy loading." },
+            { prop: "ArrowLeft", type: "keyboard", defaultValue: "-", description: zh ? "收起展开的分支，或回到父节点。" : "Collapses an open branch or returns to the parent node." },
+            { prop: "Enter / Space", type: "keyboard", defaultValue: "-", description: zh ? "展开分支或选择、切换叶子节点。" : "Expands a branch or selects and toggles leaf nodes." },
+            { prop: "Escape", type: "keyboard", defaultValue: "-", description: zh ? "关闭面板并回到触发器。" : "Closes the panel and returns to the trigger." }
           ]
         }
       ]

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.28.0
+
+- Hardened TreeSelect keyboard behavior across visible node movement, branch expansion, disabled-node skipping, leaf selection, multi-select toggling, lazy loading, and Escape dismissal.
+- Added v0.28 unit and Playwright coverage for the TreeSelect keyboard contract while preserving existing Select and Cascader regressions.
+- Updated maturity, roadmap, README, and selection docs around the deep picker hardening focus without adding public props or new dependencies.
+
 ## 0.27.0
 
 - Added a focused Recipe Gallery example module so the guide shell stays easier to maintain.

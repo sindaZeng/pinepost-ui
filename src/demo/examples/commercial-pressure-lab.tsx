@@ -42,6 +42,8 @@ const pageTwoRows: ServerRoute[] = [
   { count: 14, id: "d9", route: "D9", status: "Ready" }
 ];
 
+const SERVER_LOAD_DELAY_MS = 360;
+
 const serverColumns: Array<TableColumn<ServerRoute>> = [
   { key: "route", title: "Route" },
   { key: "count", title: "Count", align: "right" },
@@ -93,7 +95,7 @@ function ServerTablePressure({ zh }: { zh: boolean }) {
       setLoadState("idle");
       setStatusVariant("success");
       setStatus(zh ? `第 ${nextPage} 页已加载。` : `Page ${nextPage} loaded.`);
-    }, 180);
+    }, SERVER_LOAD_DELAY_MS);
   }
 
   function runBulkAction() {
