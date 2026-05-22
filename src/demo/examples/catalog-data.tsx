@@ -343,6 +343,41 @@ export function createDataCatalogDocs(context: DemoCatalogContext): DocItem[] {
     renderUploadWorkbench
   } = context;
 
+  function VirtualizedTableHandoffPreview() {
+    const [mode, setMode] = React.useState<"rows" | "loading" | "empty">("rows");
+    const [selectedKeys, setSelectedKeys] = React.useState<React.Key[]>(["route-1", "archived-route"]);
+    const [rangeLabel, setRangeLabel] = React.useState("0-0");
+    const rows = mode === "empty" ? [] : virtualRows;
+
+    return (
+      <Space direction="vertical">
+        <div className="docs-workbench__actions">
+          <Button size="sm" variant="soft" onClick={() => setMode("rows")}>{zh ? "显示数据" : "Show rows"}</Button>
+          <Button size="sm" variant="soft" onClick={() => setMode("loading")}>{zh ? "显示加载" : "Show loading"}</Button>
+          <Button size="sm" variant="soft" onClick={() => setMode("empty")}>{zh ? "显示空态" : "Show empty"}</Button>
+        </div>
+        <VirtualizedTable
+          selectable
+          rowKey={(_row, index) => `route-${index}`}
+          selectedRowKeys={selectedKeys}
+          onSelectionChange={(_rows, keys) => setSelectedKeys(keys)}
+          onVisibleRangeChange={({ startIndex, endIndex }) => setRangeLabel(`${startIndex}-${endIndex}`)}
+          columns={[
+            { key: "route", title: zh ? "路线" : "Route" },
+            { key: "status", title: zh ? "状态" : "Status" },
+            { key: "count", title: zh ? "数量" : "Count", align: "right" }
+          ]}
+          data={rows}
+          emptyText={zh ? "没有服务端路线" : "No server routes"}
+          height={220}
+          loading={mode === "loading"}
+          loadingText={zh ? "正在加载服务端路线" : "Loading server routes"}
+        />
+        <Tag variant="leaf">{zh ? `可见窗口 ${rangeLabel}，已选择 ${selectedKeys.length} 个键` : `Visible window ${rangeLabel}, ${selectedKeys.length} selected keys`}</Tag>
+      </Space>
+    );
+  }
+
   return [
     {
       id: "table",
@@ -751,22 +786,19 @@ export function createDataCatalogDocs(context: DemoCatalogContext): DocItem[] {
       id: "virtualized-table",
       group: labels.groups.display,
       title: zh ? "VirtualizedTable 虚拟表格" : "VirtualizedTable",
-      description: zh ? "面向大量行数据的表格，只渲染滚动窗口内的行。" : "A table for large row sets that renders only the visible window.",
-      preview: (
-        <VirtualizedTable
-          columns={[
-            { key: "route", title: zh ? "路线" : "Route" },
-            { key: "status", title: zh ? "状态" : "Status" },
-            { key: "count", title: zh ? "数量" : "Count", align: "right" }
-          ]}
-          data={virtualRows}
-          height={220}
-        />
-      ),
+      description: zh ? "面向大量行或服务端行数据的表格，只渲染滚动窗口内的行，并保持加载、空态、可见范围和跨窗口选择键。" : "A table for large or server-backed row sets that renders only the visible window while keeping loading, empty, visible-range, and cross-window selection state.",
+      searchText: "virtualized table server rows loading empty selected keys visible range handoff v0.30 虚拟 表格 服务端 加载 空态 选择键 可见窗口 交接",
+      preview: <VirtualizedTableHandoffPreview />,
       code: code([
         'import { VirtualizedTable } from "pinepost-ui";',
         "",
         "<VirtualizedTable",
+        "  selectable",
+        "  selectedRowKeys={selectedRowKeys}",
+        "  onSelectionChange={(_, keys) => setSelectedRowKeys(keys)}",
+        "  onVisibleRangeChange={setVisibleRange}",
+        "  loading={isFetching}",
+        "  emptyText=\"No server routes\"",
         "  height={260}",
         "  rowHeight={44}",
         "  columns={columns}",
@@ -781,13 +813,18 @@ export function createDataCatalogDocs(context: DemoCatalogContext): DocItem[] {
             { prop: "columns", type: "TableColumn<T>[]", defaultValue: "[]", description: zh ? "列配置。" : "Column config." },
             { prop: "data", type: "T[]", defaultValue: "[]", description: zh ? "大量行数据。" : "Large row data." },
             { prop: "height", type: "number", defaultValue: "260", description: zh ? "滚动区域高度。" : "Scroll viewport height." },
-            { prop: "rowHeight", type: "number", defaultValue: "44", description: zh ? "行高。" : "Row height." }
+            { prop: "rowHeight", type: "number", defaultValue: "44", description: zh ? "行高。" : "Row height." },
+            { prop: "selectedRowKeys / defaultSelectedRowKeys", type: "React.Key[]", defaultValue: "[]", description: zh ? "受控或默认选择键，可跨虚拟窗口保留。" : "Controlled or default selection keys that can survive virtual window changes." },
+            { prop: "loading / loadingText", type: "boolean / ReactNode", defaultValue: "false / Loading...", description: zh ? "服务端行数据请求中的可见状态。" : "Visible state while server rows are loading." },
+            { prop: "emptyText", type: "ReactNode", defaultValue: "No rows", description: zh ? "无行数据时显示。" : "Shown when there are no rows." }
           ]
         },
         {
           title: labels.events,
           rows: [
-            { prop: "onRowClick", type: "(row, index) => void", defaultValue: "-", description: zh ? "点击行。" : "Row click." }
+            { prop: "onRowClick", type: "(row, index) => void", defaultValue: "-", description: zh ? "点击行。" : "Row click." },
+            { prop: "onSelectionChange", type: "(rows, keys) => void", defaultValue: "-", description: zh ? "选择键变化，包含跨窗口保留的 key。" : "Selection key changes, including keys kept across virtual windows." },
+            { prop: "onVisibleRangeChange", type: "({ startIndex, endIndex }) => void", defaultValue: "-", description: zh ? "虚拟渲染窗口变化时触发，endIndex 为排除边界。" : "Fires when the virtual render window changes; endIndex is exclusive." }
           ]
         }
       ]

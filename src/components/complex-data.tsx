@@ -6,14 +6,25 @@ import type { TreeItem } from "./data-extras";
 export interface VirtualizedTableProps<T> extends React.HTMLAttributes<HTMLDivElement> {
   columns: Array<TableColumn<T>>;
   data: T[];
+  defaultSelectedRowKeys?: React.Key[];
+  emptyText?: React.ReactNode;
   height?: number;
+  loading?: boolean;
+  loadingText?: React.ReactNode;
   onRowClick?: (row: T, index: number) => void;
   onSelectionChange?: (rows: T[], keys: React.Key[]) => void;
   onSortChange?: (state?: TableSortState<T>) => void;
+  onVisibleRangeChange?: (range: VirtualizedTableVisibleRange) => void;
   rowHeight?: number;
   rowKey?: keyof T | ((row: T, index: number) => React.Key);
   selectable?: boolean;
+  selectedRowKeys?: React.Key[];
   sortState?: TableSortState<T>;
+}
+
+export interface VirtualizedTableVisibleRange {
+  endIndex: number;
+  startIndex: number;
 }
 
 function getCellValue<T extends object>(row: T, key: keyof T | string) {
@@ -31,20 +42,27 @@ function VirtualizedTableInner<T extends object>({
   className,
   columns,
   data,
+  defaultSelectedRowKeys = [],
+  emptyText = "No rows",
   height = 260,
+  loading,
+  loadingText = "Loading...",
   onRowClick,
   onSelectionChange,
   onSortChange,
+  onVisibleRangeChange,
   rowHeight = 44,
   rowKey,
   selectable,
+  selectedRowKeys,
   sortState,
   ...props
 }: VirtualizedTableProps<T>, ref: React.ForwardedRef<VirtualizedTableRef<T>>) {
   const [scrollTop, setScrollTop] = React.useState(0);
-  const [selectedKeys, setSelectedKeys] = React.useState<React.Key[]>([]);
+  const [internalSelectedKeys, setInternalSelectedKeys] = React.useState<React.Key[]>(defaultSelectedRowKeys);
   const [internalSortState, setInternalSortState] = React.useState<TableSortState<T> | undefined>();
   const activeSort = sortState ?? internalSortState;
+  const currentSelectedKeys = selectedRowKeys ?? internalSelectedKeys;
   const sortedData = React.useMemo(() => {
     if (!activeSort) return data;
     const column = columns.find((item) => String(item.key) === String(activeSort.key));
@@ -66,7 +84,7 @@ function VirtualizedTableInner<T extends object>({
   }
 
   function commitSelection(nextKeys: React.Key[]) {
-    setSelectedKeys(nextKeys);
+    if (selectedRowKeys === undefined) setInternalSelectedKeys(nextKeys);
     onSelectionChange?.(data.filter((row, index) => nextKeys.includes(getRowKey(row, index))), nextKeys);
   }
 
@@ -81,14 +99,18 @@ function VirtualizedTableInner<T extends object>({
     setSort({ key: column.key, order: nextOrder });
   }
 
+  React.useEffect(() => {
+    onVisibleRangeChange?.({ startIndex, endIndex });
+  }, [endIndex, onVisibleRangeChange, startIndex]);
+
   React.useImperativeHandle(ref, () => ({
     clearExpansion: () => undefined,
     clearSelection: () => commitSelection([]),
     clearSort: () => setSort(undefined),
     getExpandedRows: () => [],
     getColumnOrder: () => columns.map((column) => String(column.key)),
-    getSelectionKeys: () => selectedKeys,
-    getSelectionRows: () => data.filter((row, index) => selectedKeys.includes(getRowKey(row, index))),
+    getSelectionKeys: () => currentSelectedKeys,
+    getSelectionRows: () => data.filter((row, index) => currentSelectedKeys.includes(getRowKey(row, index))),
     getSortState: () => activeSort,
     getViewPreset: () => undefined,
     getVisibleColumns: () => columns,
@@ -103,10 +125,10 @@ function VirtualizedTableInner<T extends object>({
     toggleRowSelection: (row, selected) => {
       const rowIndex = data.indexOf(row);
       const key = getRowKey(row, rowIndex >= 0 ? rowIndex : data.length);
-      const nextSelected = selected ?? !selectedKeys.includes(key);
-      commitSelection(nextSelected ? Array.from(new Set([...selectedKeys, key])) : selectedKeys.filter((item) => item !== key));
+      const nextSelected = selected ?? !currentSelectedKeys.includes(key);
+      commitSelection(nextSelected ? Array.from(new Set([...currentSelectedKeys, key])) : currentSelectedKeys.filter((item) => item !== key));
     }
-  }), [activeSort, data, selectedKeys]);
+  }), [activeSort, columns, currentSelectedKeys, data]);
 
   return (
     <div className={cn("pinepost-virtual-table", className)} {...props}>
@@ -139,7 +161,7 @@ function VirtualizedTableInner<T extends object>({
               {visibleRows.map((row, windowIndex) => {
                 const index = startIndex + windowIndex;
                 const key = getRowKey(row, data.indexOf(row));
-                const selected = selectedKeys.includes(key);
+                const selected = currentSelectedKeys.includes(key);
 
                 return (
                   <tr key={key} data-selected={selected} onClick={() => onRowClick?.(row, index)}>
@@ -150,8 +172,8 @@ function VirtualizedTableInner<T extends object>({
                           checked={selected}
                           onChange={(event) => {
                             const nextKeys = event.currentTarget.checked
-                              ? Array.from(new Set([...selectedKeys, key]))
-                              : selectedKeys.filter((item) => item !== key);
+                              ? Array.from(new Set([...currentSelectedKeys, key]))
+                              : currentSelectedKeys.filter((item) => item !== key);
                             commitSelection(nextKeys);
                           }}
                           onClick={(event) => event.stopPropagation()}
@@ -169,6 +191,22 @@ function VirtualizedTableInner<T extends object>({
                   </tr>
                 );
               })}
+              {loading && (
+                <tr>
+                  <td colSpan={columns.length + (selectable ? 1 : 0)}>
+                    <div className="pinepost-virtual-table__state" role="status">
+                      {loadingText}
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {!loading && sortedData.length === 0 && (
+                <tr>
+                  <td colSpan={columns.length + (selectable ? 1 : 0)}>
+                    <div className="pinepost-virtual-table__state">{emptyText}</div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

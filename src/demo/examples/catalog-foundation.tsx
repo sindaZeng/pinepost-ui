@@ -422,8 +422,9 @@ export function createFoundationCatalogDocs(context: DemoCatalogContext): DocIte
       group: labels.groups.form,
       title: zh ? "Select 选择器" : "Select",
       description: zh
-        ? "可访问的下拉选择器，支持键盘选择、点外关闭、筛选和远程数据。"
-        : "Accessible dropdown selection with keyboard control, outside-dismiss, filtering, and remote data.",
+        ? "可访问的下拉选择器，支持键盘选择、点外关闭、筛选、远程加载和空态交接。"
+        : "Accessible dropdown selection with keyboard control, outside-dismiss, filtering, remote loading, and empty-state handoff.",
+      searchText: "select remote loading empty owner handoff v0.30 keyboard filter 选择器 远程 加载 空态 负责人 交接 键盘 筛选",
       examples: renderSelectExamples(),
       playground: renderSelectWorkbench(),
       preview: (
@@ -486,7 +487,9 @@ export function createFoundationCatalogDocs(context: DemoCatalogContext): DocIte
           rows: [
             { prop: "options", type: "SelectOption[]", defaultValue: "[]", description: zh ? "下拉选项。" : "Dropdown options." },
             { prop: "value", type: "string | string[]", defaultValue: "-", description: zh ? "受控值；multiple 时为数组。" : "Controlled value; multiple mode uses an array." },
-            { prop: "filterable", type: "boolean", defaultValue: "false", description: zh ? "启用筛选输入。" : "Enables filter input." }
+            { prop: "filterable", type: "boolean", defaultValue: "false", description: zh ? "启用筛选输入。" : "Enables filter input." },
+            { prop: "loading / loadingText", type: "boolean / ReactNode", defaultValue: "false / Loading...", description: zh ? "远程选项请求中的可见状态。" : "Visible state while remote options are loading." },
+            { prop: "emptyText", type: "ReactNode", defaultValue: "No options", description: zh ? "筛选或远程请求无结果时显示。" : "Shown when filtering or remote loading returns no options." }
           ]
         },
         {

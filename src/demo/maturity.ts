@@ -45,19 +45,20 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       zh: "高密数据与操作"
     },
     level: "commercial",
-    score: 90,
-    focus: false,
+    score: 91,
+    focus: true,
     signals: [
       { en: "Segmented examples cover filtering, sorting, selection, expansion, summaries, settings, and views.", zh: "分段示例覆盖筛选、排序、选择、展开、汇总、列设置和视图。" },
-      { en: "The pressure lab now keeps selected keys visible across pagination, loading, errors, and bulk actions.", zh: "压力场现在让选择键跨分页、加载、错误和批量操作保持可见。" }
+      { en: "The pressure lab keeps selected keys visible across pagination, loading, errors, and bulk actions.", zh: "压力场让选择键跨分页、加载、错误和批量操作保持可见。" },
+      { en: "VirtualizedTable now exposes controlled selection keys, loading and empty states, and visible range handoff for server-style row windows.", zh: "VirtualizedTable 现在暴露受控选择键、加载与空态，以及服务端行窗口可见范围交接。" }
     ],
     currentGaps: [
       { en: "Very large server grids still need more keyboard and viewport checks.", zh: "超大服务端表格还需要更多键盘与视口检查。" },
-      { en: "Virtualized server data remains outside this handoff pass.", zh: "虚拟化服务端数据仍不放入本轮交接范围。" }
+      { en: "Remote row fetching stays application-owned rather than becoming a runtime data source abstraction.", zh: "远程行数据拉取仍由应用层持有，不提升为运行时数据源抽象。" }
     ],
     nextActions: [
-      { en: "Keep the Commercial Pressure Lab as the regression check for server-style selection and bulk actions.", zh: "把 Commercial Pressure Lab 继续作为服务端选择和批量操作回归检查。" },
-      { en: "Keep controlled table state stable while v0.29 focuses on selection scale behavior.", zh: "v0.29 聚焦选择器规模化行为期间，保持受控表格状态稳定。" }
+      { en: "Use the v0.30 virtual table handoff as the regression check for server-style row windows and selection keys.", zh: "把 v0.30 虚拟表格交接作为服务端行窗口与选择键的回归检查。" },
+      { en: "Keep the Commercial Pressure Lab as the broader regression check for pagination, errors, and bulk actions.", zh: "把 Commercial Pressure Lab 继续作为分页、错误和批量操作的整体回归检查。" }
     ]
   },
   {
@@ -114,20 +115,21 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       zh: "深层选择与层级选择"
     },
     level: "active",
-    score: 87,
+    score: 88,
     focus: true,
     signals: [
       { en: "Single, multiple, grouped, lazy, and tree-shaped selection flows have dedicated examples.", zh: "单选、多选、分组、懒加载和树形选择已有独立示例。" },
       { en: "TreeSelect now has a test-backed keyboard contract for movement, branch expansion, leaf toggling, lazy loading, and Escape dismissal.", zh: "TreeSelect 现在用测试约束移动、分支展开、叶子切换、懒加载和 Escape 关闭。" },
-      { en: "VirtualizedSelect, Select filters, and Cascader filtered matches now share keyboard movement, commit, and dismissal coverage.", zh: "VirtualizedSelect、Select 筛选输入和 Cascader 筛选命中现在共享键盘移动、提交和关闭覆盖。" }
+      { en: "VirtualizedSelect, Select filters, and Cascader filtered matches share keyboard movement, commit, and dismissal coverage.", zh: "VirtualizedSelect、Select 筛选输入和 Cascader 筛选命中共享键盘移动、提交和关闭覆盖。" },
+      { en: "Select and VirtualizedSelect now expose loading and empty states for remote option handoff.", zh: "Select 和 VirtualizedSelect 现在暴露远程选项交接需要的加载与空态。" }
     ],
     currentGaps: [
-      { en: "Large mixed option sets still need product-specific guidance for remote fetching and batching.", zh: "大型混合选项集仍需要面向远程拉取和批量选择的业务说明。" },
+      { en: "Remote fetching remains product-owned, so examples must keep the boundary explicit.", zh: "远程拉取仍由业务持有，因此示例需要继续明确边界。" },
       { en: "Virtualized selection is keyboard-backed but not a replacement for tree virtualization guidance.", zh: "虚拟化选择已有键盘覆盖，但不能替代树虚拟化指导。" }
     ],
     nextActions: [
-      { en: "Use the v0.29 selection scale contract as the regression check for filtered and virtualized pickers.", zh: "把 v0.29 选择器规模化契约作为筛选和虚拟选择器的回归检查。" },
-      { en: "Keep selection examples focused on large option trust before broad display polish.", zh: "在展示类广泛打磨前，选择器示例继续聚焦大型选项可信度。" }
+      { en: "Use the v0.30 remote option contract as the regression check for loading, empty, filtered, and virtualized pickers.", zh: "把 v0.30 远程选项契约作为加载、空态、筛选和虚拟选择器的回归检查。" },
+      { en: "Keep selection examples focused on large and remote option trust before broad display polish.", zh: "在展示类广泛打磨前，选择器示例继续聚焦大型与远程选项可信度。" }
     ]
   },
   {
@@ -149,7 +151,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Cross-month scheduling and recurrence workflows remain queued.", zh: "跨月排期和重复规则工作流仍在队列中。" }
     ],
     nextActions: [
-      { en: "Keep disabled scheduling baselines stable while v0.29 focuses on selection scale behavior.", zh: "v0.29 聚焦选择器规模化行为期间，保持禁用排期基线稳定。" },
+      { en: "Keep disabled scheduling baselines stable while v0.30 focuses on remote and virtual workflow handoff.", zh: "v0.30 聚焦远程与虚拟工作流交接期间，保持禁用排期基线稳定。" },
       { en: "Keep panel accessibility labels explicit.", zh: "保持面板无障碍标签明确。" }
     ]
   },
@@ -173,7 +175,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     ],
     nextActions: [
       { en: "Keep bundle import, damaged JSON recovery, richer previews, and apply-to-builder behavior under Playwright coverage.", zh: "继续用 Playwright 覆盖配方包导入、损坏 JSON 恢复、更完整预览和应用到构建器行为。" },
-      { en: "Keep Recipe Gallery as the saved workflow handoff baseline while v0.29 focuses on selection scale.", zh: "v0.29 聚焦选择器规模化期间，把 Recipe Gallery 继续作为已保存工作流交接基线。" }
+      { en: "Keep Recipe Gallery as the saved workflow handoff baseline while v0.30 focuses on remote and virtual workflows.", zh: "v0.30 聚焦远程与虚拟工作流期间，把 Recipe Gallery 继续作为已保存工作流交接基线。" }
     ]
   },
   {
@@ -213,7 +215,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Advanced composition patterns are deferred.", zh: "高级组合模式延后。" }
     ],
     nextActions: [
-      { en: "Maintain API stability and avoid scope creep during v0.29.", zh: "v0.29 期间保持 API 稳定，避免范围膨胀。" }
+      { en: "Maintain API stability and avoid scope creep during v0.30.", zh: "v0.30 期间保持 API 稳定，避免范围膨胀。" }
     ]
   }
 ];

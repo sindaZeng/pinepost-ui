@@ -25,6 +25,9 @@ export interface SelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 
   defaultValue?: string | string[];
   disabled?: boolean;
   filterable?: boolean;
+  emptyText?: React.ReactNode;
+  loading?: boolean;
+  loadingText?: React.ReactNode;
   multiple?: boolean;
   onBlur?: React.FocusEventHandler<HTMLButtonElement>;
   onClear?: () => void;
@@ -50,7 +53,10 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       contentClassName,
       defaultValue,
       disabled,
+      emptyText = "No options",
       filterable,
+      loading,
+      loadingText = "Loading...",
       multiple,
       onBlur,
       onClear,
@@ -80,6 +86,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       ? options.filter((option) => optionLabelText(option).toLowerCase().includes(query.toLowerCase()))
       : options;
     const groups = Array.from(new Set(visibleOptions.map((option) => option.group).filter(Boolean)));
+    const activeDescendant = open && visibleOptions[activeIndex] ? `${listboxId}-${activeIndex}` : undefined;
 
     function setOpenState(nextOpen: boolean) {
       if (!nextOpen) setQuery("");
@@ -245,7 +252,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       <div className={cn("pinepost-select-wrap", className)} {...props}>
         <button
           ref={triggerRef}
-          aria-activedescendant={open ? `${listboxId}-${activeIndex}` : undefined}
+          aria-activedescendant={activeDescendant}
           aria-controls={open ? listboxId : undefined}
           aria-expanded={open}
           aria-haspopup="listbox"
@@ -294,7 +301,13 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
               />
             )}
             <div className="pinepost-select__viewport">
-              {groups.length > 0 ? (
+              {loading ? (
+                <div className="pinepost-select__state" role="status">
+                  {loadingText}
+                </div>
+              ) : visibleOptions.length === 0 ? (
+                <div className="pinepost-select__state">{emptyText}</div>
+              ) : groups.length > 0 ? (
                 <>
                   {groups.map((group) => (
                     <div className="pinepost-select__group" key={String(group)}>

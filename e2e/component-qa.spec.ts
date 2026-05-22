@@ -407,6 +407,38 @@ test.describe("Pinepost component QA hardening", () => {
     await expect(virtualPreview.locator(".pinepost-virtual-select__panel")).toHaveCount(0);
   });
 
+  test("supports v0.30 remote option and virtual table handoff states", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Select 选择器" }).click();
+    const remoteState = page.getByRole("region", { name: /远程加载状态|Remote loading state/ });
+    const remoteTrigger = remoteState.getByRole("combobox", { name: /输入负责人|Type owner/ });
+    await remoteTrigger.click();
+    await expect(remoteState.getByRole("status")).toHaveText(/正在查询负责人|Fetching owners/);
+    await page.keyboard.press("Escape");
+    await expect(remoteTrigger).toBeFocused();
+
+    await page.getByRole("button", { name: /VirtualizedTable|虚拟表格/ }).click();
+    const virtualTablePage = page.locator("main");
+    await expect(virtualTablePage.getByText(/可见窗口|Visible window/)).toBeVisible();
+    await expect(virtualTablePage.getByText(/已选择 2 个键|2 selected keys/)).toBeVisible();
+
+    const virtualTable = virtualTablePage.locator(".pinepost-virtual-table").first();
+    const virtualBody = virtualTable.locator(".pinepost-virtual-table__body");
+    await virtualBody.evaluate((element) => {
+      element.scrollTop = 440;
+      element.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+    await expect(virtualTablePage.getByText(/可见窗口 7-19|Visible window 7-19/)).toBeVisible();
+    await virtualTable.getByRole("checkbox", { name: /Select Route 10|Select 路线 10/ }).click();
+    await expect(virtualTablePage.getByText(/已选择 3 个键|3 selected keys/)).toBeVisible();
+
+    await virtualTablePage.getByRole("button", { name: /显示加载|Show loading/ }).click();
+    await expect(virtualTablePage.getByRole("status")).toHaveText(/正在加载服务端路线|Loading server routes/);
+    await virtualTablePage.getByRole("button", { name: /显示空态|Show empty/ }).click();
+    await expect(virtualTable.locator(".pinepost-virtual-table__state")).toHaveText(/没有服务端路线|No server routes/);
+  });
+
   test("opens and dismisses overlay and feedback docs previews", async ({ page }) => {
     await page.goto("/");
 

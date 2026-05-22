@@ -955,9 +955,12 @@ export interface VirtualizedSelectRef {
 export interface VirtualizedSelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "defaultValue" | "onChange"> {
   clearable?: boolean;
   defaultValue?: string | string[];
+  emptyText?: React.ReactNode;
   filterable?: boolean;
   height?: number;
   itemHeight?: number;
+  loading?: boolean;
+  loadingText?: React.ReactNode;
   multiple?: boolean;
   onChange?: (value: string | string[]) => void;
   onClear?: () => void;
@@ -974,9 +977,12 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
       className,
       clearable,
       defaultValue,
+      emptyText = "No options",
       filterable,
       height = 220,
       itemHeight = 38,
+      loading,
+      loadingText = "Loading...",
       multiple,
       onChange,
       onClear,
@@ -1007,6 +1013,7 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
     const endIndex = Math.min(visibleOptions.length, startIndex + Math.ceil(height / itemHeight) + 5);
     const windowed = visibleOptions.slice(startIndex, endIndex).map((option, index) => ({ option, index: startIndex + index }));
     const displayValue = selected.map((option) => (typeof option.label === "string" ? option.label : option.value)).join(", ");
+    const activeDescendant = open && visibleOptions[activeIndex] ? `${listboxId}-${activeIndex}` : undefined;
 
     function setOpenState(nextOpen: boolean) {
       if (!nextOpen) {
@@ -1142,7 +1149,7 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
       <div className={cn("pinepost-virtual-select", className)} {...props}>
         <button
           ref={triggerRef}
-          aria-activedescendant={open ? `${listboxId}-${activeIndex}` : undefined}
+          aria-activedescendant={activeDescendant}
           aria-controls={open ? listboxId : undefined}
           aria-expanded={open}
           aria-haspopup="listbox"
@@ -1181,27 +1188,35 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
               role="listbox"
               style={{ height, "--pinepost-item-height": `${itemHeight}px` } as React.CSSProperties}
             >
-              <div style={{ height: visibleOptions.length * itemHeight, position: "relative" }}>
-                <div style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
-                  {windowed.map(({ option, index }) => (
-                    <button
-                      key={option.value}
-                      aria-selected={selectedValues.includes(option.value)}
-                      data-active={activeIndex === index || undefined}
-                      disabled={option.disabled}
-                      id={`${listboxId}-${index}`}
-                      data-selected={selectedValues.includes(option.value)}
-                      onClick={() => selectOption(option)}
-                      onMouseEnter={() => setActiveIndex(index)}
-                      role="option"
-                      type="button"
-                    >
-                      {multiple && <input checked={selectedValues.includes(option.value)} readOnly tabIndex={-1} type="checkbox" />}
-                      {option.label}
-                    </button>
-                  ))}
+              {loading ? (
+                <div className="pinepost-virtual-select__state" role="status">
+                  {loadingText}
                 </div>
-              </div>
+              ) : visibleOptions.length === 0 ? (
+                <div className="pinepost-virtual-select__state">{emptyText}</div>
+              ) : (
+                <div style={{ height: visibleOptions.length * itemHeight, position: "relative" }}>
+                  <div style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
+                    {windowed.map(({ option, index }) => (
+                      <button
+                        key={option.value}
+                        aria-selected={selectedValues.includes(option.value)}
+                        data-active={activeIndex === index || undefined}
+                        disabled={option.disabled}
+                        id={`${listboxId}-${index}`}
+                        data-selected={selectedValues.includes(option.value)}
+                        onClick={() => selectOption(option)}
+                        onMouseEnter={() => setActiveIndex(index)}
+                        role="option"
+                        type="button"
+                      >
+                        {multiple && <input checked={selectedValues.includes(option.value)} readOnly tabIndex={-1} type="checkbox" />}
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

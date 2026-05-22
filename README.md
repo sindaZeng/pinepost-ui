@@ -166,6 +166,11 @@ skipping, multi-select toggling, listbox semantics, and Escape dismissal, while
 Select and Cascader filter inputs can navigate and commit filtered choices from
 the keyboard.
 
+The v0.30 remote and virtual workflow pass adds visible loading and empty states
+for Select and VirtualizedSelect remote option handoffs, plus controlled
+selection keys, loading and empty states, and visible range callbacks for
+VirtualizedTable server-style row windows.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, segmented usage examples, an advanced playground where useful,
 copyable recipes, and an API table.

@@ -59,7 +59,7 @@ test.describe("Pinepost docs smoke", () => {
   test("shows the maturity matrix through commercial docs search", async ({ page }) => {
     await page.goto("/");
 
-    for (const term of ["maturity", "commercial", "Table", "Upload", "handoff", "workflow", "team handoff", "bundle handoff", "keyboard", "selection"]) {
+    for (const term of ["maturity", "commercial", "Table", "Upload", "handoff", "workflow", "team handoff", "bundle handoff", "keyboard", "selection", "remote", "virtual table"]) {
       await page.getByLabel("搜索组件").fill(term);
       await expect(page.getByRole("button", { name: /Component Maturity|组件成熟度/ })).toBeVisible();
     }
@@ -74,7 +74,7 @@ test.describe("Pinepost docs smoke", () => {
     await expect(matrix.getByText("Theme, Provider, Recipe Bundle", { exact: true })).toBeVisible();
     await expect(matrix.getByText("Select / Cascader / TreeSelect")).toBeVisible();
     await expect(matrix.getByText("Date and time panels", { exact: true })).toBeVisible();
-    await expect(matrix.getByText(/v0.29 重点|v0.29 focus|v0.29 选择器规模化重点|v0.29 selection scale focus/).first()).toBeVisible();
+    await expect(matrix.getByText(/v0.30 重点|v0.30 focus|v0.30 远程与虚拟交接重点|v0.30 remote and virtual handoff focus/).first()).toBeVisible();
     await expectNoPageOverflow(page);
   });
 
@@ -236,6 +236,11 @@ test.describe("Pinepost docs smoke", () => {
       await page.getByLabel("搜索组件").fill(term);
       await expect(page.getByRole("button", { name: "Cascader 级联选择" })).toBeVisible();
     }
+
+    await page.getByLabel("搜索组件").fill("remote loading");
+    await expect(page.getByRole("button", { name: "Select 选择器" })).toBeVisible();
+    await page.getByLabel("搜索组件").fill("visible range");
+    await expect(page.getByRole("button", { name: /VirtualizedTable|虚拟表格/ })).toBeVisible();
 
     for (const term of ["preset", "排期"]) {
       await page.getByLabel("搜索组件").fill(term);

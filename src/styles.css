@@ -367,6 +367,16 @@
   padding: 6px;
 }
 
+.pinepost-select__state,
+.pinepost-virtual-select__state,
+.pinepost-virtual-table__state {
+  color: var(--pinepost-muted);
+  font-size: 0.9rem;
+  font-weight: 850;
+  line-height: 1.4;
+  padding: 12px;
+}
+
 .pinepost-select__item {
   align-items: center;
   border-radius: var(--pinepost-radius-sm);
@@ -2670,6 +2680,10 @@
   overflow: auto;
 }
 
+.pinepost-virtual-select__state {
+  min-height: 100%;
+}
+
 .pinepost-virtual-select__list button {
   height: var(--pinepost-item-height, 38px);
 }
@@ -2783,6 +2797,10 @@
 .pinepost-virtual-table__body tr {
   cursor: pointer;
   height: var(--pinepost-row-height, 44px);
+}
+
+.pinepost-virtual-table__state {
+  text-align: center;
 }
 
 .pinepost-virtual-tree {

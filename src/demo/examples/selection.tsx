@@ -397,6 +397,8 @@ export function createSelectionExamples(context: DemoContext) {
           "  clearable",
           "  filterable",
           "  options={ownerOptions}",
+          "  loading={isFetching}",
+          "  emptyText=\"No owner matches\"",
           "  value={owners}",
           "  onValueChange={setOwners}",
           "/>"
@@ -424,6 +426,32 @@ export function createSelectionExamples(context: DemoContext) {
         description: zh ? "remoteMethod 接收查询词，业务层可以接远程接口。" : "remoteMethod receives the query so the product can call a remote source.",
         preview: <Select filterable remoteMethod={() => undefined} options={[{ value: "cedar", label: zh ? "雪松" : "Cedar" }]} placeholder={zh ? "输入关键字" : "Type keyword"} />,
         code: code(['<Select filterable remoteMethod={fetchOptions} options={options} />'])
+      },
+      {
+        id: "remote-status",
+        title: zh ? "远程加载状态" : "Remote loading state",
+        description: zh ? "loading、loadingText 和 emptyText 让远程负责人选择器在请求中和无结果时都有明确交接。" : "loading, loadingText, and emptyText keep remote owner pickers explicit during requests and no-result states.",
+        preview: (
+          <Select
+            filterable
+            loading
+            loadingText={zh ? "正在查询负责人" : "Fetching owners"}
+            emptyText={zh ? "没有匹配负责人" : "No owner matches"}
+            remoteMethod={() => undefined}
+            options={[]}
+            placeholder={zh ? "输入负责人" : "Type owner"}
+          />
+        ),
+        code: code([
+          "<Select",
+          "  filterable",
+          "  loading={isFetching}",
+          "  loadingText=\"正在查询负责人\"",
+          "  emptyText=\"没有匹配负责人\"",
+          "  remoteMethod={fetchOwners}",
+          "  options={ownerOptions}",
+          "/>"
+        ])
       }
     ];
   }
@@ -662,6 +690,7 @@ export function createSelectionExamples(context: DemoContext) {
             multiple
             clearable
             filterable
+            emptyText={zh ? "没有匹配负责人" : "No owner matches"}
             placeholder={zh ? "选择负责人" : "Choose owners"}
             value={selectWorkbenchValue}
             onValueChange={(value) => {

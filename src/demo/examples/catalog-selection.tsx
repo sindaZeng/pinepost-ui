@@ -598,12 +598,13 @@ export function createSelectionCatalogDocs(context: DemoCatalogContext): DocItem
       id: "virtualized-select",
       group: labels.groups.form,
       title: zh ? "VirtualizedSelect 虚拟选择器" : "VirtualizedSelect",
-      description: zh ? "用于大量选项的选择器，只渲染当前视窗附近的条目，并保持键盘移动、筛选和关闭契约。" : "Select for large option sets, rendering only the visible window while preserving keyboard movement, filtering, and dismissal.",
-      searchText: "virtualized select large options keyboard filter listbox 大量 选项 虚拟 键盘 筛选",
+      description: zh ? "用于大量或远程选项的选择器，只渲染当前视窗附近的条目，并保持键盘移动、筛选、加载和空态交接。" : "Select for large or remote option sets, rendering only the visible window while preserving keyboard movement, filtering, loading, and empty-state handoff.",
+      searchText: "virtualized select large options keyboard filter listbox remote loading empty handoff v0.30 大量 选项 虚拟 键盘 筛选 远程 加载 空态 交接",
       preview: (
         <VirtualizedSelect
           clearable
           filterable
+          emptyText={zh ? "没有匹配路线" : "No route matches"}
           onValueChange={(value) => setVirtualSelectValue(Array.isArray(value) ? value[0] ?? "" : value)}
           options={virtualOptions}
           value={virtualSelectValue}
@@ -616,6 +617,7 @@ export function createSelectionCatalogDocs(context: DemoCatalogContext): DocItem
         "  filterable",
         "  height={220}",
         "  itemHeight={38}",
+        "  emptyText=\"No route matches\"",
         "  options={largeOptions}",
         "/>"
       ]),
@@ -627,13 +629,16 @@ export function createSelectionCatalogDocs(context: DemoCatalogContext): DocItem
             { prop: "options", type: "Array<{ value; label; disabled? }>", defaultValue: "[]", description: zh ? "大量选项。" : "Large option list." },
             { prop: "height", type: "number", defaultValue: "220", description: zh ? "滚动面板高度。" : "List viewport height." },
             { prop: "itemHeight", type: "number", defaultValue: "38", description: zh ? "单项高度。" : "Option row height." },
-            { prop: "filterable", type: "boolean", defaultValue: "false", description: zh ? "启用筛选。" : "Enables filtering." }
+            { prop: "filterable", type: "boolean", defaultValue: "false", description: zh ? "启用筛选。" : "Enables filtering." },
+            { prop: "loading / loadingText", type: "boolean / ReactNode", defaultValue: "false / Loading...", description: zh ? "远程选项请求中的可见状态。" : "Visible state while remote options are loading." },
+            { prop: "emptyText", type: "ReactNode", defaultValue: "No options", description: zh ? "筛选或远程请求无结果时显示。" : "Shown when filtering or remote loading returns no options." }
           ]
         },
         {
           title: labels.events,
           rows: [
-            { prop: "onValueChange / onChange", type: "(value: string) => void", defaultValue: "-", description: zh ? "选择变化。" : "Selection changes." }
+            { prop: "onValueChange / onChange", type: "(value: string) => void", defaultValue: "-", description: zh ? "选择变化。" : "Selection changes." },
+            { prop: "remoteMethod", type: "(query: string) => void", defaultValue: "-", description: zh ? "筛选词变化时交给业务层拉取远程选项。" : "Hands filter query changes to the product layer for remote options." }
           ]
         },
         {

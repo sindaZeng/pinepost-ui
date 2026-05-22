@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.30.0
+
+- Added remote loading and empty states for Select and VirtualizedSelect so product-owned option fetching can keep request and no-result states visible.
+- Added controlled selection keys, default selection keys, loading and empty states, and visible range callbacks for VirtualizedTable server-style row windows.
+- Updated the docs maturity matrix, search coverage, roadmap, and README around the remote option and virtual table handoff focus.
+
 ## 0.29.0
 
 - Hardened VirtualizedSelect keyboard behavior for opening, movement, disabled-option skipping, Home/End jumps, selection, multi-select toggling, and Escape dismissal.
