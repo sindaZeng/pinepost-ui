@@ -95,7 +95,7 @@ describe("Pinepost UI v0.5 pack", () => {
     expect(onTreeChange).toHaveBeenCalledWith("cedar");
 
     await user.click(screen.getByRole("button", { name: "Select" }));
-    await user.click(screen.getByRole("button", { name: "Route 0" }));
+    await user.click(screen.getByRole("option", { name: "Route 0" }));
     expect(onVirtualChange).toHaveBeenCalledWith("r0");
   });
 

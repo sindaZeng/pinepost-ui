@@ -160,6 +160,12 @@ keyboard contract expected from Pinepost selection workflows: visible node
 movement, branch expansion, disabled-node skipping, lazy loading, leaf toggling,
 and Escape dismissal are now test-backed.
 
+The v0.29 selection scale pass extends that trust across large option sets:
+VirtualizedSelect now has keyboard movement, Home/End jumps, disabled-option
+skipping, multi-select toggling, listbox semantics, and Escape dismissal, while
+Select and Cascader filter inputs can navigate and commit filtered choices from
+the keyboard.
+
 The demo site is also the component catalog: each documented component includes
 a live preview, segmented usage examples, an advanced playground where useful,
 copyable recipes, and an API table.

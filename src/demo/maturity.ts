@@ -57,7 +57,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     ],
     nextActions: [
       { en: "Keep the Commercial Pressure Lab as the regression check for server-style selection and bulk actions.", zh: "把 Commercial Pressure Lab 继续作为服务端选择和批量操作回归检查。" },
-      { en: "Keep controlled table state stable while v0.28 focuses on selection keyboard behavior.", zh: "v0.28 聚焦选择器键盘行为期间，保持受控表格状态稳定。" }
+      { en: "Keep controlled table state stable while v0.29 focuses on selection scale behavior.", zh: "v0.29 聚焦选择器规模化行为期间，保持受控表格状态稳定。" }
     ]
   },
   {
@@ -114,19 +114,20 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       zh: "深层选择与层级选择"
     },
     level: "active",
-    score: 84,
+    score: 87,
     focus: true,
     signals: [
       { en: "Single, multiple, grouped, lazy, and tree-shaped selection flows have dedicated examples.", zh: "单选、多选、分组、懒加载和树形选择已有独立示例。" },
-      { en: "TreeSelect now has a test-backed keyboard contract for movement, branch expansion, leaf toggling, lazy loading, and Escape dismissal.", zh: "TreeSelect 现在用测试约束移动、分支展开、叶子切换、懒加载和 Escape 关闭。" }
+      { en: "TreeSelect now has a test-backed keyboard contract for movement, branch expansion, leaf toggling, lazy loading, and Escape dismissal.", zh: "TreeSelect 现在用测试约束移动、分支展开、叶子切换、懒加载和 Escape 关闭。" },
+      { en: "VirtualizedSelect, Select filters, and Cascader filtered matches now share keyboard movement, commit, and dismissal coverage.", zh: "VirtualizedSelect、Select 筛选输入和 Cascader 筛选命中现在共享键盘移动、提交和关闭覆盖。" }
     ],
     currentGaps: [
-      { en: "Large mixed option sets still need more documented guidance.", zh: "大型混合选项集仍需要更多说明。" },
-      { en: "Virtualized selection guidance stays separate from this deep picker pass.", zh: "虚拟化选择指导仍与本轮深层选择器打磨分开。" }
+      { en: "Large mixed option sets still need product-specific guidance for remote fetching and batching.", zh: "大型混合选项集仍需要面向远程拉取和批量选择的业务说明。" },
+      { en: "Virtualized selection is keyboard-backed but not a replacement for tree virtualization guidance.", zh: "虚拟化选择已有键盘覆盖，但不能替代树虚拟化指导。" }
     ],
     nextActions: [
-      { en: "Use the v0.28 TreeSelect keyboard contract as the deep selection regression check.", zh: "把 v0.28 TreeSelect 键盘契约作为深层选择回归检查。" },
-      { en: "Prefer fewer but deeper selection examples before broad display polish.", zh: "在展示类广泛打磨前，选择器示例保持少而深。" }
+      { en: "Use the v0.29 selection scale contract as the regression check for filtered and virtualized pickers.", zh: "把 v0.29 选择器规模化契约作为筛选和虚拟选择器的回归检查。" },
+      { en: "Keep selection examples focused on large option trust before broad display polish.", zh: "在展示类广泛打磨前，选择器示例继续聚焦大型选项可信度。" }
     ]
   },
   {
@@ -148,7 +149,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Cross-month scheduling and recurrence workflows remain queued.", zh: "跨月排期和重复规则工作流仍在队列中。" }
     ],
     nextActions: [
-      { en: "Keep disabled scheduling baselines stable while v0.28 focuses on selection keyboard behavior.", zh: "v0.28 聚焦选择器键盘行为期间，保持禁用排期基线稳定。" },
+      { en: "Keep disabled scheduling baselines stable while v0.29 focuses on selection scale behavior.", zh: "v0.29 聚焦选择器规模化行为期间，保持禁用排期基线稳定。" },
       { en: "Keep panel accessibility labels explicit.", zh: "保持面板无障碍标签明确。" }
     ]
   },
@@ -172,7 +173,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
     ],
     nextActions: [
       { en: "Keep bundle import, damaged JSON recovery, richer previews, and apply-to-builder behavior under Playwright coverage.", zh: "继续用 Playwright 覆盖配方包导入、损坏 JSON 恢复、更完整预览和应用到构建器行为。" },
-      { en: "Keep Recipe Gallery as the saved workflow handoff baseline while v0.28 focuses on selection.", zh: "v0.28 聚焦选择器期间，把 Recipe Gallery 继续作为已保存工作流交接基线。" }
+      { en: "Keep Recipe Gallery as the saved workflow handoff baseline while v0.29 focuses on selection scale.", zh: "v0.29 聚焦选择器规模化期间，把 Recipe Gallery 继续作为已保存工作流交接基线。" }
     ]
   },
   {
@@ -212,7 +213,7 @@ export const componentMaturityMatrix: ComponentMaturityItem[] = [
       { en: "Advanced composition patterns are deferred.", zh: "高级组合模式延后。" }
     ],
     nextActions: [
-      { en: "Maintain API stability and avoid scope creep during v0.28.", zh: "v0.28 期间保持 API 稳定，避免范围膨胀。" }
+      { en: "Maintain API stability and avoid scope creep during v0.29.", zh: "v0.29 期间保持 API 稳定，避免范围膨胀。" }
     ]
   }
 ];

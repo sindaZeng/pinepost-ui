@@ -974,10 +974,10 @@ export function createGuideCatalogDocs(context: DemoCatalogContext): DocItem[] {
       group: labels.groups.guide,
       title: zh ? "Coverage / Roadmap 覆盖计划" : "Coverage / Roadmap",
       description: zh ? "公开展示 Pinepost 自己的覆盖计划；详细成熟度见 Component Maturity 矩阵。" : "Public Pinepost-only coverage plan; use the Component Maturity matrix for depth status.",
-      preview: <div className="docs-roadmap"><Tag>Focus</Tag><span>{zh ? "v0.28 聚焦 TreeSelect 键盘契约。" : "v0.28 focuses the TreeSelect keyboard contract."}</span><Tag variant="parcel">Maintain</Tag><span>{zh ? "Recipe Gallery 和 Table、Form、Upload 压力场继续作为回归基线。" : "Recipe Gallery plus Table, Form, and Upload pressure workflows remain regression baselines."}</span><Tag variant="sky">Hold</Tag><span>{zh ? "展示类组件本轮保持非重点，避免平均扩张。" : "Display components stay non-focus in this pass to avoid broad shallow expansion."}</span></div>,
-      code: code(["Focus: TreeSelect keyboard contract", "Maintain: Recipe Gallery and heavy workflow baselines", "Hold: display components remain non-focus during v0.28"]),
+      preview: <div className="docs-roadmap"><Tag>Focus</Tag><span>{zh ? "v0.29 聚焦大规模选择器键盘契约。" : "v0.29 focuses the large selection keyboard contract."}</span><Tag variant="parcel">Maintain</Tag><span>{zh ? "Recipe Gallery 和 Table、Form、Upload 压力场继续作为回归基线。" : "Recipe Gallery plus Table, Form, and Upload pressure workflows remain regression baselines."}</span><Tag variant="sky">Hold</Tag><span>{zh ? "展示类组件本轮保持非重点，避免平均扩张。" : "Display components stay non-focus in this pass to avoid broad shallow expansion."}</span></div>,
+      code: code(["Focus: large selection keyboard contract", "Maintain: Recipe Gallery and heavy workflow baselines", "Hold: display components remain non-focus during v0.29"]),
       api: [
-        { prop: "Focus", type: "status", defaultValue: "-", description: zh ? "v0.28 优先深挖的 TreeSelect 键盘行为。" : "TreeSelect keyboard behavior deepens first in v0.28." },
+        { prop: "Focus", type: "status", defaultValue: "-", description: zh ? "v0.29 优先深挖的大规模选择器键盘行为。" : "Large selection keyboard behavior deepens first in v0.29." },
         { prop: "Maintain", type: "status", defaultValue: "-", description: zh ? "继续维护现有文档与 API。" : "Existing docs and APIs remain maintained." },
         { prop: "Hold", type: "status", defaultValue: "-", description: zh ? "本轮暂不平均投入。" : "No broad investment in this pass." }
       ]

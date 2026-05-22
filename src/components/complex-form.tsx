@@ -133,6 +133,7 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
     const [query, setQuery] = React.useState("");
     const [treeOptions, setTreeOptions] = React.useState(options);
     const [activePath, setActivePath] = React.useState<CascaderValue>(() => (isMultipleCascaderValue(defaultValue) ? [] : defaultValue ?? []));
+    const [activeMatchIndex, setActiveMatchIndex] = React.useState(0);
     const [loadingKeys, setLoadingKeys] = React.useState(() => new Set<string>());
     const [internalValue, setInternalValue] = React.useState<CascaderChangeValue>(() => defaultValue ?? (multiple ? [] : []));
     const currentValue = value ?? internalValue;
@@ -155,6 +156,7 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
 
     function setOpenState(nextOpen: boolean) {
       if (nextOpen) setActivePath(multiple ? multipleValue[0] ?? [] : singleValue);
+      else setQuery("");
       setOpen(nextOpen);
       onVisibleChange?.(nextOpen);
     }
@@ -188,12 +190,29 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
             next.delete(option.value);
             return next;
           });
-        });
+      });
+    }
+
+    function firstEnabledMatchIndex() {
+      const index = matches.findIndex((path) => !path[path.length - 1].disabled);
+      return Math.max(0, index);
     }
 
     React.useEffect(() => {
       setTreeOptions(options);
     }, [options]);
+
+    React.useEffect(() => {
+      if (!query) {
+        setActiveMatchIndex(0);
+        return;
+      }
+
+      setActiveMatchIndex((current) => {
+        if (matches[current] && !matches[current][matches[current].length - 1].disabled) return current;
+        return firstEnabledMatchIndex();
+      });
+    }, [query, matches.length]);
 
     React.useImperativeHandle(ref, () => ({
       blur: () => triggerRef.current?.blur(),
@@ -218,6 +237,64 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
     function focusSiblingMenu(levelIndex: number, offset: number) {
       const menus = Array.from(rootRef.current?.querySelectorAll(".pinepost-cascader__menu") ?? []);
       window.setTimeout(() => focusMenuButton(menus[levelIndex + offset], offset > 0 ? 0 : Math.max(0, (menus[levelIndex + offset]?.querySelectorAll("button:not(:disabled)").length ?? 1) - 1)), 0);
+    }
+
+    function focusTriggerSoon() {
+      window.setTimeout(() => triggerRef.current?.focus(), 0);
+    }
+
+    function moveMatchFocus(offset: number) {
+      const enabled = matches
+        .map((path, index) => ({ index, path }))
+        .filter((item) => !item.path[item.path.length - 1].disabled);
+      if (enabled.length === 0) return;
+      const current = enabled.findIndex((item) => item.index === activeMatchIndex);
+      const next = current < 0 ? 0 : (current + offset + enabled.length) % enabled.length;
+      setActiveMatchIndex(enabled[next].index);
+    }
+
+    function jumpMatchFocus(edge: "first" | "last") {
+      const enabled = matches
+        .map((path, index) => ({ index, path }))
+        .filter((item) => !item.path[item.path.length - 1].disabled);
+      const next = edge === "first" ? enabled[0]?.index : enabled[enabled.length - 1]?.index;
+      if (typeof next === "number") setActiveMatchIndex(next);
+    }
+
+    function activateMatch(path: CascaderOption[], focusTrigger = false) {
+      const nextValue = path.map((item) => item.value);
+      if (multiple) {
+        toggleMultiplePath(nextValue, path);
+        return;
+      }
+
+      commit(nextValue, path);
+      setOpenState(false);
+      if (focusTrigger) focusTriggerSoon();
+    }
+
+    function onFilterKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        moveMatchFocus(event.key === "ArrowDown" ? 1 : -1);
+      }
+
+      if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        jumpMatchFocus(event.key === "Home" ? "first" : "last");
+      }
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        const activeMatch = matches[activeMatchIndex];
+        if (activeMatch && !activeMatch[activeMatch.length - 1].disabled) activateMatch(activeMatch, true);
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpenState(false);
+        focusTriggerSoon();
+      }
     }
 
     return (
@@ -257,23 +334,49 @@ export const Cascader = React.forwardRef<CascaderRef, CascaderProps>(
                 aria-label="Filter options"
                 className="pinepost-cascader__filter"
                 onChange={(event) => setQuery(event.currentTarget.value)}
+                onKeyDown={onFilterKeyDown}
                 placeholder="Filter"
                 value={query}
               />
             )}
             {query ? (
               <div className="pinepost-cascader__matches">
-                {matches.map((path) => (
+                {matches.map((path, matchIndex) => (
                   <button
                     key={path.map((item) => item.value).join("/")}
+                    data-active={activeMatchIndex === matchIndex || undefined}
                     disabled={path[path.length - 1].disabled}
-                    onClick={() => {
-                      const nextValue = path.map((item) => item.value);
-                      if (multiple) {
-                        toggleMultiplePath(nextValue, path);
-                      } else {
-                        commit(nextValue, path);
+                    onClick={() => activateMatch(path)}
+                    onKeyDown={(event) => {
+                      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                        event.preventDefault();
+                        moveMatchFocus(event.key === "ArrowDown" ? 1 : -1);
+                        window.setTimeout(() => {
+                          const buttons = Array.from(rootRef.current?.querySelectorAll<HTMLButtonElement>(".pinepost-cascader__matches button:not(:disabled)") ?? []);
+                          const activeButton = buttons.find((button) => button.dataset.active === "true");
+                          activeButton?.focus();
+                        }, 0);
+                      }
+
+                      if (event.key === "Home" || event.key === "End") {
+                        event.preventDefault();
+                        jumpMatchFocus(event.key === "Home" ? "first" : "last");
+                        window.setTimeout(() => {
+                          const buttons = Array.from(rootRef.current?.querySelectorAll<HTMLButtonElement>(".pinepost-cascader__matches button:not(:disabled)") ?? []);
+                          const activeButton = buttons.find((button) => button.dataset.active === "true");
+                          activeButton?.focus();
+                        }, 0);
+                      }
+
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        activateMatch(path, true);
+                      }
+
+                      if (event.key === "Escape") {
+                        event.preventDefault();
                         setOpenState(false);
+                        focusTriggerSoon();
                       }
                     }}
                     type="button"
@@ -886,8 +989,11 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
     },
     ref
   ) => {
+    const listboxId = React.useId();
+    const listRef = React.useRef<HTMLDivElement>(null);
     const triggerRef = React.useRef<HTMLButtonElement>(null);
     const [open, setOpen] = React.useState(false);
+    const [activeIndex, setActiveIndex] = React.useState(0);
     const [query, setQuery] = React.useState("");
     const [scrollTop, setScrollTop] = React.useState(0);
     const [internalValue, setInternalValue] = React.useState<string | string[]>(defaultValue ?? (multiple ? [] : ""));
@@ -899,8 +1005,17 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
     const selected = options.filter((option) => selectedValues.includes(option.value));
     const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 2);
     const endIndex = Math.min(visibleOptions.length, startIndex + Math.ceil(height / itemHeight) + 5);
-    const windowed = visibleOptions.slice(startIndex, endIndex);
+    const windowed = visibleOptions.slice(startIndex, endIndex).map((option, index) => ({ option, index: startIndex + index }));
     const displayValue = selected.map((option) => (typeof option.label === "string" ? option.label : option.value)).join(", ");
+
+    function setOpenState(nextOpen: boolean) {
+      if (!nextOpen) {
+        setQuery("");
+        setScrollTop(0);
+        if (listRef.current) listRef.current.scrollTop = 0;
+      }
+      setOpen(nextOpen);
+    }
 
     function commit(nextValue: string | string[]) {
       if (value === undefined) setInternalValue(nextValue);
@@ -913,6 +1028,110 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
       onClear?.();
     }
 
+    function enabledOptionIndexes() {
+      return visibleOptions
+        .map((option, index) => ({ index, option }))
+        .filter((item) => !item.option.disabled);
+    }
+
+    function ensureOptionVisible(index: number) {
+      if (index < 0) return;
+      const currentTop = listRef.current?.scrollTop ?? scrollTop;
+      const itemTop = index * itemHeight;
+      const itemBottom = itemTop + itemHeight;
+      let nextTop = currentTop;
+
+      if (itemTop < currentTop) nextTop = itemTop;
+      if (itemBottom > currentTop + height) nextTop = itemBottom - height;
+
+      nextTop = Math.max(0, Math.min(nextTop, Math.max(0, visibleOptions.length * itemHeight - height)));
+      setScrollTop(nextTop);
+      if (listRef.current) listRef.current.scrollTop = nextTop;
+    }
+
+    function setActiveOption(index: number) {
+      setActiveIndex(index);
+      ensureOptionVisible(index);
+    }
+
+    function moveActive(offset: number) {
+      const enabled = enabledOptionIndexes();
+      if (enabled.length === 0) return;
+      const current = enabled.findIndex((item) => item.index === activeIndex);
+      const next = current < 0 ? 0 : (current + offset + enabled.length) % enabled.length;
+      setActiveOption(enabled[next].index);
+    }
+
+    function jumpActive(edge: "first" | "last") {
+      const enabled = enabledOptionIndexes();
+      const next = edge === "first" ? enabled[0]?.index : enabled[enabled.length - 1]?.index;
+      if (typeof next === "number") setActiveOption(next);
+    }
+
+    function selectOption(option: VirtualizedSelectOption, focusTrigger = false) {
+      if (option.disabled) return;
+
+      if (multiple) {
+        const next = selectedValues.includes(option.value)
+          ? selectedValues.filter((item) => item !== option.value)
+          : [...selectedValues, option.value];
+        commit(next);
+        return;
+      }
+
+      commit(option.value);
+      setOpenState(false);
+      if (focusTrigger) window.setTimeout(() => triggerRef.current?.focus(), 0);
+    }
+
+    function onPickerKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        if (!open) {
+          setOpenState(true);
+          jumpActive(event.key === "ArrowDown" ? "first" : "last");
+          return;
+        }
+        moveActive(event.key === "ArrowDown" ? 1 : -1);
+      }
+
+      if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        if (!open) setOpenState(true);
+        jumpActive(event.key === "Home" ? "first" : "last");
+      }
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        if (!open) {
+          setOpenState(true);
+          return;
+        }
+        const activeOption = visibleOptions[activeIndex];
+        if (activeOption) selectOption(activeOption, event.currentTarget !== triggerRef.current);
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpenState(false);
+        window.setTimeout(() => triggerRef.current?.focus(), 0);
+      }
+    }
+
+    function updateQuery(nextQuery: string) {
+      setQuery(nextQuery);
+      setScrollTop(0);
+      if (listRef.current) listRef.current.scrollTop = 0;
+      remoteMethod?.(nextQuery);
+    }
+
+    React.useEffect(() => {
+      if (!open) return;
+      const selectedIndex = visibleOptions.findIndex((option) => selectedValues.includes(option.value) && !option.disabled);
+      const nextIndex = selectedIndex >= 0 ? selectedIndex : enabledOptionIndexes()[0]?.index ?? 0;
+      setActiveOption(nextIndex);
+    }, [open, query]);
+
     React.useImperativeHandle(ref, () => ({
       blur: () => triggerRef.current?.blur(),
       clear,
@@ -921,7 +1140,18 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
 
     return (
       <div className={cn("pinepost-virtual-select", className)} {...props}>
-        <button ref={triggerRef} className="pinepost-picker-trigger" onClick={() => setOpen(!open)} type="button">
+        <button
+          ref={triggerRef}
+          aria-activedescendant={open ? `${listboxId}-${activeIndex}` : undefined}
+          aria-controls={open ? listboxId : undefined}
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          aria-label={displayValue || String(placeholder)}
+          className="pinepost-picker-trigger"
+          onClick={() => setOpenState(!open)}
+          onKeyDown={onPickerKeyDown}
+          type="button"
+        >
           <span data-placeholder={!displayValue}>{displayValue || placeholder}</span>
           <span aria-hidden="true">v</span>
         </button>
@@ -936,37 +1166,34 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
               <input
                 aria-label="Filter virtual select"
                 className="pinepost-cascader__filter"
-                onChange={(event) => {
-                  setQuery(event.currentTarget.value);
-                  remoteMethod?.(event.currentTarget.value);
-                }}
+                onChange={(event) => updateQuery(event.currentTarget.value)}
+                onKeyDown={onPickerKeyDown}
                 placeholder="Filter"
                 value={query}
               />
             )}
             <div
+              ref={listRef}
+              id={listboxId}
+              aria-multiselectable={multiple || undefined}
               className="pinepost-virtual-select__list"
               onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+              role="listbox"
               style={{ height, "--pinepost-item-height": `${itemHeight}px` } as React.CSSProperties}
             >
               <div style={{ height: visibleOptions.length * itemHeight, position: "relative" }}>
                 <div style={{ transform: `translateY(${startIndex * itemHeight}px)` }}>
-                  {windowed.map((option) => (
+                  {windowed.map(({ option, index }) => (
                     <button
                       key={option.value}
+                      aria-selected={selectedValues.includes(option.value)}
+                      data-active={activeIndex === index || undefined}
                       disabled={option.disabled}
+                      id={`${listboxId}-${index}`}
                       data-selected={selectedValues.includes(option.value)}
-                      onClick={() => {
-                        if (multiple) {
-                          const next = selectedValues.includes(option.value)
-                            ? selectedValues.filter((item) => item !== option.value)
-                            : [...selectedValues, option.value];
-                          commit(next);
-                        } else {
-                          commit(option.value);
-                          setOpen(false);
-                        }
-                      }}
+                      onClick={() => selectOption(option)}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      role="option"
                       type="button"
                     >
                       {multiple && <input checked={selectedValues.includes(option.value)} readOnly tabIndex={-1} type="checkbox" />}

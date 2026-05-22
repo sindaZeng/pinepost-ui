@@ -479,6 +479,32 @@ export function createFoundationCatalogDocs(context: DemoCatalogContext): DocIte
         { prop: "options", type: "SelectOption[]", defaultValue: "[]", description: zh ? "下拉选项。" : "Dropdown options." },
         { prop: "value", type: "string", defaultValue: "-", description: zh ? "受控值。" : "Controlled value." },
         { prop: "onValueChange", type: "(value: string) => void", defaultValue: "-", description: zh ? "值变化回调。" : "Value change callback." }
+      ],
+      apiSections: [
+        {
+          title: labels.attributes,
+          rows: [
+            { prop: "options", type: "SelectOption[]", defaultValue: "[]", description: zh ? "下拉选项。" : "Dropdown options." },
+            { prop: "value", type: "string | string[]", defaultValue: "-", description: zh ? "受控值；multiple 时为数组。" : "Controlled value; multiple mode uses an array." },
+            { prop: "filterable", type: "boolean", defaultValue: "false", description: zh ? "启用筛选输入。" : "Enables filter input." }
+          ]
+        },
+        {
+          title: labels.events,
+          rows: [
+            { prop: "onValueChange", type: "(value: string | string[]) => void", defaultValue: "-", description: zh ? "值变化回调。" : "Value change callback." },
+            { prop: "remoteMethod", type: "(query: string) => void", defaultValue: "-", description: zh ? "筛选词变化时触发。" : "Fires when the filter query changes." }
+          ]
+        },
+        {
+          title: labels.shortcuts,
+          rows: [
+            { prop: "ArrowUp / ArrowDown", type: "keyboard", defaultValue: "-", description: zh ? "在未禁用选项之间移动当前项。" : "Moves the active item through enabled options." },
+            { prop: "Home / End", type: "keyboard", defaultValue: "-", description: zh ? "跳到第一个或最后一个可选项。" : "Jumps to the first or last enabled option." },
+            { prop: "Enter / Space", type: "keyboard", defaultValue: "-", description: zh ? "选择或切换当前项。" : "Selects or toggles the active option." },
+            { prop: "Escape", type: "keyboard", defaultValue: "-", description: zh ? "关闭面板并回到触发器。" : "Closes the panel and returns to the trigger." }
+          ]
+        }
       ]
     },
     {

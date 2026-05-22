@@ -218,7 +218,7 @@ describe("Pinepost UI v0.6 pack", () => {
     expect(onSelectChange).toHaveBeenCalledWith([]);
 
     await user.click(screen.getByRole("button", { name: /north route/i }));
-    await user.click(screen.getByRole("button", { name: /south route/i }));
+    await user.click(screen.getByRole("option", { name: /south route/i }));
     expect(onVirtualChange).toHaveBeenCalledWith(["north", "south"]);
     act(() => virtualRef.current?.clear());
     expect(onVirtualChange).toHaveBeenCalledWith([]);

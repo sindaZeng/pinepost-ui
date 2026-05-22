@@ -477,6 +477,8 @@ export function createSelectionCatalogDocs(context: DemoCatalogContext): DocItem
           rows: [
             { prop: "ArrowUp / ArrowDown", type: "keyboard", defaultValue: "-", description: zh ? "在当前菜单内移动焦点。" : "Moves focus inside the current menu." },
             { prop: "ArrowRight / ArrowLeft", type: "keyboard", defaultValue: "-", description: zh ? "进入或返回相邻层级。" : "Moves into or back from adjacent levels." },
+            { prop: "Home / End", type: "keyboard", defaultValue: "-", description: zh ? "在筛选命中中跳到首项或末项。" : "Jumps to the first or last filtered match." },
+            { prop: "Filter Enter / Space", type: "keyboard", defaultValue: "-", description: zh ? "提交或切换当前筛选命中。" : "Commits or toggles the active filtered match." },
             { prop: "Enter", type: "keyboard", defaultValue: "-", description: zh ? "展开分支或选择叶子节点。" : "Expands a branch or selects a leaf." },
             { prop: "Escape", type: "keyboard", defaultValue: "-", description: zh ? "关闭面板并回到触发器。" : "Closes the panel and returns to the trigger." }
           ]
@@ -596,7 +598,8 @@ export function createSelectionCatalogDocs(context: DemoCatalogContext): DocItem
       id: "virtualized-select",
       group: labels.groups.form,
       title: zh ? "VirtualizedSelect 虚拟选择器" : "VirtualizedSelect",
-      description: zh ? "用于大量选项的选择器，只渲染当前视窗附近的条目。" : "Select for large option sets, rendering only the visible window.",
+      description: zh ? "用于大量选项的选择器，只渲染当前视窗附近的条目，并保持键盘移动、筛选和关闭契约。" : "Select for large option sets, rendering only the visible window while preserving keyboard movement, filtering, and dismissal.",
+      searchText: "virtualized select large options keyboard filter listbox 大量 选项 虚拟 键盘 筛选",
       preview: (
         <VirtualizedSelect
           clearable
@@ -610,6 +613,7 @@ export function createSelectionCatalogDocs(context: DemoCatalogContext): DocItem
         'import { VirtualizedSelect } from "pinepost-ui";',
         "",
         "<VirtualizedSelect",
+        "  filterable",
         "  height={220}",
         "  itemHeight={38}",
         "  options={largeOptions}",
@@ -635,7 +639,16 @@ export function createSelectionCatalogDocs(context: DemoCatalogContext): DocItem
         {
           title: labels.methods,
           rows: [
-            { prop: "focus / blur / clear", type: "CascaderRef", defaultValue: "-", description: zh ? "聚焦、失焦和清空。" : "Focus, blur, and clear." }
+            { prop: "focus / blur / clear", type: "VirtualizedSelectRef", defaultValue: "-", description: zh ? "聚焦、失焦和清空。" : "Focus, blur, and clear." }
+          ]
+        },
+        {
+          title: labels.shortcuts,
+          rows: [
+            { prop: "ArrowUp / ArrowDown", type: "keyboard", defaultValue: "-", description: zh ? "在未禁用选项之间移动当前项。" : "Moves the active item through enabled options." },
+            { prop: "Home / End", type: "keyboard", defaultValue: "-", description: zh ? "跳到第一个或最后一个可选项，并同步滚动窗口。" : "Jumps to the first or last enabled option and syncs the scroll window." },
+            { prop: "Enter / Space", type: "keyboard", defaultValue: "-", description: zh ? "选择单项或切换多选项。" : "Selects a single option or toggles a multiple option." },
+            { prop: "Escape", type: "keyboard", defaultValue: "-", description: zh ? "关闭面板、清空筛选并回到触发器。" : "Closes the panel, clears the filter, and returns to the trigger." }
           ]
         }
       ]

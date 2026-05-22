@@ -81,6 +81,11 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       : options;
     const groups = Array.from(new Set(visibleOptions.map((option) => option.group).filter(Boolean)));
 
+    function setOpenState(nextOpen: boolean) {
+      if (!nextOpen) setQuery("");
+      setOpen(nextOpen);
+    }
+
     function commit(nextValue: string | string[]) {
       if (value === undefined) setInternalValue(nextValue);
       onValueChange?.(nextValue);
@@ -99,7 +104,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       function onPointerDown(event: PointerEvent) {
         const target = event.target as Node;
         if (triggerRef.current?.contains(target) || contentRef.current?.contains(target)) return;
-        setOpen(false);
+        setOpenState(false);
       }
 
       document.addEventListener("pointerdown", onPointerDown);
@@ -108,7 +113,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
 
     function clear() {
       commit(multiple ? [] : "");
-      setOpen(false);
+      setOpenState(false);
       onClear?.();
     }
 
@@ -127,7 +132,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
         commit(nextValue);
       } else {
         commit(option.value);
-        setOpen(false);
+        setOpenState(false);
       }
     }
 
@@ -145,7 +150,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
         if (!open) {
-          setOpen(true);
+          setOpenState(true);
           return;
         }
         moveActive(event.key === "ArrowDown" ? 1 : -1);
@@ -153,7 +158,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
 
       if (event.key === "Home" || event.key === "End") {
         event.preventDefault();
-        setOpen(true);
+        setOpenState(true);
         const enabledOptions = visibleOptions
           .map((option, index) => ({ index, option }))
           .filter((item) => !item.option.disabled);
@@ -172,7 +177,44 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
 
       if (event.key === "Escape") {
         event.preventDefault();
-        setOpen(false);
+        setOpenState(false);
+      }
+    }
+
+    function focusTriggerSoon() {
+      window.setTimeout(() => triggerRef.current?.focus(), 0);
+    }
+
+    function onFilterKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        moveActive(event.key === "ArrowDown" ? 1 : -1);
+      }
+
+      if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        const enabledOptions = visibleOptions
+          .map((option, index) => ({ index, option }))
+          .filter((item) => !item.option.disabled);
+        const nextIndex = event.key === "Home"
+          ? enabledOptions[0]?.index
+          : enabledOptions[enabledOptions.length - 1]?.index;
+        if (typeof nextIndex === "number" && nextIndex >= 0) setActiveIndex(nextIndex);
+      }
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        const activeOption = visibleOptions[activeIndex];
+        if (activeOption) {
+          selectOption(activeOption);
+          if (!multiple) focusTriggerSoon();
+        }
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpenState(false);
+        focusTriggerSoon();
       }
     }
 
@@ -211,7 +253,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
           className="pinepost-select"
           disabled={disabled}
           onBlur={onBlur}
-          onClick={() => setOpen(!open)}
+          onClick={() => setOpenState(!open)}
           onFocus={onFocus}
           onKeyDown={onTriggerKeyDown}
           role="combobox"
@@ -246,6 +288,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
                   setQuery(event.currentTarget.value);
                   remoteMethod?.(event.currentTarget.value);
                 }}
+                onKeyDown={onFilterKeyDown}
                 placeholder="Filter"
                 value={query}
               />

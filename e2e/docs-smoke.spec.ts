@@ -74,7 +74,7 @@ test.describe("Pinepost docs smoke", () => {
     await expect(matrix.getByText("Theme, Provider, Recipe Bundle", { exact: true })).toBeVisible();
     await expect(matrix.getByText("Select / Cascader / TreeSelect")).toBeVisible();
     await expect(matrix.getByText("Date and time panels", { exact: true })).toBeVisible();
-    await expect(matrix.getByText(/v0.28 重点|v0.28 focus|v0.28 选择器重点|v0.28 selection focus/).first()).toBeVisible();
+    await expect(matrix.getByText(/v0.29 重点|v0.29 focus|v0.29 选择器规模化重点|v0.29 selection scale focus/).first()).toBeVisible();
     await expectNoPageOverflow(page);
   });
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.29.0
+
+- Hardened VirtualizedSelect keyboard behavior for opening, movement, disabled-option skipping, Home/End jumps, selection, multi-select toggling, and Escape dismissal.
+- Added filter-input keyboard contracts for Select, Cascader, and VirtualizedSelect so filtered choices can be navigated, committed, dismissed, and reopened without stale panel state.
+- Updated selection docs, maturity copy, roadmap, and README around large option set trust while keeping public props and dependencies unchanged.
+
 ## 0.28.1
 
 - Fixed filterable TreeSelect Escape handling so the panel closes from the filter input, returns focus to the trigger, and clears stale filter text before the next open.

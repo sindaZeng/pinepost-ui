@@ -339,6 +339,74 @@ test.describe("Pinepost component QA hardening", () => {
     await expect(treeTrigger).toBeFocused();
   });
 
+  test("keeps selection scale filter and virtual keyboard behavior aligned", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Select 选择器" }).click();
+    const remoteSelect = page.getByRole("region", { name: /远程搜索事件|Remote search event/ });
+    const selectTrigger = remoteSelect.getByRole("combobox", { name: /输入关键字|Type keyword/ });
+    await selectTrigger.click();
+    await remoteSelect.getByRole("textbox", { name: "Filter select" }).fill("雪");
+    await page.keyboard.press("Enter");
+    await expect(remoteSelect.locator(".pinepost-select__content")).toHaveCount(0);
+    await expect(remoteSelect.getByRole("combobox", { name: /雪松|Cedar/ })).toBeVisible();
+
+    const selectedSelectTrigger = remoteSelect.getByRole("combobox", { name: /雪松|Cedar/ });
+    await selectedSelectTrigger.click();
+    await remoteSelect.getByRole("textbox", { name: "Filter select" }).fill("zzzz");
+    await page.keyboard.press("Escape");
+    await expect(remoteSelect.locator(".pinepost-select__content")).toHaveCount(0);
+    await expect(selectedSelectTrigger).toBeFocused();
+    await selectedSelectTrigger.click();
+    await expect(remoteSelect.getByRole("option", { name: /雪松|Cedar/ })).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: "Cascader 级联选择" }).click();
+    const cascaderFilter = page.getByRole("region", { name: /筛选路径|Filter paths/ });
+    const cascaderTrigger = cascaderFilter.locator(".pinepost-picker-trigger").first();
+    await cascaderTrigger.click();
+    await cascaderFilter.getByRole("textbox", { name: "Filter options" }).fill("河岸");
+    await page.keyboard.press("Enter");
+    await expect(cascaderFilter.locator(".pinepost-cascader__panel")).toHaveCount(0);
+
+    const selectedCascaderTrigger = cascaderFilter.locator(".pinepost-picker-trigger").first();
+    await selectedCascaderTrigger.click();
+    await cascaderFilter.getByRole("textbox", { name: "Filter options" }).fill("zzzz");
+    await page.keyboard.press("Escape");
+    await expect(cascaderFilter.locator(".pinepost-cascader__panel")).toHaveCount(0);
+    await expect(selectedCascaderTrigger).toBeFocused();
+    await selectedCascaderTrigger.click();
+    await expect(cascaderFilter.getByRole("button", { name: /北线|North line/ }).first()).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: "VirtualizedSelect 虚拟选择器" }).click();
+    const virtualPreview = page.locator(".docs-preview-surface").first();
+    const virtualTrigger = virtualPreview.locator(".pinepost-picker-trigger").first();
+    await virtualTrigger.click();
+    await expect(virtualPreview.getByRole("listbox")).toBeVisible();
+
+    await virtualTrigger.press("End");
+    const lastOption = virtualPreview.getByRole("option", { name: /路线 59|Route 59/ });
+    await expect(lastOption).toBeVisible();
+    await expect(lastOption).toHaveAttribute("data-active", "true");
+    await page.keyboard.press("Enter");
+    await expect(virtualPreview.locator(".pinepost-virtual-select__panel")).toHaveCount(0);
+    await virtualPreview.getByRole("button", { name: "Clear" }).click();
+    await expect(virtualPreview.getByRole("button", { name: "Clear" })).toHaveCount(0);
+
+    await virtualTrigger.click();
+    await virtualPreview.getByRole("textbox", { name: "Filter virtual select" }).fill("5");
+    await expect(virtualPreview.getByRole("option", { name: /路线 5|Route 5/ }).first()).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(virtualPreview.locator(".pinepost-virtual-select__panel")).toHaveCount(0);
+    await expect(virtualTrigger).toBeFocused();
+
+    await virtualTrigger.click();
+    await expect(virtualPreview.getByRole("option", { name: /路线 0|Route 0/ })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(virtualPreview.locator(".pinepost-virtual-select__panel")).toHaveCount(0);
+  });
+
   test("opens and dismisses overlay and feedback docs previews", async ({ page }) => {
     await page.goto("/");
 
