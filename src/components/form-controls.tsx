@@ -86,7 +86,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       ? options.filter((option) => optionLabelText(option).toLowerCase().includes(query.toLowerCase()))
       : options;
     const groups = Array.from(new Set(visibleOptions.map((option) => option.group).filter(Boolean)));
-    const activeDescendant = open && visibleOptions[activeIndex] ? `${listboxId}-${activeIndex}` : undefined;
+    const activeDescendant = open && !loading && visibleOptions[activeIndex] ? `${listboxId}-${activeIndex}` : undefined;
 
     function setOpenState(nextOpen: boolean) {
       if (!nextOpen) setQuery("");
@@ -144,6 +144,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
     }
 
     function moveActive(offset: number) {
+      if (loading) return;
       const enabled = visibleOptions
         .map((option, index) => ({ index, option }))
         .filter((item) => !item.option.disabled);
@@ -166,6 +167,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       if (event.key === "Home" || event.key === "End") {
         event.preventDefault();
         setOpenState(true);
+        if (loading) return;
         const enabledOptions = visibleOptions
           .map((option, index) => ({ index, option }))
           .filter((item) => !item.option.disabled);
@@ -178,6 +180,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
       if (event.key === "Enter" || event.key === " ") {
         if (!open) return;
         event.preventDefault();
+        if (loading) return;
         const activeOption = visibleOptions[activeIndex];
         if (activeOption) selectOption(activeOption);
       }
@@ -200,6 +203,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
 
       if (event.key === "Home" || event.key === "End") {
         event.preventDefault();
+        if (loading) return;
         const enabledOptions = visibleOptions
           .map((option, index) => ({ index, option }))
           .filter((item) => !item.option.disabled);
@@ -211,6 +215,7 @@ export const Select = React.forwardRef<SelectRef, SelectProps>(
 
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
+        if (loading) return;
         const activeOption = visibleOptions[activeIndex];
         if (activeOption) {
           selectOption(activeOption);

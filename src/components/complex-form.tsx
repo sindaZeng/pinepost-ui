@@ -1013,7 +1013,7 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
     const endIndex = Math.min(visibleOptions.length, startIndex + Math.ceil(height / itemHeight) + 5);
     const windowed = visibleOptions.slice(startIndex, endIndex).map((option, index) => ({ option, index: startIndex + index }));
     const displayValue = selected.map((option) => (typeof option.label === "string" ? option.label : option.value)).join(", ");
-    const activeDescendant = open && visibleOptions[activeIndex] ? `${listboxId}-${activeIndex}` : undefined;
+    const activeDescendant = open && !loading && visibleOptions[activeIndex] ? `${listboxId}-${activeIndex}` : undefined;
 
     function setOpenState(nextOpen: boolean) {
       if (!nextOpen) {
@@ -1062,6 +1062,7 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
     }
 
     function moveActive(offset: number) {
+      if (loading) return;
       const enabled = enabledOptionIndexes();
       if (enabled.length === 0) return;
       const current = enabled.findIndex((item) => item.index === activeIndex);
@@ -1070,6 +1071,7 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
     }
 
     function jumpActive(edge: "first" | "last") {
+      if (loading) return;
       const enabled = enabledOptionIndexes();
       const next = edge === "first" ? enabled[0]?.index : enabled[enabled.length - 1]?.index;
       if (typeof next === "number") setActiveOption(next);
@@ -1114,6 +1116,7 @@ export const VirtualizedSelect = React.forwardRef<VirtualizedSelectRef, Virtuali
           setOpenState(true);
           return;
         }
+        if (loading) return;
         const activeOption = visibleOptions[activeIndex];
         if (activeOption) selectOption(activeOption, event.currentTarget !== triggerRef.current);
       }

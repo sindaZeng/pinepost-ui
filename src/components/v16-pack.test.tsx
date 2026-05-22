@@ -147,7 +147,7 @@ describe("Pinepost UI v0.16 pack", () => {
 
     expect(output).toContain(`# Pinepost UI v${packageJson.version}`);
     expect(output).toContain("## Changes");
-    expect(output).toContain("- Added");
+    expect(output).toMatch(/^- .+/m);
     expect(output).toContain("corepack pnpm check");
   });
 });

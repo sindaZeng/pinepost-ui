@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.30.1
+
+- Fixed Select and VirtualizedSelect so visible remote loading states cannot commit stale hidden options from keyboard actions.
+- Fixed VirtualizedTable visible range notifications so parent rerenders with unchanged ranges do not re-fire callbacks.
+- Reduced VirtualizedTable selection callback work for large selected-key handoffs.
+
 ## 0.30.0
 
 - Added remote loading and empty states for Select and VirtualizedSelect so product-owned option fetching can keep request and no-result states visible.

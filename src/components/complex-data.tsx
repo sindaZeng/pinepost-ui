@@ -63,6 +63,8 @@ function VirtualizedTableInner<T extends object>({
   const [internalSortState, setInternalSortState] = React.useState<TableSortState<T> | undefined>();
   const activeSort = sortState ?? internalSortState;
   const currentSelectedKeys = selectedRowKeys ?? internalSelectedKeys;
+  const lastVisibleRangeRef = React.useRef<VirtualizedTableVisibleRange | undefined>(undefined);
+  const onVisibleRangeChangeRef = React.useRef(onVisibleRangeChange);
   const sortedData = React.useMemo(() => {
     if (!activeSort) return data;
     const column = columns.find((item) => String(item.key) === String(activeSort.key));
@@ -85,7 +87,8 @@ function VirtualizedTableInner<T extends object>({
 
   function commitSelection(nextKeys: React.Key[]) {
     if (selectedRowKeys === undefined) setInternalSelectedKeys(nextKeys);
-    onSelectionChange?.(data.filter((row, index) => nextKeys.includes(getRowKey(row, index))), nextKeys);
+    const keySet = new Set(nextKeys);
+    onSelectionChange?.(data.filter((row, index) => keySet.has(getRowKey(row, index))), nextKeys);
   }
 
   function setSort(nextSort?: TableSortState<T>) {
@@ -100,8 +103,17 @@ function VirtualizedTableInner<T extends object>({
   }
 
   React.useEffect(() => {
-    onVisibleRangeChange?.({ startIndex, endIndex });
-  }, [endIndex, onVisibleRangeChange, startIndex]);
+    onVisibleRangeChangeRef.current = onVisibleRangeChange;
+  }, [onVisibleRangeChange]);
+
+  React.useEffect(() => {
+    const previousRange = lastVisibleRangeRef.current;
+    if (previousRange?.startIndex === startIndex && previousRange.endIndex === endIndex) return;
+
+    const nextRange = { startIndex, endIndex };
+    lastVisibleRangeRef.current = nextRange;
+    onVisibleRangeChangeRef.current?.(nextRange);
+  }, [endIndex, startIndex]);
 
   React.useImperativeHandle(ref, () => ({
     clearExpansion: () => undefined,
@@ -110,7 +122,10 @@ function VirtualizedTableInner<T extends object>({
     getExpandedRows: () => [],
     getColumnOrder: () => columns.map((column) => String(column.key)),
     getSelectionKeys: () => currentSelectedKeys,
-    getSelectionRows: () => data.filter((row, index) => currentSelectedKeys.includes(getRowKey(row, index))),
+    getSelectionRows: () => {
+      const keySet = new Set(currentSelectedKeys);
+      return data.filter((row, index) => keySet.has(getRowKey(row, index)));
+    },
     getSortState: () => activeSort,
     getViewPreset: () => undefined,
     getVisibleColumns: () => columns,

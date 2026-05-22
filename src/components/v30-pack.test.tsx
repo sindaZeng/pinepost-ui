@@ -2,7 +2,14 @@ import * as React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { Select, VirtualizedSelect, VirtualizedTable, type TableColumn, type VirtualizedTableRef } from "../index";
+import {
+  Select,
+  VirtualizedSelect,
+  VirtualizedTable,
+  type TableColumn,
+  type VirtualizedTableRef,
+  type VirtualizedTableVisibleRange
+} from "../index";
 
 type RouteRow = {
   count: number;
@@ -61,6 +68,31 @@ describe("Pinepost UI v0.30 remote and virtual workflow handoff", () => {
     expect(trigger).toHaveFocus();
   });
 
+  it("does not commit stale Select options while remote loading is visible", async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+
+    render(
+      <Select
+        loading
+        loadingText="Fetching owners"
+        onValueChange={onValueChange}
+        options={[{ value: "cedar", label: "Cedar owner" }]}
+        placeholder="Find owner"
+      />
+    );
+
+    const trigger = screen.getByRole("combobox", { name: "Find owner" });
+    await user.click(trigger);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Fetching owners");
+    expect(trigger).not.toHaveAttribute("aria-activedescendant");
+
+    await user.keyboard("{Enter}");
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Fetching owners");
+  });
+
   it("renders VirtualizedSelect remote loading and empty states", async () => {
     const user = userEvent.setup();
     const remoteMethod = vi.fn();
@@ -98,6 +130,61 @@ describe("Pinepost UI v0.30 remote and virtual workflow handoff", () => {
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+  });
+
+  it("does not commit stale VirtualizedSelect options while remote loading is visible", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <VirtualizedSelect
+        loading
+        loadingText="Loading route matches"
+        onChange={onChange}
+        options={[{ value: "north", label: "North route" }]}
+        placeholder="Find route"
+      />
+    );
+
+    const trigger = screen.getByRole("button", { name: "Find route" });
+    await user.click(trigger);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading route matches");
+    expect(trigger).not.toHaveAttribute("aria-activedescendant");
+
+    await user.keyboard("{Enter}");
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Loading route matches");
+  });
+
+  it("does not repeat VirtualizedTable visible range callbacks for unchanged ranges", () => {
+    const ranges: VirtualizedTableVisibleRange[] = [];
+
+    function RangeHarness() {
+      const [renderCount, setRenderCount] = React.useState(0);
+
+      return (
+        <>
+          <button onClick={() => setRenderCount((count) => count + 1)} type="button">
+            Rerender {renderCount}
+          </button>
+          <VirtualizedTable
+            rowKey="id"
+            height={88}
+            rowHeight={44}
+            onVisibleRangeChange={(range) => ranges.push(range)}
+            columns={routeColumns}
+            data={routeRows}
+          />
+        </>
+      );
+    }
+
+    render(<RangeHarness />);
+
+    expect(ranges).toEqual([{ startIndex: 0, endIndex: 9 }]);
+    fireEvent.click(screen.getByRole("button", { name: /Rerender/ }));
+    expect(ranges).toEqual([{ startIndex: 0, endIndex: 9 }]);
   });
 
   it("keeps VirtualizedTable controlled selection and visible ranges across scrolling", () => {
